@@ -737,6 +737,7 @@ namespace TikArena
         public string FxStack;
         public bool FxBars, BlackoutNight, QuakeRagdollPlayer;
         public string FxBarsPos;
+        public bool SharpImages;
         // [Events] panel of the running events (where the gift guide was)
         public bool EventsEnabled, EventsSpawns, EventsInstant, EventsTitleEnabled;
         public int EventsMax;
@@ -903,7 +904,8 @@ namespace TikArena
             c.Top3Title = ini.S("Hud", "Top3Title", "أفضل الداعمين");
             c.ShowCoins = ini.B("Hud", "ShowCoins", true);
             c.ShowCounters = ini.B("Hud", "ShowCounters", true);
-            c.ShowStatus = ini.B("Hud", "ShowStatus", true);
+            c.ShowStatus = ini.B("Hud", "ShowStatus", false);   // "TikFinity connected" row under the supporters
+            c.SharpImages = ini.B("Hud", "SharpImages", true);
             c.HealthEnabled = ini.B("Hud", "HealthEnabled", true);
             c.HealthLabel = ini.S("Hud", "HealthLabel", "health");
             c.HealthColor = ini.C("Hud", "HealthColor", "#1ed760");
@@ -2018,6 +2020,91 @@ namespace TikArena
         }
     }
 
+    // Sharp HUD: GTA draws script pictures without mip-maps, so a 128 px shape or picture shown at 15 px
+    // looks jagged / grainy. Mip keeps smaller copies (made with high quality resampling) and the
+    // one closest to the real size on screen is drawn. A few copies are made per frame (no stutter).
+    static class Mip
+    {
+        static readonly Dictionary<string, Size> sizes = new Dictionary<string, Size>(StringComparer.OrdinalIgnoreCase);
+        static readonly Dictionary<string, string> made = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        static int budget;
+        public static bool Enabled = true;
+        public static float PxPerUnit = 1.5f;   // real pixels per HUD unit (screen height / 720)
+
+        public static void NewFrame(float pxPerUnit) { budget = 3; PxPerUnit = Math.Max(0.5f, pxPerUnit); }
+
+        public static string Pick(string file, float w, float h)
+        {
+            if (!Enabled || w <= 0 || h <= 0) return file;
+            Size s;
+            if (!sizes.TryGetValue(file, out s))
+            {
+                if (budget <= 0) return file;
+                budget--;
+                s = ReadSize(file);
+                sizes[file] = s;
+            }
+            if (s.Width < 16 || s.Height < 16) return file;
+            // part of the picture really shown on screen (1 = 1:1)
+            float shown = Math.Max(w * PxPerUnit / s.Width, h * PxPerUnit / s.Height);
+            int level = 0;
+            while (level < 4 && (s.Width >> (level + 1)) >= 8 && shown * (1 << (level + 1)) <= 1.0f) level++;
+            if (level == 0) return file;
+            string key = file + "|" + level, p;
+            if (made.TryGetValue(key, out p)) return p ?? file;
+            if (budget <= 0) return file;
+            budget--;
+            p = Make(file, s, level);
+            made[key] = p;
+            return p ?? file;
+        }
+
+        static Size ReadSize(string file)
+        {
+            try
+            {
+                using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (Image img = Image.FromStream(fs, false, false))
+                    return img.Size;
+            }
+            catch { return Size.Empty; }
+        }
+
+        static string Make(string file, Size s, int level)
+        {
+            try
+            {
+                string dir = Path.Combine(U.DataDir, "cache", "mip");
+                Directory.CreateDirectory(dir);
+                long stamp = File.GetLastWriteTimeUtc(file).Ticks / 10000000;
+                string target = Path.Combine(dir, U.Joaat(file.ToLowerInvariant()).ToString("x8") + "_" + stamp.ToString("x") + "_" + level + ".png");
+                if (File.Exists(target)) return target;
+                int w = Math.Max(2, s.Width >> level), h = Math.Max(2, s.Height >> level);
+                using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (Image src = Image.FromStream(fs))
+                using (Bitmap b = new Bitmap(w, h, PixelFormat.Format32bppArgb))
+                using (Graphics g = Graphics.FromImage(b))
+                using (ImageAttributes ia = new ImageAttributes())
+                {
+                    ia.SetWrapMode(WrapMode.TileFlipXY);   // no dark border when shrinking
+                    g.Clear(Color.Transparent);
+                    g.CompositingMode = CompositingMode.SourceCopy;
+                    g.CompositingQuality = CompositingQuality.HighQuality;
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    g.SmoothingMode = SmoothingMode.HighQuality;
+                    g.DrawImage(src, new Rectangle(0, 0, w, h), 0, 0, s.Width, s.Height, GraphicsUnit.Pixel, ia);
+                    string tmp = target + ".tmp";
+                    b.Save(tmp, ImageFormat.Png);
+                    if (File.Exists(target)) File.Delete(target);
+                    File.Move(tmp, target);
+                }
+                return target;
+            }
+            catch (Exception ex) { U.Log("mip " + file + ": " + ex.Message); return null; }
+        }
+    }
+
     static class Gfx
     {
         static readonly TextElement te = new TextElement("", PointF.Empty, 0.35f);
@@ -2036,6 +2123,7 @@ namespace TikArena
         {
             used.Clear();
             Txt.NewFrame();
+            try { Mip.NewFrame(Screen.Resolution.Height / 720f); } catch { Mip.NewFrame(1.5f); }
             if (U.Now > existsReset) { exists.Clear(); existsReset = U.Now + 2000; }
         }
 
@@ -2184,6 +2272,7 @@ namespace TikArena
         public static void ImageAbsTint(string file, float x, float y, float w, float h, Color tint)
         {
             if (!FileOk(file) || tint.A <= 0) return;
+            file = Mip.Pick(file, w, h);
             List<CustomSprite> list;
             if (!pool.TryGetValue(file, out list)) { list = new List<CustomSprite>(); pool[file] = list; }
             int n;
@@ -2411,6 +2500,7 @@ namespace TikArena
             Txt.FontName = cfg.UnicodeFont;
             Txt.Bold = cfg.UnicodeBold;
             Txt.SizeFix = cfg.UnicodeSize;
+            Mip.Enabled = cfg.SharpImages;
             Txt.StripEmoji = cfg.StripEmoji;
             Txt.FancyToAscii = cfg.FancyToAscii;
             Txt.MaxTextures = cfg.MaxTextTextures;

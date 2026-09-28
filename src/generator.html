@@ -164,6 +164,51 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
 @keyframes spotbar{from{width:460px}to{width:0}}
 @media (max-width:1100px){.inter{grid-template-columns:1fr 1fr}.col.tools{flex-direction:row;flex-wrap:wrap;grid-column:1/-1}.hudwrap{grid-template-columns:1fr}.previewBox{position:relative;top:0}}
 @media (max-width:640px){.inter{grid-template-columns:1fr}.fld.wide{grid-column:auto}main{padding:12px}.top{padding:8px 12px}nav.pills{top:59px;padding:8px 12px}}
+/* ---------------------------------------------------------------- pro polish (same DarkRing identity) */
+:root{--bg:#05080d; --card:#0c121b; --card2:#0f1722; --glow:0 0 0 1px rgba(0,230,118,.10),0 18px 50px rgba(0,0,0,.45); --ease:cubic-bezier(.2,.8,.2,1)}
+body{background:
+  radial-gradient(1100px 520px at 90% -12%,rgba(0,230,118,.11),transparent 62%),
+  radial-gradient(900px 480px at -5% 8%,rgba(41,121,255,.10),transparent 62%),
+  radial-gradient(800px 500px at 50% 110%,rgba(139,92,246,.08),transparent 60%),
+  linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px) 0 0/100% 32px,
+  var(--bg)}
+::selection{background:rgba(0,230,118,.3)}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:#070b11}
+::-webkit-scrollbar-thumb{background:linear-gradient(#18324a,#12271c);border-radius:10px;border:2px solid #070b11}
+.top{padding:12px 24px;background:linear-gradient(180deg,rgba(6,10,16,.94),rgba(6,10,16,.82));border-bottom:1px solid transparent;
+  border-image:linear-gradient(90deg,transparent,rgba(0,230,118,.55),rgba(41,121,255,.45),transparent) 1}
+.brand b{font-size:19px;background:linear-gradient(90deg,#fff,#b9ffd9);-webkit-background-clip:text;background-clip:text;color:transparent}
+nav.pills{padding:9px 24px;gap:7px}
+nav.pills a{padding:6px 14px;font-weight:600;background:rgba(13,19,29,.9);transition:all .2s var(--ease)}
+nav.pills a.on{background:linear-gradient(135deg,rgba(0,230,118,.22),rgba(41,121,255,.16));color:#fff;border-color:rgba(0,230,118,.55)}
+main{max-width:1400px;padding:22px 24px 90px}
+section.card{position:relative;border:1px solid transparent;border-radius:20px;padding:22px 22px 18px;margin-bottom:26px;
+  background:linear-gradient(180deg,var(--card),#090e15) padding-box,
+             linear-gradient(140deg,rgba(0,230,118,.38),rgba(41,121,255,.14) 35%,rgba(255,255,255,.05) 60%,rgba(139,92,246,.26)) border-box;
+  box-shadow:var(--glow);animation:cardIn .5s var(--ease) both}
+@keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+section.card>h2{font-size:20px;padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,.06)}
+.num{min-width:38px;height:38px;border-radius:12px;font-size:15px;background:linear-gradient(135deg,#00e676,#00a8ff);color:#04140b;border:0;box-shadow:0 6px 18px rgba(0,230,118,.35)}
+h3{font-size:14.5px;letter-spacing:.2px}
+h3:before{content:"";width:4px;height:16px;border-radius:3px;background:linear-gradient(#00e676,#2979ff);flex:none}
+.fld{background:linear-gradient(180deg,#0b121c,#09101a);border-radius:12px;padding:10px 11px;transition:border-color .2s,transform .2s var(--ease),box-shadow .2s}
+.fld:hover{border-color:rgba(0,230,118,.28);box-shadow:0 6px 18px rgba(0,0,0,.28)}
+label{font-weight:600;letter-spacing:.1px}
+input[type=text],input[type=number],select,textarea{background:#060b12;border-radius:10px;padding:8px 10px;border-color:rgba(255,255,255,.08)}
+input[type=text]:hover,input[type=number]:hover,select:hover{border-color:rgba(255,255,255,.16)}
+.btn{min-height:34px;border-radius:11px;padding:7px 14px;font-weight:600;transition:transform .15s var(--ease),box-shadow .2s,border-color .2s,filter .2s}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.btn.sm{min-height:28px}
+.chip{transition:all .18s var(--ease);font-weight:600}
+.chip:hover{border-color:rgba(0,230,118,.45);color:#fff}
+.inter{border-radius:16px;background:linear-gradient(180deg,#0f1823,#0a111a);box-shadow:0 8px 26px rgba(0,0,0,.3);transition:border-color .2s,box-shadow .2s,transform .2s var(--ease)}
+.inter:hover{border-color:rgba(0,230,118,.3);box-shadow:0 12px 32px rgba(0,0,0,.4)}
+.stage{border-radius:16px;box-shadow:0 18px 48px rgba(0,0,0,.5),0 0 0 1px rgba(0,230,118,.18)}
+.stylebtn{border-radius:12px;transition:transform .15s var(--ease),border-color .2s,box-shadow .2s}
+.stylebtn:hover{transform:translateY(-2px);border-color:rgba(0,230,118,.4)}
+.obslink{box-shadow:0 12px 36px rgba(0,0,0,.35)}
+.obslinkrow input{border-radius:12px;font-size:15px;letter-spacing:.2px}
+@media (prefers-reduced-motion:reduce){section.card{animation:none}.btn,.fld,.inter,.stylebtn{transition:none}}
 </style>
 <style>
 html.obsmode, html.obsmode body{background:transparent !important;margin:0;min-height:0;overflow:hidden}
@@ -567,7 +612,7 @@ function defaults(){
   S.Hud = {Profile:"",Enabled:true,Style:"Broadcast",StylePalette:true,StyleCycle:"Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro",LookCycle:"Crest,Duo,Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Luxury,Aurora,Ember,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
     AccentColor:"#00e676",TextColor:"#ffffff",PanelColor:"#0a0e16",WinColor:"#00e676",LossColor:"#ff3b5c",LayoutMode:"Normal",
     ScoreEnabled:true,ScoreOrder:"Title,Score,Streak",TitleEnabled:true,Title:"حاول تقتلني",ShowScore:true,ShowTimer:true,ShowStreak:true,
-    Top3Enabled:true,Top3Order:"Top3,Status",ShowTop3:true,TopCount:3,Top3Title:"أفضل الداعمين",ShowCoins:true,ShowCounters:true,ShowStatus:true,
+    Top3Enabled:true,Top3Order:"Top3,Status",ShowTop3:true,TopCount:3,Top3Title:"أفضل الداعمين",ShowCoins:true,ShowCounters:true,ShowStatus:false,SharpImages:true,
     HealthEnabled:true,HealthLabel:"health",HealthColor:"#1ed760",ShowArmor:true,ShowHealthPoints:false,HideRadar:false,
     OverheadEnabled:true,OverheadAvatar:true,OverheadName:true,OverheadHealth:true,OverheadHeight:0,AvatarShape:"Circle",OverheadStyle:"Classic",OverheadRing:true,OverheadLevel:true,
     ScoreVariant:"Classic",Top3Variant:"List",HealthVariant:"Bar",NotifVariant:"Card",FeedAnimation:"Slide",
@@ -607,7 +652,7 @@ function defaults(){
     v:1, ini:S, interactions:defaultInteractions(),
     sounds:{kill:null, death:null},             // {name, data(dataURL)}
     obs:Object.assign({}, OBS_DEFAULTS),
-    ui:{sound:true, preview:"Normal", selPanel:"Score", claude:null, mig15:false, mig16:false, obsLinkMode:"quick"},
+    ui:{sound:true, preview:"Normal", selPanel:"Score", claude:null, mig15:false, mig16:false, mig17:false, obsLinkMode:"quick"},
     customGifts:[], giftDb:{}, hudProfiles:{}
   };
 }
@@ -676,6 +721,7 @@ function normalize(obj){
   if (s.ini.Hud.DesignCoinsWord === "كوينز") s.ini.Hud.DesignCoinsWord = "";
   delete s.ini.DamageFx.Blood; delete s.ini.DamageFx.HitFx;
   // update 15 (once): an effect lasts only its own time (Reset), the name sits right above the head
+  if (!s.ui.mig17){ s.ini.Hud.ShowStatus = false; s.ui.mig17 = true; }
   if (!s.ui.mig16){ s.ini.Effects.BarsPosition = "Events"; s.ini.LayoutVertical.GuideShow = true; s.ini.Layout.GuideShow = true; s.ui.mig16 = true; }
   if (!s.ui.mig15){ if (s.ini.Effects.Stack === "Extend") s.ini.Effects.Stack = "Reset"; s.ui.mig15 = true; }
   if (+s.ini.Hud.OverheadHeight >= 0.8) s.ini.Hud.OverheadHeight = 0;
@@ -1336,7 +1382,7 @@ function renderAllForms(){
       ["LookCycle","F11 كيدور على (الأشكال الكاملة)","list",{opts:LOOKS,wide:true}],["Font","🔤 الخط","s",{opts:FONTS}],["FontCycle","F8 كيدور على","list",{opts:FONTS,wide:true}],
       ["FontScale","حجم الكتابة","range",{min:0.5,max:2,step:0.05}],["Opacity","الشفافية","range",{min:0,max:255}],["TextOutline","الحواشي","b"],["TextShadow","الظل","b"],
       ["AccentColor","اللون الرئيسي","c"],["TextColor","لون الكتابة","c"],["PanelColor","لون الخلفية","c"],["WinColor","لون الفوز","c"],["LossColor","لون الخسارة","c"],
-      ["AvatarShape","شكل الصور","s",{opts:[["Circle","⚪ دائرة"],["Square","⬜ مربع"]]}],["HideRadar","🗺️ إخفاء الرادار","b"]]},
+      ["SharpImages","🔍 صور حادة (بلا تخشين)","b"],["AvatarShape","شكل الصور","s",{opts:[["Circle","⚪ دائرة"],["Square","⬜ مربع"]]}],["HideRadar","🗺️ إخفاء الرادار","b"]]},
     {sec:"Hud", title:"🏟️ الديزاين (Arena · Broadcast · Podium · Cards · Esports · Minimal · Classic)", hint:"كيبدل الشكل ديال اللوحات الأصلية: لوحة الداعمين (فوق يسار) واللائحات ديال اليمين (الإشعارات و Kill Feed)، بلا ما يزيد حتى لوحة جديدة. None = الستايل العادي. فاللعبة: F11 = الشكل الموالي (ديزاين ولا ستايل، الهود كامل كيتبدل)، F10 = غير الديزاينات، F5 = اللون الموالي.", fields:[
       ["Design","🏟️ الديزاين","s",{opts:DESIGNS}],["DesignColor","🎨 ألوان الميداليات","s",{opts:DESIGN_COLORS}],["DesignCoinsWord","كلمة الكوينز","t"],["DesignKey","⌨️ زر الديزاين","k"],["DesignColorKey","⌨️ زر اللون","k"]]},
     {sec:"Hud", title:"🔤 العربية وأسماء الداعمين", hint:"الخطوط ديال GTA ما فيهاش الحروف العربية. Auto: أي كتابة عربية (أسماء، جمل، عناوين) كتترسم كصورة بخط ديال Windows (الحروف مربوطة ومن اليمين لليسار) وكتبان فالهود. Latin: كتتحول لحروف لاتينية (أحمد → Ahmd). Always: كلشي كصورة. الأسماء المزخرفة (𝓐𝓶𝓲𝓷𝓮) كتولي عادية.", fields:[
