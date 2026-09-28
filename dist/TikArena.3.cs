@@ -614,6 +614,8 @@ namespace TikArena
         public int ReconnectSeconds;
         // [Challenge]
         public bool ChallengeEnabled, AutoRestart, EndScreenEnabled, MvpEnabled;
+        public bool RoundReset, RoundClearEnemies, RoundClearAllies, RoundClearEffects, RoundHoldQueue;
+        public string RoundVanishEffect;
         public float DurationMinutes, EndScreenSeconds;
         // [Queue]
         public int MaxEnemies, MaxAllies, MaxPerEvent, DelayMs;
@@ -782,6 +784,12 @@ namespace TikArena
             c.EndScreenEnabled = ini.B("Challenge", "EndScreenEnabled", true);
             c.EndScreenSeconds = Math.Max(1, ini.F("Challenge", "EndScreenSeconds", 6));
             c.MvpEnabled = ini.B("Challenge", "MvpEnabled", true);
+            c.RoundReset = ini.B("Challenge", "ResetOnNewRound", true);
+            c.RoundClearEnemies = ini.B("Challenge", "ClearEnemies", true);
+            c.RoundClearAllies = ini.B("Challenge", "ClearAllies", true);
+            c.RoundClearEffects = ini.B("Challenge", "ClearEffects", true);
+            c.RoundHoldQueue = ini.B("Challenge", "HoldQueue", true);
+            c.RoundVanishEffect = ini.S("Challenge", "VanishEffect", "SoftSmoke");
 
             c.MaxEnemies = U.Clamp(ini.I("Queue", "MaxEnemies", 15), 1, 100);
             c.MaxAllies = U.Clamp(ini.I("Queue", "MaxAllies", 10), 1, 100);
@@ -2517,8 +2525,31 @@ namespace TikArena
             Status(cfg.Tx("StartedText", "Started"));
         }
 
+        // new round = clean arena: the spawned enemies/allies vanish and every effect stops.
+        // Wins/losses, the streak and the top supporters stay.
+        void ResetArena()
+        {
+            if (!cfg.RoundReset) return;
+            int fx = 0;
+            for (int i = tracked.Count - 1; i >= 0; i--)
+            {
+                Tracked t = tracked[i];
+                if (!(t.Enemy ? cfg.RoundClearEnemies : cfg.RoundClearAllies)) continue;
+                try
+                {
+                    if (t.Ped != null && t.Ped.Exists() && fx++ < 12) SpawnFx(cfg.RoundVanishEffect, t.Ped.Position);
+                    DeleteTracked(t);
+                    SafeDeleteVehicle(t.Veh);   // keeps it if you are driving it
+                }
+                catch (Exception ex) { U.Error("ResetArena", ex); }
+                tracked.RemoveAt(i);
+            }
+            if (cfg.RoundClearEffects) StopAllEffects();
+        }
+
         void StartRound()
         {
+            ResetArena();
             roundMs = 0;
             roundEnemies = roundAllies = roundKills = 0;
             roundDurMs = cfg.DurationMinutes * 60000.0;
@@ -3150,6 +3181,8 @@ namespace TikArena
         void UpdateQueues()
         {
             if (paused || PlayerBusy()) return;
+            // between two rounds the gifts wait in the queue and come in the next round
+            if (cfg.RoundReset && cfg.RoundHoldQueue && phase == Phase.Ended) return;
             long now = U.Now;
 
             if (now >= nextSpawn && spawnQ.Count > 0)
@@ -4302,6 +4335,8 @@ namespace TikArena
                 Function.Call((Hash)0x67C540AA08E4A6F5UL, -1, "LOSER", "HUD_AWARDS", true);
             }
             if (cfg.ClearQueueOnRoundEnd) { spawnQ.Clear(); instantQ.Clear(); }
+            // a win clears the arena now; a loss waits for the killer camera / celebration (StartRound clears it)
+            if (win) ResetArena();
         }
 
         void OnPlayerDeath()

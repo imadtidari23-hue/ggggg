@@ -365,7 +365,8 @@ function defaults(){
   S.General = {PowerKey:"K",StartKey:"F3",HudStyleKey:"F11",HudFontKey:"F8",EmergencyKey:"Delete",StopEffectsKey:"End",PauseKey:"Pause",LayoutKey:"F7",HypeTestKey:"F6",
     AutoReload:true,AutoImport:true,ShowLoadMessage:true,CleanupOnPowerOff:true,ShowStatusMessages:true,TestKeysEnabled:true,DebugLog:false};
   S.TikFinity = {Enabled:true,Url:"ws://localhost:21213/",ReconnectSeconds:5,LearnMode:true,TestUserName:"Test"};
-  S.Challenge = {Enabled:true,DurationMinutes:10,AutoRestart:true,EndScreenEnabled:true,EndScreenSeconds:6,MvpEnabled:true};
+  S.Challenge = {Enabled:true,DurationMinutes:10,AutoRestart:true,EndScreenEnabled:true,EndScreenSeconds:6,MvpEnabled:true,
+    ResetOnNewRound:true,ClearEnemies:true,ClearAllies:true,ClearEffects:true,HoldQueue:true,VanishEffect:"SoftSmoke"};
   S.Queue = {MaxEnemies:15,MaxAllies:10,MaxPerEvent:0,DelayMs:400,CorpseCleanupSeconds:2,VehicleCleanupSeconds:60,ClearQueueOnRoundEnd:false};
   S.World = {PoliceIgnore:true,GangsIgnore:true};
   S.Player = {ApplyOnRoundStart:true,Health:1000,Armor:100,Invincible:false};
@@ -1067,6 +1068,9 @@ function renderAllForms(){
   renderForm("#formChallenge", [
     {sec:"Challenge", title:"🏆 التحدي", fields:[["Enabled","التحدي (العداد)","b"],["DurationMinutes","⏱️ مدة الجولة (دقايق)","f",{min:0.1}],["AutoRestart","🔁 تعاود أوتوماتيكياً","b"],
       ["EndScreenEnabled","🖼️ شاشة النهاية","b"],["EndScreenSeconds","مدة شاشة النهاية (ث)","f",{min:1}],["MvpEnabled","⭐ MVP","b"]]},
+    {sec:"Challenge", title:"🔄 جولة جديدة = ساحة نقية", hint:"ملي كتسالي الجولة (العداد كمل = ربح، ولا متي = خسارة): كتزاد ليك +1 فالفوز ولا فالخسارة، والأعداء والمساعدين اللي نزلو كيختفيو (مع دخان)، وجميع التأثيرات كتحبس، والعداد كيرجع للصفر. أحسن الداعمين (Top) كيبقاو كيف ما هوما. فالربح الساحة كتنقى دغيا، فالخسارة كتسنى حتى تسالي كاميرا القاتل. الهدايا اللي جات وسط شاشة النهاية كتسنى فالطابور وكتنزل فالجولة الجاية.", fields:[
+      ["ResetOnNewRound","🔄 نقي الساحة فكل جولة","b"],["ClearEnemies","🦹 حيد الأعداء","b"],["ClearAllies","👮 حيد المساعدين","b"],["ClearEffects","⏹️ حبس التأثيرات","b"],
+      ["HoldQueue","⏳ الهدايا كتسنى الجولة الجاية","b"],["VanishEffect","💨 تأثير الاختفاء","s",{opts:EFFECTS}]]},
     {sec:"Queue", title:"📋 الطابور والتنظيف", fields:[["CorpseCleanupSeconds","💨 مسح الجثث بعد (ث، 0 = مباشرة)","f",{min:0}],["VehicleCleanupSeconds","🚗 مسح الطوموبيلات بعد (ث)","f",{min:1}],["ClearQueueOnRoundEnd","🗑️ مسح الطابور فنهاية الجولة","b"]]}
   ]);
   renderForm("#formChars", [
