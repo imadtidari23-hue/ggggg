@@ -647,6 +647,10 @@ namespace TikArena
         public float OverheadHeight;
         public string AvatarShape;
         public bool StylePalette, OverheadRing, OverheadLevel;
+        public string TextMode, UnicodeFont;
+        public bool UnicodeBold, StripEmoji, FancyToAscii;
+        public float UnicodeSize;
+        public int MaxTextTextures;
         public string ScoreVariant, Top3Variant, HealthVariant, NotifVariant, FeedAnimation, OverheadStyle;
         // [Aura]
         public bool AuraEnabled, AuraKingCrown;
@@ -844,6 +848,13 @@ namespace TikArena
             c.OverheadStyle = ini.S("Hud", "OverheadStyle", "Classic");
             c.OverheadRing = ini.B("Hud", "OverheadRing", true);
             c.OverheadLevel = ini.B("Hud", "OverheadLevel", true);
+            c.TextMode = ini.S("Hud", "TextMode", "Auto");
+            c.UnicodeFont = ini.S("Hud", "UnicodeFont", "Segoe UI");
+            c.UnicodeBold = ini.B("Hud", "UnicodeBold", true);
+            c.UnicodeSize = U.Clamp(ini.F("Hud", "UnicodeSize", 1f), 0.4f, 3f);
+            c.StripEmoji = ini.B("Hud", "StripEmoji", true);
+            c.FancyToAscii = ini.B("Hud", "FancyToAscii", true);
+            c.MaxTextTextures = U.Clamp(ini.I("Hud", "MaxTextTextures", 1500), 50, 20000);
 
             c.AuraEnabled = ini.B("Aura", "Enabled", true);
             c.AuraEnemy = ini.S("Aura", "EnemyAura", "Ring");
@@ -1056,6 +1067,7 @@ namespace TikArena
     class FeedItem
     {
         public string Text = "";
+        public List<string> Parts;  // template pieces + values (Arabic-safe layout)
         public string Avatar;      // local png path or null
         public string Icon;        // gift icon png path or null
         public int Level;
@@ -1514,6 +1526,241 @@ namespace TikArena
     // ------------------------------------------------------------------------
     //  Drawing helpers (1280x720 virtual screen)
     // ------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
+    //  Unicode text (Arabic, other scripts) for the HUD.
+    //  GTA's fonts have no Arabic glyphs, so such strings are rendered once with
+    //  GDI+ (Windows shapes/joins Arabic letters and handles right-to-left) into
+    //  a white PNG with outline/shadow, then drawn as a tinted sprite.
+    //  Fallback (budget/limit reached or TextMode=Latin): Latin transliteration.
+    // ------------------------------------------------------------------------
+    static class Txt
+    {
+        public class Tex { public string File; public int W, H; }
+
+        // [Hud] TextMode: Auto (image only when needed) | Always | Latin (transliterate) | Off (raw GTA text)
+        public static string Mode = "Auto";
+        public static string FontName = "Segoe UI";
+        public static bool Bold = true;
+        public static bool StripEmoji = true;
+        public static bool FancyToAscii = true;
+        public static float SizeFix = 1f;
+        public static int MaxTextures = 1500;
+        public const int Pad = 8;
+        public const float EmPx = 44f;
+
+        static readonly Dictionary<string, Tex> cache = new Dictionary<string, Tex>();
+        static readonly Dictionary<string, string> prep = new Dictionary<string, string>();
+        static int budget;
+        public static int Count { get { return cache.Count; } }
+
+        public static void NewFrame() { budget = 3; }
+
+        static bool IsArabic(int c)
+        {
+            return (c >= 0x0600 && c <= 0x06FF) || (c >= 0x0750 && c <= 0x077F) || (c >= 0x08A0 && c <= 0x08FF) || (c >= 0xFB50 && c <= 0xFDFF) || (c >= 0xFE70 && c <= 0xFEFF);
+        }
+
+        static bool IsEmoji(int c)
+        {
+            return (c >= 0x1F000 && c <= 0x1FAFF) || (c >= 0x2600 && c <= 0x27BF) || (c >= 0x2B00 && c <= 0x2BFF) || c == 0xFE0F || c == 0x200D || c == 0x20E3 ||
+                   (c >= 0x2190 && c <= 0x21FF) || (c >= 0x2300 && c <= 0x23FF) || (c >= 0xE0000 && c <= 0xE007F) || c == 0x00A9 || c == 0x00AE || c == 0x2122;
+        }
+
+        // 𝓐𝓶𝓲𝓷𝓮 / 𝐀𝐦𝐢𝐧𝐞 / Ａｍｉｎｅ -> Amine (TikTok "fancy" names)
+        static int Fancy(int c)
+        {
+            if (c >= 0x1D400 && c <= 0x1D6A3) { int i = (c - 0x1D400) % 52; return i < 26 ? 'A' + i : 'a' + i - 26; }
+            if (c >= 0x1D7CE && c <= 0x1D7FF) return '0' + (c - 0x1D7CE) % 10;
+            if (c >= 0xFF01 && c <= 0xFF5E) return c - 0xFEE0;
+            if (c >= 0x24B6 && c <= 0x24CF) return 'A' + c - 0x24B6;
+            if (c >= 0x24D0 && c <= 0x24E9) return 'a' + c - 0x24D0;
+            if (c >= 0x1F130 && c <= 0x1F149) return 'A' + c - 0x1F130;
+            if (c >= 0x1F150 && c <= 0x1F169) return 'A' + c - 0x1F150;
+            if (c >= 0x1F170 && c <= 0x1F189) return 'A' + c - 0x1F170;
+            if (c >= 0x1F1E6 && c <= 0x1F1FF) return 'A' + c - 0x1F1E6;
+            return c;
+        }
+
+        // Cleans a string: fancy letters -> ASCII, emoji removed, ellipsis, trims.
+        public static string Prep(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            string r;
+            if (prep.TryGetValue(s, out r)) return r;
+            StringBuilder sb = new StringBuilder(s.Length);
+            for (int i = 0; i < s.Length; i++)
+            {
+                int c = s[i];
+                if (char.IsHighSurrogate(s[i]) && i + 1 < s.Length && char.IsLowSurrogate(s[i + 1])) { c = char.ConvertToUtf32(s[i], s[i + 1]); i++; }
+                if (FancyToAscii) c = Fancy(c);
+                if (StripEmoji && IsEmoji(c)) continue;
+                if (c == 0x2026) { sb.Append("..."); continue; }
+                if (c == 0x0640) continue; // tatweel
+                if (c < 0x20) continue;
+                sb.Append(char.ConvertFromUtf32(c));
+            }
+            r = sb.ToString().Trim();
+            while (r.Contains("  ")) r = r.Replace("  ", " ");
+            if (prep.Count > 5000) prep.Clear();
+            prep[s] = r;
+            return r;
+        }
+
+        // true when GTA's own font cannot show the string
+        public static bool NeedsImage(string s)
+        {
+            if (Mode.Equals("Always", StringComparison.OrdinalIgnoreCase)) return true;
+            foreach (char ch in s)
+            {
+                int c = ch;
+                if (c <= 0x24F) continue;
+                if (c >= 0x2000 && c <= 0x206F) continue;
+                return true;
+            }
+            return false;
+        }
+
+        public static bool IsRtl(string s)
+        {
+            foreach (char ch in s)
+            {
+                if (IsArabic(ch) || (ch >= 0x0590 && ch <= 0x05FF)) return true;
+                if (char.IsLetter(ch)) return false;
+            }
+            return false;
+        }
+
+        static readonly Dictionary<char, string> Map = new Dictionary<char, string> {
+            {'ا',"a"},{'أ',"a"},{'إ',"i"},{'آ',"a"},{'ٱ',"a"},{'ب',"b"},{'ت',"t"},{'ث',"th"},{'ج',"j"},{'ح',"h"},{'خ',"kh"},{'د',"d"},{'ذ',"dh"},{'ر',"r"},{'ز',"z"},
+            {'س',"s"},{'ش',"ch"},{'ص',"s"},{'ض',"d"},{'ط',"t"},{'ظ',"z"},{'ع',"3"},{'غ',"gh"},{'ف',"f"},{'ق',"q"},{'ك',"k"},{'ل',"l"},{'م',"m"},{'ن',"n"},{'ه',"h"},
+            {'و',"w"},{'ي',"y"},{'ى',"a"},{'ة',"a"},{'ء',"'"},{'ئ',"2"},{'ؤ',"2"},{'پ',"p"},{'چ',"tch"},{'ڤ',"v"},{'گ',"g"},{'ک',"k"},{'ی',"y"},{'ڭ',"g"},{'؟',"?"},{'،',","},{'؛',";"} };
+
+        // Latin fallback so a name always shows
+        public static string Translit(string s)
+        {
+            StringBuilder sb = new StringBuilder();
+            bool start = true;
+            foreach (char ch in s)
+            {
+                string m;
+                if (ch >= 0x0660 && ch <= 0x0669) { sb.Append((char)('0' + ch - 0x0660)); start = false; continue; }
+                if (ch >= 0x06F0 && ch <= 0x06F9) { sb.Append((char)('0' + ch - 0x06F0)); start = false; continue; }
+                if (ch >= 0x064B && ch <= 0x065F) continue;
+                if (Map.TryGetValue(ch, out m)) { sb.Append(start ? char.ToUpperInvariant(m[0]) + m.Substring(1) : m); start = false; continue; }
+                if (ch <= 0x24F || (ch >= 0x2000 && ch <= 0x206F)) { sb.Append(ch); start = ch == ' '; continue; }
+            }
+            string r = sb.ToString().Trim();
+            return r.Length == 0 ? "?" : r;
+        }
+
+        // rendered texture for a string (null while not available this frame)
+        public static Tex Get(string s, bool outline, bool shadow, bool allowCreate)
+        {
+            string key = s + "\u0001" + (outline ? "o" : "") + (shadow ? "s" : "");
+            Tex t;
+            if (cache.TryGetValue(key, out t)) return t;
+            if (!allowCreate || budget <= 0 || cache.Count >= MaxTextures) return null;
+            budget--;
+            try
+            {
+                string dir = Path.Combine(U.DataDir, "cache", "text");
+                Directory.CreateDirectory(dir);
+                string file = Path.Combine(dir, U.Joaat(FontName + "|" + Bold + "|" + key).ToString("x8") + "_" + s.Length + ".png");
+                if (!File.Exists(file)) Render(s, outline, shadow, file);
+                t = new Tex();
+                t.File = file;
+                using (Image im = Image.FromFile(file)) { t.W = im.Width; t.H = im.Height; }
+                cache[key] = t;
+                return t;
+            }
+            catch (Exception ex)
+            {
+                U.Log("text render failed: " + ex.Message);
+                cache[key] = null;
+                return null;
+            }
+        }
+
+        static void Render(string s, bool outline, bool shadow, string file)
+        {
+            bool rtl = IsRtl(s);
+            using (System.Drawing.Font f = new System.Drawing.Font(FontName, EmPx, Bold ? FontStyle.Bold : FontStyle.Regular, GraphicsUnit.Pixel))
+            using (StringFormat sf = new StringFormat())
+            {
+                sf.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces | StringFormatFlags.NoWrap;
+                if (rtl) sf.FormatFlags |= StringFormatFlags.DirectionRightToLeft;
+                SizeF m;
+                float lineH;
+                using (Bitmap tmp = new Bitmap(4, 4))
+                using (Graphics g0 = Graphics.FromImage(tmp))
+                {
+                    g0.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+                    m = g0.MeasureString(s, f, 8000, sf);
+                    lineH = f.GetHeight(g0);
+                }
+                int w = Math.Max(4, (int)Math.Ceiling(m.Width) + Pad * 2 + 4);
+                int h = (int)Math.Ceiling(lineH) + Pad * 2;
+                using (Bitmap b = new Bitmap(w, h, PixelFormat.Format32bppArgb))
+                using (Graphics g = Graphics.FromImage(b))
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+                    g.Clear(Color.Transparent);
+                    RectangleF r = new RectangleF(Pad, Pad, w - Pad * 2, lineH);
+                    if (shadow)
+                        using (SolidBrush sb = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))
+                            g.DrawString(s, f, sb, new RectangleF(r.X + 3f, r.Y + 3f, r.Width, r.Height), sf);
+                    if (outline)
+                        using (SolidBrush ob = new SolidBrush(Color.FromArgb(235, 0, 0, 0)))
+                            for (int k = 0; k < 12; k++)
+                            {
+                                double an = k * Math.PI / 6;
+                                g.DrawString(s, f, ob, new RectangleF(r.X + (float)Math.Cos(an) * 2.6f, r.Y + (float)Math.Sin(an) * 2.6f, r.Width, r.Height), sf);
+                            }
+                    g.DrawString(s, f, Brushes.White, r, sf);
+                    string tmpf = file + ".tmp";
+                    b.Save(tmpf, ImageFormat.Png);
+                    if (File.Exists(file)) File.Delete(file);
+                    File.Move(tmpf, file);
+                }
+            }
+        }
+
+        // splits a template into drawable parts: static text pieces and variable values
+        public static List<string> Parts(string tpl, string name, int count, string rival, int level)
+        {
+            List<string> r = new List<string>();
+            if (string.IsNullOrEmpty(tpl)) return r;
+            int i = 0;
+            StringBuilder cur = new StringBuilder();
+            while (i < tpl.Length)
+            {
+                string val = null;
+                int len = 0;
+                if (tpl[i] == '{')
+                {
+                    if (string.Compare(tpl, i, "{name}", 0, 6) == 0) { val = name ?? ""; len = 6; }
+                    else if (string.Compare(tpl, i, "{count}", 0, 7) == 0) { val = count.ToString(U.IC); len = 7; }
+                    else if (string.Compare(tpl, i, "{rival}", 0, 7) == 0) { val = rival ?? ""; len = 7; }
+                    else if (string.Compare(tpl, i, "{level}", 0, 7) == 0) { val = level.ToString(U.IC); len = 7; }
+                }
+                if (val == null) { cur.Append(tpl[i]); i++; continue; }
+                AddPart(r, cur.ToString());
+                cur.Length = 0;
+                AddPart(r, val);
+                i += len;
+            }
+            AddPart(r, cur.ToString());
+            return r;
+        }
+
+        static void AddPart(List<string> r, string s)
+        {
+            string p = Prep(s);
+            if (p.Length > 0) r.Add(p);
+        }
+    }
+
     static class Gfx
     {
         static readonly TextElement te = new TextElement("", PointF.Empty, 0.35f);
@@ -1531,6 +1778,7 @@ namespace TikArena
         public static void BeginFrame()
         {
             used.Clear();
+            Txt.NewFrame();
             if (U.Now > existsReset) { exists.Clear(); existsReset = U.Now + 2000; }
         }
 
@@ -1560,6 +1808,21 @@ namespace TikArena
         public static void TextAbs(string s, float x, float y, float scale, Color c, Alignment al, Font f)
         {
             if (string.IsNullOrEmpty(s) || c.A == 0) return;
+            string mode = Txt.Mode;
+            if (!mode.Equals("Off", StringComparison.OrdinalIgnoreCase))
+            {
+                s = Txt.Prep(s);
+                if (s.Length == 0) return;
+                if (Txt.NeedsImage(s))
+                {
+                    if (!mode.Equals("Latin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Txt.Tex t = Txt.Get(s, Outline, Shadow, true);
+                        if (t != null) { DrawTex(t, x, y, scale, c, al); return; }
+                    }
+                    s = Txt.Translit(s);
+                }
+            }
             te.Caption = s;
             te.Position = new PointF(x, y);
             te.Scale = scale;
@@ -1578,11 +1841,72 @@ namespace TikArena
             TextAbs(s, Ox + x * S, Oy + y * S, size * S * FontScale, c, al, F);
         }
 
+        // text drawn as an image: GDI+ line height mapped to the GTA line height of this scale
+        static void TexBox(Txt.Tex t, float scale, out float drawW, out float drawH, out float pad)
+        {
+            float lineH = scale * 38f * Txt.SizeFix;
+            drawH = lineH * t.H / Math.Max(1f, t.H - Txt.Pad * 2);
+            drawW = drawH * t.W / Math.Max(1f, t.H);
+            pad = Txt.Pad * drawH / Math.Max(1f, t.H);
+        }
+
+        static void DrawTex(Txt.Tex t, float x, float y, float scale, Color c, Alignment al)
+        {
+            float w, h, pad;
+            TexBox(t, scale, out w, out h, out pad);
+            float left = al == Alignment.Center ? x - w / 2 : (al == Alignment.Right ? x - w + pad : x - pad);
+            ImageAbsTint(t.File, left, y - pad + scale * 2f, w, h, c);
+        }
+
         public static float TextW(string s, float size)
         {
             if (string.IsNullOrEmpty(s)) return 0;
-            try { return TextElement.GetStringWidth(s, F, size * FontScale); }
-            catch { return s.Length * size * 18f * FontScale; }
+            float scale = size * FontScale;
+            if (!Txt.Mode.Equals("Off", StringComparison.OrdinalIgnoreCase))
+            {
+                s = Txt.Prep(s);
+                if (s.Length == 0) return 0;
+                if (Txt.NeedsImage(s))
+                {
+                    if (!Txt.Mode.Equals("Latin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Txt.Tex t = Txt.Get(s, Outline, Shadow, true);
+                        if (t != null) { float w, h, pad; TexBox(t, scale, out w, out h, out pad); return w - pad * 2; }
+                    }
+                    s = Txt.Translit(s);
+                }
+            }
+            try { return TextElement.GetStringWidth(s, F, scale); }
+            catch { return s.Length * scale * 18f; }
+        }
+
+        // several parts (template pieces + names) laid out in reading order; right-to-left when any part is Arabic
+        public static float PartsW(List<string> parts, float size)
+        {
+            if (parts == null || parts.Count == 0) return 0;
+            float w = 0;
+            foreach (string p in parts) w += TextW(p, size);
+            return w + (parts.Count - 1) * size * 11f * FontScale;
+        }
+
+        public static void Parts(List<string> parts, float x, float y, float size, Color c)
+        {
+            if (parts == null || parts.Count == 0) return;
+            bool rtl = false;
+            foreach (string p in parts) if (Txt.IsRtl(p)) { rtl = true; break; }
+            float gap = size * 11f * FontScale;
+            float cx = x;
+            for (int i = 0; i < parts.Count; i++)
+            {
+                string p = parts[rtl ? parts.Count - 1 - i : i];
+                Text(p, cx, y, size, c, Alignment.Left);
+                cx += TextW(p, size) + gap;
+            }
+        }
+
+        public static void PartsCentered(List<string> parts, float cx, float y, float size, Color c)
+        {
+            Parts(parts, cx - PartsW(parts, size) / 2, y, size, c);
         }
 
         public static bool FileOk(string file)
@@ -1597,7 +1921,12 @@ namespace TikArena
 
         public static void ImageAbs(string file, float x, float y, float w, float h, int alpha)
         {
-            if (!FileOk(file) || alpha <= 0) return;
+            ImageAbsTint(file, x, y, w, h, Color.FromArgb(U.Clamp(alpha, 0, 255), 255, 255, 255));
+        }
+
+        public static void ImageAbsTint(string file, float x, float y, float w, float h, Color tint)
+        {
+            if (!FileOk(file) || tint.A <= 0) return;
             List<CustomSprite> list;
             if (!pool.TryGetValue(file, out list)) { list = new List<CustomSprite>(); pool[file] = list; }
             int n;
@@ -1614,7 +1943,7 @@ namespace TikArena
             used[file] = n + 1;
             sp.Position = new PointF(x, y);
             sp.Size = new SizeF(w, h);
-            sp.Color = Color.FromArgb(U.Clamp(alpha, 0, 255), 255, 255, 255);
+            sp.Color = tint;
             sp.Draw();
         }
 
@@ -1783,6 +2112,13 @@ namespace TikArena
             cfg = Cfg.Load(ini);
             try { iniTime = File.Exists(iniPath) ? File.GetLastWriteTime(iniPath) : DateTime.MinValue; } catch { }
             U.DebugLog = cfg.DebugLog;
+            Txt.Mode = cfg.TextMode;
+            Txt.FontName = cfg.UnicodeFont;
+            Txt.Bold = cfg.UnicodeBold;
+            Txt.SizeFix = cfg.UnicodeSize;
+            Txt.StripEmoji = cfg.StripEmoji;
+            Txt.FancyToAscii = cfg.FancyToAscii;
+            Txt.MaxTextures = cfg.MaxTextTextures;
             style = cfg.HudStyle;
             fontName = cfg.HudFont;
             vertical = string.Equals(cfg.LayoutMode, "Vertical", StringComparison.OrdinalIgnoreCase);
@@ -1842,7 +2178,33 @@ namespace TikArena
         void Status(string msg)
         {
             if (!cfg.ShowStatusMessages || string.IsNullOrEmpty(msg)) return;
-            try { Screen.ShowSubtitle("~g~TikArena~s~  " + msg, 2500); } catch { }
+            toastParts = new List<string> { "TikArena" };
+            toastParts.AddRange(Txt.Parts(msg, "", 0, null, 0));
+            toastUntil = U.Now + 2800;
+        }
+
+        List<string> toastParts;
+        long toastUntil;
+
+        // status / load messages drawn by the HUD text system (GTA subtitles cannot show Arabic)
+        void DrawToast(bool begin)
+        {
+            if (toastParts == null || U.Now >= toastUntil) return;
+            if (Function.Call<bool>((Hash)0xB0034A223497FFCBUL)) return;
+            if (begin)
+            {
+                Gfx.BeginFrame();
+                Gfx.F = FontOf(fontName);
+                Gfx.FontScale = cfg.FontScale;
+                Gfx.Outline = cfg.TextOutline;
+                Gfx.Shadow = cfg.TextShadow;
+            }
+            Gfx.Origin(0, 0, 1);
+            float a = U.Clamp((toastUntil - U.Now) / 400f, 0, 1);
+            float w = Gfx.PartsW(toastParts, 0.42f) + 30, x = 640 - w / 2, y = 610;
+            Gfx.Rect(x, y, w, 30, Color.FromArgb((int)(210 * a), 10, 14, 22));
+            Gfx.Rect(x, y, 4, 30, Color.FromArgb((int)(255 * a), 0, 230, 118));
+            Gfx.Parts(toastParts, x + 15, y + 3, 0.42f, Color.FromArgb((int)(255 * a), 255, 255, 255));
         }
 
         // ================================================================ main loop
@@ -1856,10 +2218,14 @@ namespace TikArena
                 first = false;
                 if (cfg.ShowLoadMessage)
                 {
-                    try { Notification.Show("~g~TikArena~s~ " + cfg.Tx("LoadedText", "Ready. Press") + " ~y~" + cfg.PowerKey); } catch { }
+                    toastParts = new List<string> { "TikArena" };
+                    toastParts.AddRange(Txt.Parts(cfg.Tx("LoadedText", "Ready. Press"), "", 0, null, 0));
+                    toastParts.Add(cfg.PowerKey.ToString());
+                    toastUntil = U.Now + 7000;
                 }
             }
             FileWatch();
+            try { if (!started || !cfg.HudEnabled) DrawToast(true); } catch (Exception ex) { U.Error("Toast", ex); }
             if (!powered) return;
 
             try { ProcessInbox(); } catch (Exception ex) { U.Error("Inbox", ex); }
@@ -1899,7 +2265,7 @@ namespace TikArena
                 if (k == cfg.HypeTestKey)
                 {
                     Supporter t = GetSup("test:" + cfg.TestUserName, cfg.TestUserName, null, 25);
-                    PushHype(U.Fill(cfg.ComboText, t.Nick, cfg.ComboMin), t);
+                    PushHype(cfg.ComboText, t, cfg.ComboMin, null);
                     return;
                 }
                 if (cfg.TestKeysEnabled)
@@ -2301,7 +2667,7 @@ namespace TikArena
                     if (cfg.HypeEnabled && cfg.ComboEnabled && e.RepeatCount >= cfg.ComboMin && !comboFired.Contains(skey))
                     {
                         comboFired.Add(skey);
-                        PushHype(U.Fill(cfg.ComboText, s.Nick, e.RepeatCount), s);
+                        PushHype(cfg.ComboText, s, e.RepeatCount, null);
                     }
                     if (e.RepeatEnd) comboFired.Remove(skey);
                 }
@@ -2309,7 +2675,7 @@ namespace TikArena
                 {
                     delta = Math.Max(1, e.RepeatCount);
                     if (cfg.HypeEnabled && cfg.ComboEnabled && delta >= cfg.ComboMin)
-                        PushHype(U.Fill(cfg.ComboText, s.Nick, delta), s);
+                        PushHype(cfg.ComboText, s, delta, null);
                 }
                 if (delta <= 0) return;
                 e.Count = delta;
@@ -2401,7 +2767,8 @@ namespace TikArena
             if (cfg.NotifEnabled && it.Message.Length > 0)
             {
                 FeedItem f = new FeedItem();
-                f.Text = U.Fill(it.Message, s.Nick, units);
+                f.Parts = Txt.Parts(it.Message, s.Nick, units, null, s.Level);
+                f.Text = string.Join(" ", f.Parts.ToArray());
                 f.Avatar = cfg.NotifAvatar ? Avatar(s) : null;
                 f.Icon = cfg.NotifGiftIcon ? ImgPath(it.GiftImage) : null;
                 f.Start = U.Now;
@@ -2456,11 +2823,13 @@ namespace TikArena
             return true;
         }
 
-        void PushHype(string text, Supporter s)
+        void PushHype(string tpl, Supporter s, int count, string rival)
         {
-            if (!cfg.HypeEnabled || string.IsNullOrEmpty(text)) return;
+            if (!cfg.HypeEnabled || string.IsNullOrEmpty(tpl)) return;
             FeedItem f = new FeedItem();
-            f.Text = text.Replace("{level}", s != null ? s.Level.ToString(U.IC) : "0");
+            int lvl = s != null ? s.Level : 0;
+            f.Parts = Txt.Parts(tpl, s != null ? s.Nick : "", count, rival, lvl);
+            f.Text = string.Join(" ", f.Parts.ToArray());
             f.Avatar = Avatar(s);
             f.Level = s != null ? s.Level : 0;
             f.Start = U.Now;
@@ -2490,7 +2859,7 @@ namespace TikArena
                 Supporter prev = king;
                 king = k;
                 if (prev != null && cfg.NewKingEnabled && k.Coins >= cfg.NewKingMinCoins && HypeReady("newking:" + k.Key, 30))
-                    PushHype(U.Fill(cfg.NewKingText, k.Nick, 0), k);
+                    PushHype(cfg.NewKingText, k, 0, null);
             }
         }
 
@@ -2499,12 +2868,12 @@ namespace TikArena
             if (!cfg.HypeEnabled) return;
             if (cfg.KingJoinEnabled && king == s && s.Coins > 0)
             {
-                if (HypeReady("join:" + s.Key, 120)) PushHype(U.Fill(cfg.KingJoinText, s.Nick, 0), s);
+                if (HypeReady("join:" + s.Key, 120)) PushHype(cfg.KingJoinText, s, 0, null);
                 return;
             }
             if (cfg.VipJoinEnabled && (s.Level >= cfg.VipJoinMinLevel || s.Coins >= cfg.VipJoinMinCoins))
             {
-                if (HypeReady("join:" + s.Key, 120)) PushHype(U.Fill(cfg.VipJoinText, s.Nick, 0), s);
+                if (HypeReady("join:" + s.Key, 120)) PushHype(cfg.VipJoinText, s, 0, null);
             }
         }
 
@@ -2513,7 +2882,7 @@ namespace TikArena
             if (!cfg.HypeEnabled || !cfg.RivalryEnabled || lastEnemySup == null || lastEnemySup == helper) return;
             if (U.Now - lastEnemyAt > cfg.RivalrySeconds * 1000) return;
             if (!HypeReady("rival:" + helper.Key + ":" + lastEnemySup.Key, 60)) return;
-            PushHype(U.Fill(cfg.RivalryText, helper.Nick, 0).Replace("{rival}", lastEnemySup.Nick), helper);
+            PushHype(cfg.RivalryText, helper, 0, lastEnemySup.Nick);
         }
 
         void UpdateHypeChecks()
@@ -2528,7 +2897,7 @@ namespace TikArena
                 if (now - s.LastGift < cfg.ComebackMinutes * 60000) continue;
                 if (now - s.LastActive > 120000) continue;
                 s.ComebackSent = true;
-                PushHype(U.Fill(cfg.ComebackText, s.Nick, 0), s);
+                PushHype(cfg.ComebackText, s, 0, null);
                 break;
             }
         }
@@ -3109,7 +3478,8 @@ namespace TikArena
                 if (cfg.FeedEnabled)
                 {
                     FeedItem f = new FeedItem();
-                    f.Text = U.Fill(cfg.Tx("KillFeedText", "{name}"), t.Sup != null ? t.Sup.Nick : "?", 1);
+                    f.Parts = Txt.Parts(cfg.Tx("KillFeedText", "{name}"), t.Sup != null ? t.Sup.Nick : "?", 1, null, 0);
+                    f.Text = string.Join(" ", f.Parts.ToArray());
                     f.Avatar = Avatar(t.Sup);
                     f.Start = U.Now;
                     f.End = U.Now + (long)(cfg.FeedSeconds * 1000);
@@ -4263,6 +4633,7 @@ namespace TikArena
             Place("Hype", cfg.HypeEnabled && hypes.Count > 0, fHype);
             EndScreen();
             LiveBadge();
+            DrawToast(false);
             if (paused)
             {
                 Gfx.Origin(0, 0, 1);
@@ -4316,10 +4687,10 @@ namespace TikArena
             return phase == Phase.Running && left < 30000 && (U.Now / 500) % 2 == 0 ? cLoss : cTxt;
         }
 
-        string StreakText()
+        List<string> StreakParts()
         {
             bool win = streak > 0;
-            return Math.Abs(streak).ToString(U.IC) + " " + (win ? cfg.Tx("WinStreakText", "") : cfg.Tx("LossStreakText", ""));
+            return new List<string> { Math.Abs(streak).ToString(U.IC), win ? cfg.Tx("WinStreakText", "") : cfg.Tx("LossStreakText", "") };
         }
 
         SizeF ScorePanel(bool draw)
@@ -4346,7 +4717,7 @@ namespace TikArena
                 }
                 if (timer) Gfx.Text(TimerText(), w / 2, y + 5, 0.52f, TimerColor(), Alignment.Center);
                 y += 38;
-                if (showStreak) Gfx.Text(StreakText(), w / 2, y - 2, SMALL, streak > 0 ? cWin : cLoss, Alignment.Center);
+                if (showStreak) Gfx.PartsCentered(StreakParts(), w / 2, y - 2, SMALL, streak > 0 ? cWin : cLoss);
                 return new SizeF(w, h);
             }
             if (Is(v, "BigTimer"))
@@ -4370,7 +4741,7 @@ namespace TikArena
                     Gfx.Text(losses.ToString(U.IC) + " " + cfg.Tx("LossShort", "L"), w / 2 + 12, y, TXT, cLoss, Alignment.Left);
                     y += 24;
                 }
-                if (showStreak) Gfx.Text(StreakText(), w / 2, y - 2, SMALL, streak > 0 ? cWin : cLoss, Alignment.Center);
+                if (showStreak) Gfx.PartsCentered(StreakParts(), w / 2, y - 2, SMALL, streak > 0 ? cWin : cLoss);
                 return new SizeF(w, h);
             }
 
@@ -4412,7 +4783,7 @@ namespace TikArena
                     }
                     else if (r == "streak")
                     {
-                        Gfx.Text(StreakText(), w / 2, y + 2, TXT, streak > 0 ? cWin : cLoss, Alignment.Center);
+                        Gfx.PartsCentered(StreakParts(), w / 2, y + 2, TXT, streak > 0 ? cWin : cLoss);
                         y += 22;
                     }
                 }
@@ -4438,10 +4809,11 @@ namespace TikArena
 
         void CountersRow(float w, float y)
         {
-            string c = cfg.Tx("EnemiesShort", "E") + " " + AliveCount(true) + "  ·  " +
-                       cfg.Tx("AlliesShort", "A") + " " + AliveCount(false) + "  ·  " +
-                       cfg.Tx("QueueShort", "Q") + " " + QueueCount();
-            Gfx.Text(c, w / 2, y + 3, SMALL, TextCol(230), Alignment.Center);
+            List<string> c = new List<string> {
+                cfg.Tx("EnemiesShort", "E"), AliveCount(true).ToString(U.IC), "·",
+                cfg.Tx("AlliesShort", "A"), AliveCount(false).ToString(U.IC), "·",
+                cfg.Tx("QueueShort", "Q"), QueueCount().ToString(U.IC) };
+            Gfx.PartsCentered(c, w / 2, y + 3, SMALL, TextCol(230));
         }
 
         void StatusRow(float w, float y)
@@ -4581,7 +4953,7 @@ namespace TikArena
             if (Is(v, "Segmented"))
             {
                 PanelBg(0, 0, w, h, 0.85f);
-                Gfx.Text(cfg.HealthLabel + " " + pct, 8, 3, TXT, TextCol(255), Alignment.Left);
+                Gfx.Parts(new List<string> { cfg.HealthLabel, pct }, 8, 3, TXT, TextCol(255));
                 if (cfg.ShowHealthPoints) Gfx.Text(hpNow + " / " + hpMax, w - 8, 3, TXT, TextCol(220), Alignment.Right);
                 const int segs = 10;
                 float sw = (w - 16 - (segs - 1) * 3) / segs;
@@ -4600,7 +4972,7 @@ namespace TikArena
                 Gfx.Text(hpNow.ToString(U.IC), 10, 0, 0.72f, hc, Alignment.Left);
                 float nw = Gfx.TextW(hpNow.ToString(U.IC), 0.72f);
                 Gfx.Text("/ " + hpMax, 14 + nw, 14, TXT, TextCol(200), Alignment.Left);
-                Gfx.Text(cfg.HealthLabel + " " + pct, w - 10, 14, SMALL, TextCol(220), Alignment.Right);
+                Gfx.Parts(new List<string> { cfg.HealthLabel, pct }, w - 10 - Gfx.PartsW(new List<string> { cfg.HealthLabel, pct }, SMALL), 14, SMALL, TextCol(220));
                 Gfx.Bar(10, 38, w - 20, 4, frac, hc, back);
                 if (armor) Gfx.Bar(10, 44, w - 20, 3, af, armorC, back);
             }
@@ -4616,7 +4988,7 @@ namespace TikArena
             else
             {
                 PanelBg(0, 0, w, h, 0.85f);
-                Gfx.Text(cfg.HealthLabel + " " + pct, 8, 3, TXT, TextCol(255), Alignment.Left);
+                Gfx.Parts(new List<string> { cfg.HealthLabel, pct }, 8, 3, TXT, TextCol(255));
                 if (cfg.ShowHealthPoints) Gfx.Text(hpNow + " / " + hpMax, w - 8, 3, TXT, TextCol(220), Alignment.Right);
                 Gfx.Bar(8, 22, w - 16, 12, frac, hc, back);
                 if (armor) Gfx.Bar(8, 37, w - 16, 5, af, armorC, back);
@@ -4744,10 +5116,12 @@ namespace TikArena
         // ---------------------------------------------------------------- feeds (notifications, kill feed, hype)
         float RowWidth(FeedItem f, float img, float size, bool hype)
         {
-            float rw = 12 + (f.Avatar != null ? img + 6 : 0) + Gfx.TextW(f.Text, size) + (f.Icon != null && Gfx.FileOk(f.Icon) ? img + 6 : 0);
+            float rw = 12 + (f.Avatar != null ? img + 6 : 0) + FeedTextW(f, size) + (f.Icon != null && Gfx.FileOk(f.Icon) ? img + 6 : 0);
             if (hype && cfg.HypeShowLevel && f.Level > 0) rw += Gfx.TextW("Lv " + f.Level, SMALL) + 12;
             return rw;
         }
+
+        static float FeedTextW(FeedItem f, float size) { return f.Parts != null ? Gfx.PartsW(f.Parts, size) : Gfx.TextW(f.Text, size); }
 
         SizeF FeedList(bool draw, List<FeedItem> items, string panel, float rowH, float img, float size, bool hype)
         {
@@ -4806,8 +5180,9 @@ namespace TikArena
                     Gfx.Text(lv, cx + lw / 2, ry + (rowH - 14) / 2, SMALL * 0.9f, U.WithAlpha(Color.Black, (int)(255 * a)), Alignment.Center);
                     cx += lw + 4;
                 }
-                Gfx.Text(f.Text, cx, ry + (rowH - Gfx.LineH(size)) / 2, size, U.WithAlpha(tc, (int)(255 * a)), Alignment.Left);
-                cx += Gfx.TextW(f.Text, size) + 6;
+                if (f.Parts != null) Gfx.Parts(f.Parts, cx, ry + (rowH - Gfx.LineH(size)) / 2, size, U.WithAlpha(tc, (int)(255 * a)));
+                else Gfx.Text(f.Text, cx, ry + (rowH - Gfx.LineH(size)) / 2, size, U.WithAlpha(tc, (int)(255 * a)), Alignment.Left);
+                cx += FeedTextW(f, size) + 6;
                 if (f.Icon != null && Gfx.FileOk(f.Icon)) Gfx.Image(f.Icon, cx, ry + (rowH - img) / 2, img, img, (int)(255 * a));
                 y += rowH + gap;
             }
@@ -4851,7 +5226,7 @@ namespace TikArena
 
                 if (ostyle == "card")
                 {
-                    float nw = Math.Max(60 * s, TextElement.GetStringWidth(name, Gfx.F, ts) + 10 * s);
+                    float nw = Math.Max(60 * s, Gfx.TextW(name, TXT * s) + 10 * s);
                     float ch = lh + 12 * s, sz = 34 * s;
                     float cx = sp.X - (nw + sz) / 2 + sz, cy = sp.Y - ch;
                     Gfx.RectAbs(cx, cy, nw, ch, U.WithAlpha(cPan, 200));

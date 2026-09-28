@@ -356,7 +356,8 @@ function defaults(){
     HealthEnabled:true,HealthLabel:"health",HealthColor:"#1ed760",ShowArmor:true,ShowHealthPoints:false,HideRadar:false,
     GuideEnabled:true,GuideMax:8,GuideMode:"Cards",GuideRotateCount:3,GuideRotateSeconds:5,GuideRandom:true,GuideShowGiftImage:true,GuideShowActionImage:true,GuideTitleEnabled:false,GuideTitle:"🎁 الهدايا",GuideGiftColor:"#2979ff",GuideActionColor:"#00e676",
     OverheadEnabled:true,OverheadAvatar:true,OverheadName:true,OverheadHealth:true,OverheadHeight:1.2,AvatarShape:"Circle",OverheadStyle:"Classic",OverheadRing:true,OverheadLevel:true,
-    ScoreVariant:"Classic",Top3Variant:"List",HealthVariant:"Bar",NotifVariant:"Card",FeedAnimation:"Slide"};
+    ScoreVariant:"Classic",Top3Variant:"List",HealthVariant:"Bar",NotifVariant:"Card",FeedAnimation:"Slide",
+    TextMode:"Auto",UnicodeFont:"Segoe UI",UnicodeBold:true,UnicodeSize:1,StripEmoji:true,FancyToAscii:true,MaxTextTextures:1500};
   S.Notifications = {Enabled:true,Seconds:5,MaxVisible:5,ShowAvatar:true,ShowGiftIcon:true};
   S.KillFeed = {Enabled:true,Seconds:4,MaxVisible:4};
   S.Hype = {Enabled:true,Seconds:6,MaxVisible:3,ShowLevel:true,Color:"#ffc828",
@@ -952,6 +953,11 @@ function renderAllForms(){
       ["FontScale","حجم الكتابة","range",{min:0.5,max:2,step:0.05}],["Opacity","الشفافية","range",{min:0,max:255}],["TextOutline","الحواشي","b"],["TextShadow","الظل","b"],
       ["AccentColor","اللون الرئيسي","c"],["TextColor","لون الكتابة","c"],["PanelColor","لون الخلفية","c"],["WinColor","لون الفوز","c"],["LossColor","لون الخسارة","c"],
       ["AvatarShape","شكل الصور","s",{opts:[["Circle","⚪ دائرة"],["Square","⬜ مربع"]]}],["HideRadar","🗺️ إخفاء الرادار","b"]]},
+    {sec:"Hud", title:"🔤 العربية وأسماء الداعمين", hint:"الخطوط ديال GTA ما فيهاش الحروف العربية. Auto: أي كتابة عربية (أسماء، جمل، عناوين) كتترسم كصورة بخط ديال Windows (الحروف مربوطة ومن اليمين لليسار) وكتبان فالهود. Latin: كتتحول لحروف لاتينية (أحمد → Ahmd). Always: كلشي كصورة. الأسماء المزخرفة (𝓐𝓶𝓲𝓷𝓮) كتولي عادية.", fields:[
+      ["TextMode","🔤 طريقة الكتابة","s",{opts:[["Auto","✅ Auto (العربية كصورة)"],["Always","🖼️ كلشي كصورة"],["Latin","🔠 تحويل للاتيني"],["Off","⛔ بلا (GTA فقط)"]]}],
+      ["UnicodeFont","🅰️ خط Windows","s",{opts:["Segoe UI","Tahoma","Arial","Calibri","Traditional Arabic","Sakkal Majalla","Simplified Arabic","Cairo","Dubai","Noto Sans Arabic"]}],
+      ["UnicodeBold","عريض (Bold)","b"],["UnicodeSize","📏 حجم الكتابة العربية","range",{min:0.5,max:2,step:0.05}],
+      ["FancyToAscii","𝓐 → A (الأسماء المزخرفة)","b"],["StripEmoji","🙂 حيد الإيموجي من الكتابة","b"],["MaxTextTextures","🧮 أقصى عدد ديال الصور","i",{min:50,max:20000}]]},
     {sec:"Hud", title:"🧩 الأنواع (Variants)", hint:"كل لوحة عندها أشكال مختلفة. StylePalette = كل ستايل احترافي كيجيب الألوان ديالو (مختلفة على الأخضر ديال الأصل).", fields:[["StylePalette","🎨 ألوان الستايل الخاصة","b"],
       ["ScoreVariant","🏆 الفوز والخسارة","s",{opts:[["Classic","📦 كلاسيك"],["Bar","➖ شريط"],["BigTimer","⏱️ عداد كبير"]]}],
       ["Top3Variant","👑 الداعمين","s",{opts:[["List","📋 لائحة"],["Podium","🏆 منصة"],["Compact","⚪ صور فسطر"]]}],
