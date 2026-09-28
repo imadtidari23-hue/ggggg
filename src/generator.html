@@ -124,6 +124,16 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
 .mhead{display:flex;gap:10px;align-items:center;padding:14px;border-bottom:1px solid var(--line2)}
 .mhead b{font-size:16px;flex:none}
 .mbody{overflow:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.agroup{grid-column:1/-1;color:var(--acc);font-weight:900;font-size:14px;margin-top:6px;border-bottom:1px solid var(--line2);padding-bottom:4px}
+.mbody.tiles{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+.atile{aspect-ratio:1;border:1px solid var(--line2);background:linear-gradient(180deg,#0f1622,#0a1019);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;text-align:center;transition:.15s}
+.atile .e{font-size:40px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+.atile b{font-size:12px;line-height:1.3}
+.atile small{font-size:10px;color:var(--mut);direction:ltr}
+.atile:hover{border-color:var(--acc);box-shadow:0 0 14px rgba(0,230,118,.3);transform:translateY(-2px)}
+.atile.on{border-color:var(--acc);background:linear-gradient(180deg,rgba(0,230,118,.18),#0a1019)}
+.actbtn{width:100%;justify-content:space-between}
+.actbtn .e{font-size:22px}
 .citem{border:1px solid var(--line2);background:#0a1019;border-radius:11px;padding:8px;cursor:pointer;display:flex;gap:8px;align-items:center;transition:.15s}
 .citem:hover{border-color:var(--acc);box-shadow:0 0 10px rgba(0,230,118,.2)}
 .citem .e{font-size:24px;flex:none}
@@ -159,6 +169,8 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
       <button class="btn pri" id="btnAddInter">➕ تفاعل جديد</button>
       <button class="btn" id="btnGiftsCatalog">📖 كتالوج الهدايا</button>
       <button class="btn" id="btnAllPrompts">✨ كل البرومبتات</button>
+      <button class="btn blue" id="btnGiftsLog" title="scripts\TikArena\gifts-log.txt">📚 استيراد gifts-log.txt (IDs + كوينز حقيقيين)</button>
+      <input type="file" id="fileGiftsLog" accept=".txt,text/plain" hidden>
     </div>
   </section>
   <section class="card" id="sec-keys"><h2><span class="num">02</span>⌨️ الأزرار والتشغيل</h2><div id="formKeys"></div></section>
@@ -374,7 +386,7 @@ function defaults(){
   S.Camera = {InvincibleDuringCam:true,EntryEnabled:true,EntryMinCoins:1000,EntrySeconds:3,KillerEnabled:true,KillerSeconds:3,SlowMoMode:"LastInWave",SlowMoScale:0.3,SlowMoSeconds:1.5,WinEnabled:true,WinSeconds:4};
   S.Graphics = {LockTime:false,Hour:21,Minute:0,LockWeather:false,Weather:"Clear",TimecycleEnabled:false,Timecycle:"rply_saturation",TimecycleStrength:0.6,DensityEnabled:false,PedDensity:1,VehicleDensity:1};
   S.Texts = {WinText:"فوز",LossText:"خسارة",WinShort:"فوز",LossShort:"خسارة",MvpText:"MVP",MvpWinReason:"ساعدك باش تربح",MvpLossReason:"هو السبب ف الخسارة",KillFeedText:"{name} قُتل",
-    WinStreakText:"انتصارات متتالية",LossStreakText:"خسارات متتالية",EnemiesShort:"أعداء",AlliesShort:"مساعدين",KillsShort:"قتلات",QueueShort:"الطابور",PausedText:"إيقاف مؤقت",ResumedText:"استئناف",
+    WinStreakText:"انتصارات متتالية",LossStreakText:"خسارات متتالية",EnemiesShort:"أعداء",AlliesShort:"مساعدين",KillsShort:"قتلات",QueueShort:"الطابور",PausedText:"إيقاف مؤقت",RespawnText:"الرجوع بعد",ResumedText:"استئناف",
     StartedText:"بدأ التحدي",EmergencyText:"تم مسح كل شيء",LoadedText:"جاهز. ضغط",ReloadedText:"تحدثات الإعدادات",ImportedText:"تجابو الإعدادات الجداد من Downloads"};
   S.Layout = layoutDefaults(false);
   S.LayoutVertical = layoutDefaults(true);
@@ -384,13 +396,13 @@ function defaults(){
   S.LiveTest = {Enabled:true,Key:"F9",ShowBadge:true,Names:"أحمد,سارة,Yassine,Nora,Karim,Lina,Omar,Hiba,Adam,Salma,Mehdi,Imane,Zakaria,Khadija,Anas,Rania",AvatarUrls:"",Comments:"GG,🔥,يلاه,اقتلوه,عاونوه,واو",
     MinDelayMs:700,MaxDelayMs:2200,GiftWeight:45,LikeWeight:25,CommentWeight:10,FollowWeight:8,ShareWeight:6,JoinWeight:6,ComboChance:25,MaxCombo:15};
   S.PlayerFx = {Enabled:true,Popup:true,PopupSeconds:2.5,Burst:true,BuffAura:true,SpeedColor:"#29b6ff",GodColor:"#ffc828",JumpColor:"#39ff14",FreezeColor:"#bff4ff",WeaponColor:"#ff9f1c",HealColor:"#00e676",SpeedTrail:"core|ent_amb_elec_crackle"};
-  S.Death = {CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Coffin:true,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
+  S.Death = {CustomDeath:true,RespawnSeconds:6,RespawnMode:"Here",CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Coffin:true,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
   return {
     v:1, ini:S, interactions:defaultInteractions(),
     sounds:{kill:null, death:null},             // {name, data(dataURL)}
     obs:{Columns:2, Size:84, ShowNames:true, Background:"transparent"},
     ui:{sound:true, preview:"Normal", selPanel:"Score", claude:null},
-    customGifts:[]
+    customGifts:[], giftDb:{}
   };
 }
 const PANELS = [["Score","🏆 الفوز والخسارة"],["Top3","👑 لوحة الداعمين"],["Health","❤️ شريط الطاقة"],["Guide","🎁 دليل الهدايا"],["Notif","🔔 الإشعارات"],["Feed","☠️ Kill Feed"],["Hype","🔥 رسائل الحماس"]];
@@ -664,7 +676,57 @@ function thumbHTML(img, emoji){ return img ? `<img src="${img}" alt="">` : esc(e
 
 // ------------------------------------------------------------- catalog modal
 let catCb = null, catType = "";
-function allGifts(){ return GIFTS.concat(state.customGifts.map(g => [g[0], g[1] || "🎁", g[2] || 0, true])); }
+// action picker: squares (picture on top, name under), grouped
+let actPickIndex = -1;
+function openActionPicker(i){
+  actPickIndex = i;
+  catType = "actiontiles"; catCb = null;
+  $("#mTitle").textContent = "🎬 اختار الأكشن";
+  $("#mSearch").value = "";
+  $("#mAdd").style.display = "none";
+  renderActionTiles();
+  $("#modal").classList.add("on");
+  setTimeout(() => $("#mSearch").focus(), 50);
+}
+function renderActionTiles(){
+  const q = $("#mSearch").value.trim().toLowerCase(), cur = (state.interactions[actPickIndex] || {}).Action;
+  let html = "";
+  Object.keys(GROUPS).forEach(g => {
+    const list = ACTIONS.filter(a => a.group === g && (!q || (a.name + " " + a.key).toLowerCase().includes(q)));
+    if (!list.length) return;
+    html += `<div class="agroup">${GROUPS[g]}</div>` + list.map(a => `<div class="atile ${a.key===cur?"on":""}" data-act="${a.key}"><span class="e">${a.emoji}</span><b>${esc(a.name)}</b><small>${a.key}</small></div>`).join("");
+  });
+  const body = $("#mBody");
+  body.classList.add("tiles");
+  body.innerHTML = html || `<p class="hint">ما كاين والو</p>`;
+  body.onclick = e => {
+    const t = e.target.closest("[data-act]"); if (!t) return;
+    const it = state.interactions[actPickIndex]; if (!it) return;
+    const prev = it.Action; it.Action = t.dataset.act;
+    if (prev !== it.Action) onActionChange(it, prev);
+    closeModal(); renderInteractions(); changed();
+  };
+}
+// IDs of common gifts (the learn mode / gifts-log.txt gives the exact ones)
+const GIFT_IDS = {"Rose":"5655","TikTok":"5269","GG":"6064","Ice Cream Cone":"5827","Finger Heart":"5487","Heart Me":"7934","Perfume":"5658","Doughnut":"5879","Hand Hearts":"5660","Confetti":"5585","Galaxy":"11046","Lion":"6369"};
+function giftId(name){ const k = String(name || "").toLowerCase(); const db = state.giftDb || {}; for (const n in db) if (n.toLowerCase() === k && db[n].id) return db[n].id; for (const n in GIFT_IDS) if (n.toLowerCase() === k) return GIFT_IDS[n]; return ""; }
+// gifts-log.txt (learn mode): "date | Name | id=123 | coins=5 | user=..." -> real IDs and coins
+function importGiftsLog(text){
+  state.giftDb = state.giftDb || {};
+  let n = 0, filled = 0;
+  String(text).split(/\r?\n/).forEach(line => {
+    const p = line.split("|").map(x => x.trim());
+    if (p.length < 3) return;
+    const name = p[1], id = (p.find(x => /^id=/.test(x)) || "").slice(3), coins = +((p.find(x => /^coins=/.test(x)) || "").slice(6)) || 0;
+    if (!name) return;
+    state.giftDb[name] = {id, coins}; n++;
+    if (!GIFTS.some(g => g[0].toLowerCase() === name.toLowerCase()) && !state.customGifts.some(g => g[0].toLowerCase() === name.toLowerCase())) state.customGifts.push([name, "🎁", coins]);
+  });
+  state.interactions.forEach(it => { if (it.Trigger === "Gift" && it.GiftName) { const id = giftId(it.GiftName); if (id && it.GiftId !== id) { it.GiftId = id; filled++; } } });
+  renderInteractions(); changed();
+  toast(`📚 ${n} هدية · تعمرو ${filled} IDs`);
+}
+function allGifts(){ const db = state.giftDb || {}; return GIFTS.map(g => db[g[0]] && db[g[0]].coins ? [g[0], g[1], db[g[0]].coins] : g).concat(state.customGifts.map(g => [g[0], g[1] || "🎁", g[2] || 0, true])); }
 function openCatalog(type, cb){
   catType = type; catCb = cb;
   $("#mTitle").textContent = {gift:"🎁 كتالوج الهدايا", model:"🧍 السكنات", weapon:"🔫 الأسلحة", vehicle:"🚗 الطوموبيلات", action:"⚡ الأكسيونات"}[type];
@@ -675,6 +737,8 @@ function openCatalog(type, cb){
   setTimeout(() => $("#mSearch").focus(), 50);
 }
 function renderCatalog(){
+  if (catType === "actiontiles") return renderActionTiles();
+  $("#mBody").classList.remove("tiles");
   const q = $("#mSearch").value.trim().toLowerCase();
   let items;
   if (catType === "gift") items = allGifts().map(g => ({v:g[0], e:g[1], t:g[0], s:"≈ " + g[2] + " كوينز", raw:g}));
@@ -731,7 +795,9 @@ function triggerFields(i){
   const it = state.interactions[i], t = it.Trigger;
   if (t === "Gift"){
     const c = giftCoins(it.GiftName);
-    return `<div><label>🎁 الهدية</label><div class="row" style="display:flex;gap:5px"><input type="text" class="ltr" list="giftNames" data-ii="${i}" data-ik="GiftName" data-t="t" value="${esc(it.GiftName)}"><button class="btn sm icon" data-giftcat="${i}">📖</button></div>${c!=null?`<div class="coins">≈ ${c} كوينز</div>`:""}</div>` + iField(i,"GiftId","🆔 ID (اختياري)","t");
+    const known = giftId(it.GiftName);
+    return `<div><label>🎁 الهدية</label><div class="row" style="display:flex;gap:5px"><input type="text" class="ltr" list="giftNames" data-ii="${i}" data-ik="GiftName" data-t="t" value="${esc(it.GiftName)}"><button class="btn sm icon" data-giftcat="${i}">📖</button></div>${c!=null?`<div class="coins">≈ ${c} كوينز</div>`:""}</div>
+      <div><label>🆔 ID ديال الهدية</label><div class="row" style="display:flex;gap:5px"><input type="text" class="ltr" inputmode="numeric" placeholder="${known ? "مثلاً " + known : "مثلاً 5655"}" data-ii="${i}" data-ik="GiftId" data-t="t" value="${esc(it.GiftId)}">${known && known !== it.GiftId ? `<button class="btn sm" data-fillid="${i}" title="استعمل ${known}">↙ ${known}</button>` : ""}</div><div class="hint">بالاسم ولا بالـ ID (واحد منهم كيكفي)</div></div>`;
   }
   if (t === "Likes") return iField(i,"LikesCount","❤️ كل شحال من لايك","i",{min:1});
   if (t === "Comment") return iField(i,"CommentText","💬 الكلمة (خاوي = أي تعليق)","t");
@@ -785,7 +851,7 @@ function renderInteractions(){
           <div style="flex:1"><label>صورة الهدية</label><div style="display:flex;gap:4px"><input type="text" data-ii="${i}" data-ik="giftEmoji" data-t="t" value="${esc(it.giftEmoji)}" style="width:60px;text-align:center">${it.giftImg?`<button class="btn sm icon" data-imgdel="gift" data-i="${i}">🗑️</button>`:""}</div></div></div>
       </div>
       <div class="col">
-        <div><label>🎬 الأكشن</label><select data-ii="${i}" data-ik="Action" data-t="s">${actionOptions(it.Action)}</select></div>
+        <div><label>🎬 الأكشن</label><button class="btn actbtn" data-actpick="${i}"><span class="e">${esc(a.emoji)}</span><span style="flex:1;text-align:right">${esc(a.name)}</span><span>▦</span></button></div>
         <div class="imgpick"><div class="thumb act" data-img="act" data-i="${i}" title="صورة الأكشن">${thumbHTML(it.actImg, it.actEmoji)}</div>
           <div style="flex:1"><label>صورة الأكشن</label><div style="display:flex;gap:4px"><input type="text" data-ii="${i}" data-ik="actEmoji" data-t="t" value="${esc(it.actEmoji)}" style="width:60px;text-align:center">${it.actImg?`<button class="btn sm icon" data-imgdel="act" data-i="${i}">🗑️</button>`:""}</div></div></div>
         <span class="tag">${GROUPS[a.group]}</span>
@@ -865,8 +931,12 @@ interBox.addEventListener("change", e => {
 interBox.addEventListener("click", e => {
   const u = e.target.closest("[data-units]");
   if (u){ const it = state.interactions[+u.dataset.i]; it.Units = Math.max(1, Math.min(999, it.Units + (+u.dataset.units))); u.parentElement.querySelector("input").value = it.Units; changed(); return; }
+  const fid = e.target.closest("[data-fillid]");
+  if (fid){ const it = state.interactions[+fid.dataset.fillid]; it.GiftId = giftId(it.GiftName); renderInteractions(); changed(); return; }
+  const ap = e.target.closest("[data-actpick]");
+  if (ap){ openActionPicker(+ap.dataset.actpick); return; }
   const gc = e.target.closest("[data-giftcat]");
-  if (gc){ const it = state.interactions[+gc.dataset.giftcat]; openCatalog("gift", (v, item) => { it.GiftName = v; if (!it.giftImg) it.giftEmoji = item.e; renderInteractions(); changed(); }); return; }
+  if (gc){ const it = state.interactions[+gc.dataset.giftcat]; openCatalog("gift", (v, item) => { it.GiftName = v; it.GiftId = giftId(v) || it.GiftId; if (!it.giftImg) it.giftEmoji = item.e; renderInteractions(); changed(); }); return; }
   const th = e.target.closest(".thumb[data-img]");
   if (th){ const it = state.interactions[+th.dataset.i]; pickImage(png => { it[th.dataset.img + "Img"] = png; renderInteractions(); changed(); }); return; }
   const idl = e.target.closest("[data-imgdel]");
@@ -929,6 +999,8 @@ function showPrompts(ids){
 $("#pCopy").onclick = () => { navigator.clipboard.writeText(promptText).then(() => toast("📋 تنسخ"), () => toast("⚠️ ما قدرتش ننسخ")); };
 $("#pClose").onclick = () => $("#promptModal").classList.remove("on");
 $("#promptModal").addEventListener("click", e => { if (e.target.id === "promptModal") $("#promptModal").classList.remove("on"); });
+$("#btnGiftsLog").onclick = () => $("#fileGiftsLog").click();
+$("#fileGiftsLog").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; const r = new FileReader(); r.onload = () => importGiftsLog(r.result); r.readAsText(f); };
 $("#btnAllPrompts").onclick = () => showPrompts(state.interactions.map((_, i) => i));
 </script>
 <script>
@@ -1024,6 +1096,8 @@ function renderAllForms(){
       ["KingCrown","👑 تاج الملك","b"],["KingColor","لون التاج","c"],["Intensity","💡 قوة الضو","range",{min:0,max:20,step:0.5}],["Range","📏 مدى الضو","range",{min:0.5,max:10,step:0.5}],
       ["RingSize","⭕ حجم الدائرة","range",{min:0.4,max:4,step:0.1}],["MaxDistance","👁️ أقصى مسافة","i",{min:5,max:300}],["FxScale","✨ حجم الـ particles","range",{min:0.2,max:3,step:0.1}],
       ["FireFx","🔥 Fire (asset|name)","t",{ltr:true}],["SmokeFx","💨 Smoke","t",{ltr:true}],["ElectricFx","⚡ Electric","t",{ltr:true}],["SparklesFx","✨ Sparkles","t",{ltr:true}]]},
+    {sec:"Death", title:"💀 شاشة الموت (بلا WASTED ديال GTA)", hint:"CustomDeath: الشخصية ديالك ما كتموتش بصح فـ GTA، داكشي علاش ما كتبانش شاشة WASTED. ملي الدم كيوصل 0: كتطيح، الوقت كيبطا، كاميرا القاتل، الاحتفال، وشاشة الموت ديال الهود (بنفس الديزاين) مع عداد الرجوع. من بعد كتنوض هنا ولا فالسبيطار.", fields:[
+      ["CustomDeath","💀 شاشة موت ديال الهود (بلا WASTED)","b"],["RespawnSeconds","⏱️ الرجوع بعد (ث)","f",{min:1,max:60}],["RespawnMode","📍 فين كتنوض","s",{opts:[["Here","🧍 فنفس البلاصة"],["Hospital","🏥 أقرب سبيطار"]]}]]},
     {sec:"Death", title:"⚰️ الاحتفال ملي كتموت", hint:"الرقصة وحمل التابوت تقريبيين (خاصهم تجربة فاللعبة).", fields:[["CelebrationEnabled","مشعول","b"],["Seconds","المدة (ث)","f",{min:1,max:60}],["Dance","💃 الرقصة","b"],["DanceDict","Anim Dict","t",{ltr:true}],["DanceAnim","Anim","t",{ltr:true}],
       ["Coffin","⚰️ التابوت","b"],["CoffinModel","موديل التابوت","t",{ltr:true}],["SoundEnabled","🎵 موسيقى WAV (Coffin Dance)","b"],["Sound","ملف الموسيقى","wav",{slot:"death"}]]}
   ]);

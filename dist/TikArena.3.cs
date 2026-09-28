@@ -704,7 +704,9 @@ namespace TikArena
         public string KillEffect, KillSound;
         public Color SmokeColor;
         // [Death]
-        public bool CelebEnabled, CelebDance, CelebCoffin, DeathSoundEnabled;
+        public bool CelebEnabled, CelebDance, CelebCoffin, DeathSoundEnabled, CustomDeath;
+        public float RespawnSeconds;
+        public string RespawnMode;
         public float CelebSeconds;
         public string DanceDict, DanceAnim, CoffinModel, DeathSound;
         // [Interactions]
@@ -971,7 +973,7 @@ namespace TikArena
                 "WinText=فوز", "LossText=خسارة", "WinShort=فوز", "LossShort=خسارة", "MvpText=MVP",
                 "MvpWinReason=ساعدك باش تربح", "MvpLossReason=هو السبب ف الخسارة", "KillFeedText={name} قُتل",
                 "WinStreakText=انتصارات متتالية", "LossStreakText=خسارات متتالية", "EnemiesShort=أعداء",
-                "AlliesShort=مساعدين", "KillsShort=قتلات", "QueueShort=الطابور", "PausedText=إيقاف مؤقت", "ResumedText=استئناف",
+                "AlliesShort=مساعدين", "KillsShort=قتلات", "QueueShort=الطابور", "PausedText=إيقاف مؤقت", "RespawnText=الرجوع بعد", "ResumedText=استئناف",
                 "StartedText=بدأ التحدي", "EmergencyText=تم مسح كل شيء", "LoadedText=جاهز. ضغط",
                 "ReloadedText=تحدثات الإعدادات", "ImportedText=تجابو الإعدادات الجداد من Downloads" };
             foreach (string t in texts)
@@ -1011,6 +1013,9 @@ namespace TikArena
 
             c.CelebEnabled = ini.B("Death", "CelebrationEnabled", true);
             c.CelebSeconds = U.Clamp(ini.F("Death", "Seconds", 8), 1, 60);
+            c.CustomDeath = ini.B("Death", "CustomDeath", true);
+            c.RespawnSeconds = U.Clamp(ini.F("Death", "RespawnSeconds", 6), 1, 60);
+            c.RespawnMode = ini.S("Death", "RespawnMode", "Here");
             c.CelebDance = ini.B("Death", "Dance", true);
             c.DanceDict = ini.S("Death", "DanceDict", "missfbi3_sniping");
             c.DanceAnim = ini.S("Death", "DanceAnim", "dance_m_default");
@@ -2382,6 +2387,7 @@ namespace TikArena
             try { ProcessInbox(); } catch (Exception ex) { U.Error("Inbox", ex); }
             try { UpdateLiveTest(); } catch (Exception ex) { U.Error("LiveTest", ex); }
             try { WorldRules(); } catch (Exception ex) { U.Error("World", ex); }
+            try { UpdateFakeDeath(); } catch (Exception ex) { U.Error("FakeDeath", ex); }
             try { UpdateRound(dt); } catch (Exception ex) { U.Error("Round", ex); }
             try { UpdateQueues(); } catch (Exception ex) { U.Error("Queue", ex); }
             try { UpdateTracked(); } catch (Exception ex) { U.Error("Tracked", ex); }
@@ -2487,6 +2493,7 @@ namespace TikArena
             foreach (Supporter s in sups.Values) s.RoundHelpCoins = 0;
             phase = cfg.ChallengeEnabled ? Phase.Running : Phase.Idle;
             Ped pl = Game.Player.Character;
+            EnsureHpBuffer();
             if (cfg.ApplyOnRoundStart && pl.Exists() && !pl.IsDead)
             {
                 SetPlayerHealth(cfg.PlayerHealth, true);
@@ -2498,7 +2505,7 @@ namespace TikArena
         void SetPlayerHealth(int points, bool fill)
         {
             Ped pl = Game.Player.Character;
-            int max = points + 100;
+            int max = points + 100 + hpBuf;
             Function.Call((Hash)0xF5F6378C4F3419D3UL, pl, max);
             Function.Call((Hash)0x166E7CF68597D8B5UL, pl, max);
             if (fill) Function.Call((Hash)0x6B76DC1F3AE6E6A3UL, pl, max, 0);
@@ -2557,6 +2564,8 @@ namespace TikArena
                 if (pl.IsInVehicle()) Function.Call((Hash)0x428CA6DBD1094446UL, pl.CurrentVehicle, false);
             }
             ClearRelationships();
+            RemoveHpBuffer();
+            fakeDead = false;
             StopSpeedFx();
             popups.Clear();
             shaking = drunkClip = speedOn = freezeOn = gravOn = blackoutOn = false;
@@ -2689,7 +2698,7 @@ namespace TikArena
             // invincibility: settings, god mode, cinematic cameras
             if (pl.Exists() && !pl.IsDead)
             {
-                bool inv = cfg.PlayerInvincible || Active("GodMode") || (cfg.InvincibleDuringCam && camMode.Length > 0);
+                bool inv = cfg.PlayerInvincible || fakeDead || Active("GodMode") || (cfg.InvincibleDuringCam && camMode.Length > 0);
                 if (pl.IsInvincible != inv) pl.IsInvincible = inv;
             }
         }
@@ -3092,7 +3101,7 @@ namespace TikArena
         bool PlayerBusy()
         {
             Ped pl = Game.Player.Character;
-            return !pl.Exists() || pl.IsDead || celeb || Function.Call<bool>((Hash)0x424D4687FA1E5652UL, Game.Player);
+            return !pl.Exists() || pl.IsDead || celeb || fakeDead || Function.Call<bool>((Hash)0x424D4687FA1E5652UL, Game.Player);
         }
 
         void UpdateQueues()
@@ -3822,6 +3831,7 @@ namespace TikArena
                     StopCam();
                     killPlayerSup = j.Sup;
                     killPlayerAt = U.Now;
+                    if (cfg.CustomDeath && hpBuf > 0) { if (!fakeDead) FakeDeath(j.Sup); break; }
                     pl.IsInvincible = false;
                     Function.Call((Hash)0x6B76DC1F3AE6E6A3UL, pl, 0, 0);
                     break;
@@ -4061,6 +4071,8 @@ namespace TikArena
             if (dead && !deathHandled)
             {
                 deathHandled = true;
+                hpBuf = 0;          // the game resets the health on respawn
+                fakeDead = false;
                 OnPlayerDeath();
             }
             else if (!dead && deathHandled && !celeb && killerCamEnd == 0)
@@ -4070,13 +4082,13 @@ namespace TikArena
 
             if (phase == Phase.Running && cfg.ChallengeEnabled)
             {
-                if (!paused && camMode.Length == 0 && !dead && !celeb) roundMs += dt;
+                if (!paused && camMode.Length == 0 && !dead && !fakeDead && !celeb) roundMs += dt;
                 if (roundMs >= roundDurMs) EndRound(true, null);
             }
             else if (phase == Phase.Ended)
             {
                 bool screenDone = !cfg.EndScreenEnabled || now >= endScreenUntil;
-                if (screenDone && !dead && !celeb && camMode.Length == 0 && !Screen.IsFadedOut && !Screen.IsFadingIn)
+                if (screenDone && !dead && !fakeDead && !celeb && camMode.Length == 0 && !Screen.IsFadedOut && !Screen.IsFadingIn)
                 {
                     if (cfg.AutoRestart) StartRound();
                     else phase = Phase.Idle;
@@ -4987,8 +4999,8 @@ namespace TikArena
             int hpNow = 0, hpMax = 0;
             if (pl.Exists())
             {
-                hpMax = Math.Max(1, Function.Call<int>((Hash)0x15D757606D170C3CUL, pl) - 100);
-                hpNow = Math.Max(0, Function.Call<int>((Hash)0xEEF059FAD016D209UL, pl) - 100);
+                hpMax = PlayerHpMax();
+                hpNow = PlayerHpNow();
                 frac = U.Clamp(hpNow / (float)hpMax, 0, 1);
                 af = U.Clamp(pl.Armor / 100f, 0, 1);
             }
@@ -5410,6 +5422,186 @@ namespace TikArena
             }
         }
 
+        // ================================================================ custom death (no GTA "WASTED" screen)
+        //  [Death] CustomDeath=true: the player keeps a hidden health buffer, so GTA never kills him.
+        //  When the visible health reaches 0 -> fake death: ragdoll, slow motion, killer camera,
+        //  celebration, our own death screen in the HUD design, then he gets up again (here or at a hospital).
+        const int HpBufferSize = 5000;
+        int hpBuf;
+        bool fakeDead;
+        long fakeUntil, fakeStart, nextRagdoll, nextDamageScan;
+        Tracked lastDamager;
+        long lastDamageAt;
+        static readonly float[][] Hospitals = {
+            new float[] { 357.4f, -593.4f, 28.8f }, new float[] { -449.7f, -340.8f, 34.5f }, new float[] { 1151.2f, -1529.6f, 35.4f },
+            new float[] { 1839.6f, 3672.9f, 34.3f }, new float[] { -247.8f, 6331.6f, 32.4f } };
+
+        int PlayerHpNow()
+        {
+            Ped pl = Game.Player.Character;
+            return pl.Exists() ? Math.Max(0, Function.Call<int>((Hash)0xEEF059FAD016D209UL, pl) - 100 - hpBuf) : 0;
+        }
+
+        int PlayerHpMax()
+        {
+            Ped pl = Game.Player.Character;
+            return pl.Exists() ? Math.Max(1, Function.Call<int>((Hash)0x15D757606D170C3CUL, pl) - 100 - hpBuf) : 1;
+        }
+
+        // gives the player the hidden buffer (keeps the visible health as it is)
+        void EnsureHpBuffer()
+        {
+            Ped pl = Game.Player.Character;
+            if (!cfg.CustomDeath || hpBuf > 0 || !pl.Exists() || pl.IsDead) return;
+            int cur = Function.Call<int>((Hash)0xEEF059FAD016D209UL, pl);
+            int max = Function.Call<int>((Hash)0x15D757606D170C3CUL, pl);
+            hpBuf = HpBufferSize;
+            Function.Call((Hash)0xF5F6378C4F3419D3UL, pl, max + hpBuf);
+            Function.Call((Hash)0x166E7CF68597D8B5UL, pl, max + hpBuf);
+            Function.Call((Hash)0x6B76DC1F3AE6E6A3UL, pl, cur + hpBuf, 0);
+        }
+
+        void RemoveHpBuffer()
+        {
+            Ped pl = Game.Player.Character;
+            if (hpBuf == 0) return;
+            if (pl.Exists() && !pl.IsDead)
+            {
+                int vis = PlayerHpNow();
+                Function.Call((Hash)0xF5F6378C4F3419D3UL, pl, 200);
+                Function.Call((Hash)0x166E7CF68597D8B5UL, pl, 200);
+                Function.Call((Hash)0x6B76DC1F3AE6E6A3UL, pl, Math.Max(101, Math.Min(200, vis + 100)), 0);
+            }
+            hpBuf = 0;
+        }
+
+        // remembers which spawned enemy hurt the player last (the killer of a fake death)
+        void ScanDamage()
+        {
+            if (U.Now < nextDamageScan) return;
+            nextDamageScan = U.Now + 200;
+            Ped pl = Game.Player.Character;
+            if (!pl.Exists()) return;
+            foreach (Tracked t in tracked)
+            {
+                if (!t.Enemy || t.Ped == null || !t.Ped.Exists()) continue;
+                bool hit = Function.Call<bool>((Hash)0xC86D67D52A707CF8UL, pl, t.Ped, true)
+                    || (t.Veh != null && t.Veh.Exists() && Function.Call<bool>((Hash)0xC86D67D52A707CF8UL, pl, t.Veh, true));
+                if (!hit) continue;
+                lastDamager = t;
+                lastDamageAt = U.Now;
+                Function.Call((Hash)0xA72CD9CA74A5ECBAUL, pl);
+                break;
+            }
+        }
+
+        void UpdateFakeDeath()
+        {
+            Ped pl = Game.Player.Character;
+            if (!cfg.CustomDeath || !pl.Exists()) return;
+            if (!fakeDead)
+            {
+                if (pl.IsDead) return;
+                EnsureHpBuffer();
+                ScanDamage();
+                if (hpBuf > 0 && PlayerHpNow() <= 0) FakeDeath(null);
+                return;
+            }
+            long now = U.Now;
+            if (now >= nextRagdoll && !pl.IsInVehicle())
+            {
+                nextRagdoll = now + 900;
+                Function.Call((Hash)0xAE99FB955581844AUL, pl, 2000, 2000, 0, false, false, false);
+            }
+            Function.Call((Hash)0x5F4B6931816E599BUL, 0);
+            if (now >= fakeUntil) FakeRevive();
+        }
+
+        void FakeDeath(Supporter forced)
+        {
+            Ped pl = Game.Player.Character;
+            fakeDead = true;
+            fakeStart = U.Now;
+            float secs = Math.Max(cfg.RespawnSeconds, Math.Max(cfg.CelebEnabled ? cfg.CelebSeconds : 0, cfg.KillerEnabled ? cfg.KillerSeconds : 0));
+            fakeUntil = U.Now + (long)(secs * 1000);
+            pl.IsInvincible = true;
+            Function.Call((Hash)0x6B76DC1F3AE6E6A3UL, pl, 100 + hpBuf + 1, 0);
+            if (pl.IsInVehicle())
+            {
+                Vector3 at = pl.CurrentVehicle.Position + pl.CurrentVehicle.RightVector * -2.2f;
+                Function.Call((Hash)0x06843DA7060A026BUL, pl, at.X, at.Y, at.Z, false, false, false, false);
+            }
+            Function.Call((Hash)0xAE99FB955581844AUL, pl, 3000, 3000, 0, false, false, false);
+            nextRagdoll = U.Now + 900;
+            killSlowEnd = U.Now + 1400;
+
+            Supporter killer = forced;
+            Entity killerEnt = null;
+            if (killer == null && U.Now - killPlayerAt < 5000) killer = killPlayerSup;
+            if (killer == null && lastDamager != null && U.Now - lastDamageAt < 15000)
+            {
+                killer = lastDamager.Sup;
+                if (lastDamager.Ped != null && lastDamager.Ped.Exists()) killerEnt = lastDamager.Ped;
+            }
+            if (phase == Phase.Running && cfg.ChallengeEnabled) EndRound(false, killer);
+            endScreenUntil = Math.Max(endScreenUntil, fakeUntil);
+            if (cfg.KillerEnabled && killerEnt != null && killerEnt.Exists())
+            {
+                StartCam("killer", killerEnt, cfg.KillerSeconds);
+                killerCamEnd = U.Now + (long)(cfg.KillerSeconds * 1000);
+            }
+            if (cfg.CelebEnabled) StartCelebration();
+        }
+
+        void FakeRevive()
+        {
+            Ped pl = Game.Player.Character;
+            fakeDead = false;
+            EndCelebration();
+            StopCam();
+            killerCamEnd = 0;
+            Function.Call((Hash)0xAAA34F8A7CB32098UL, pl);
+            Function.Call((Hash)0x7F0DD2EBBB651AFFUL, pl);
+            if (string.Equals(cfg.RespawnMode, "Hospital", StringComparison.OrdinalIgnoreCase))
+            {
+                float[] best = Hospitals[0];
+                float bd = float.MaxValue;
+                foreach (float[] h in Hospitals)
+                {
+                    float d = pl.Position.DistanceTo(new Vector3(h[0], h[1], h[2]));
+                    if (d < bd) { bd = d; best = h; }
+                }
+                Function.Call((Hash)0x06843DA7060A026BUL, pl, best[0], best[1], best[2], false, false, false, false);
+            }
+            SetPlayerHealth(cfg.PlayerHealth, true);
+            pl.Armor = cfg.PlayerArmor;
+            pl.IsInvincible = cfg.PlayerInvincible;
+            lastDamager = null;
+            Function.Call((Hash)0xA72CD9CA74A5ECBAUL, pl);
+        }
+
+        // dark screen + respawn countdown while fake-dead
+        void DrawDeathOverlay()
+        {
+            if (!fakeDead) return;
+            Gfx.Origin(0, 0, 1);
+            float t = U.Clamp((U.Now - fakeStart) / 500f, 0, 1);
+            Gfx.RectAbs(0, 0, 1280, 720, Color.FromArgb((int)(110 * t), 0, 0, 0));
+            for (int i = 0; i < 6; i++)
+            {
+                int a = (int)((90 - i * 15) * t);
+                Gfx.RectAbs(frameX, i * 8, frameW, 8, Color.FromArgb(a, 180, 0, 20));
+                Gfx.RectAbs(frameX, 720 - (i + 1) * 8, frameW, 8, Color.FromArgb(a, 180, 0, 20));
+            }
+            float left = Math.Max(0, (fakeUntil - U.Now) / 1000f);
+            float total = Math.Max(0.1f, (fakeUntil - fakeStart) / 1000f);
+            float bw = Math.Min(frameW - 40, 300), x = frameX + (frameW - bw) / 2, y = 720 - 70;
+            Gfx.Origin(x, y, 1);
+            DBox(0, 0, bw, 30);
+            Gfx.Rect(8, 24, (bw - 16) * (1 - left / total), 3, cLoss);
+            Gfx.PartsCentered(new List<string> { cfg.Tx("RespawnText", "Respawn"), Math.Ceiling(left).ToString(U.IC) }, bw / 2, 4, SMALL * 1.15f, Color.White);
+        }
+
         // ================================================================ HUD
         const float TXT = 0.34f, SMALL = 0.28f, BIG = 0.62f;
         float frameX, frameY, frameW = 1280, frameH = 720;
@@ -5688,6 +5880,7 @@ namespace TikArena
                 Place("Feed", cfg.FeedEnabled && feed.Count > 0, fFeed);
                 Place("Hype", cfg.HypeEnabled && hypes.Count > 0, fHype);
             }
+            DrawDeathOverlay();
             EndScreen();
             LiveBadge();
             DrawToast(false);
@@ -5996,8 +6189,8 @@ namespace TikArena
             int hpNow = 0, hpMax = 0;
             if (pl.Exists())
             {
-                hpMax = Math.Max(1, Function.Call<int>((Hash)0x15D757606D170C3CUL, pl) - 100);
-                hpNow = Math.Max(0, Function.Call<int>((Hash)0xEEF059FAD016D209UL, pl) - 100);
+                hpMax = PlayerHpMax();
+                hpNow = PlayerHpNow();
                 frac = U.Clamp(hpNow / (float)hpMax, 0, 1);
                 af = U.Clamp(pl.Armor / 100f, 0, 1);
             }
