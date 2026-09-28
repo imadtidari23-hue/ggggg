@@ -692,6 +692,10 @@ namespace TikArena
         public Dictionary<string, string> T = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         // [Layout] / [LayoutVertical]
         public LayoutCfg Normal, Vertical;
+        public bool FxEnabled, FxPopup, FxBurst, FxBuffAura;
+        public float FxPopupSeconds;
+        public Color FxSpeedColor, FxGodColor, FxJumpColor, FxFreezeColor, FxWeaponColor, FxHealColor;
+        public string FxSpeedTrail;
         public bool VAutoArrange;
         public float VGap, VBottomMargin;
         public int VMaxNotif, VMaxFeed, VMaxHype;
@@ -813,7 +817,7 @@ namespace TikArena
             c.ShowTimer = ini.B("Hud", "ShowTimer", true);
             c.ShowStreak = ini.B("Hud", "ShowStreak", true);
             c.Top3Enabled = ini.B("Hud", "Top3Enabled", true);
-            c.Top3Order = ini.L("Hud", "Top3Order", "Top3,Counters,Status");
+            c.Top3Order = ini.L("Hud", "Top3Order", "Top3,Status");
             c.ShowTop3 = ini.B("Hud", "ShowTop3", true);
             c.TopCount = U.Clamp(ini.I("Hud", "TopCount", 3), 1, 10);
             c.Top3Title = ini.S("Hud", "Top3Title", "أفضل الداعمين");
@@ -967,7 +971,7 @@ namespace TikArena
                 "WinText=فوز", "LossText=خسارة", "WinShort=فوز", "LossShort=خسارة", "MvpText=MVP",
                 "MvpWinReason=ساعدك باش تربح", "MvpLossReason=هو السبب ف الخسارة", "KillFeedText={name} قُتل",
                 "WinStreakText=انتصارات متتالية", "LossStreakText=خسارات متتالية", "EnemiesShort=أعداء",
-                "AlliesShort=مساعدين", "QueueShort=الطابور", "PausedText=إيقاف مؤقت", "ResumedText=استئناف",
+                "AlliesShort=مساعدين", "KillsShort=قتلات", "QueueShort=الطابور", "PausedText=إيقاف مؤقت", "ResumedText=استئناف",
                 "StartedText=بدأ التحدي", "EmergencyText=تم مسح كل شيء", "LoadedText=جاهز. ضغط",
                 "ReloadedText=تحدثات الإعدادات", "ImportedText=تجابو الإعدادات الجداد من Downloads" };
             foreach (string t in texts)
@@ -979,6 +983,18 @@ namespace TikArena
 
             c.Normal = LayoutCfg.Read(ini, "Layout", false);
             c.Vertical = LayoutCfg.Read(ini, "LayoutVertical", true);
+            c.FxEnabled = ini.B("PlayerFx", "Enabled", true);
+            c.FxPopup = ini.B("PlayerFx", "Popup", true);
+            c.FxPopupSeconds = U.Clamp(ini.F("PlayerFx", "PopupSeconds", 2.5f), 0.5f, 10f);
+            c.FxBurst = ini.B("PlayerFx", "Burst", true);
+            c.FxBuffAura = ini.B("PlayerFx", "BuffAura", true);
+            c.FxSpeedColor = ini.C("PlayerFx", "SpeedColor", "#29b6ff");
+            c.FxGodColor = ini.C("PlayerFx", "GodColor", "#ffc828");
+            c.FxJumpColor = ini.C("PlayerFx", "JumpColor", "#39ff14");
+            c.FxFreezeColor = ini.C("PlayerFx", "FreezeColor", "#bff4ff");
+            c.FxWeaponColor = ini.C("PlayerFx", "WeaponColor", "#ff9f1c");
+            c.FxHealColor = ini.C("PlayerFx", "HealColor", "#00e676");
+            c.FxSpeedTrail = ini.S("PlayerFx", "SpeedTrail", "core|ent_amb_elec_crackle");
             c.VAutoArrange = ini.B("LayoutVertical", "AutoArrange", true);
             c.VGap = U.Clamp(ini.F("LayoutVertical", "Gap", 6), 0, 60);
             c.VBottomMargin = U.Clamp(ini.F("LayoutVertical", "BottomMargin", 60), 0, 300);
@@ -2372,6 +2388,7 @@ namespace TikArena
             try { UpdateEffects(dt); } catch (Exception ex) { U.Error("Effects", ex); }
             try { UpdateCamera(dt); } catch (Exception ex) { U.Error("Camera", ex); }
             try { UpdateAuras(); } catch (Exception ex) { U.Error("Aura", ex); }
+            try { UpdatePlayerFx(); } catch (Exception ex) { U.Error("PlayerFx", ex); }
             try { UpdateCelebration(); } catch (Exception ex) { U.Error("Death", ex); }
             try { UpdateHypeChecks(); } catch (Exception ex) { U.Error("Hype", ex); }
             try { DrawHud(); } catch (Exception ex) { U.Error("Hud", ex); }
@@ -2464,6 +2481,7 @@ namespace TikArena
         void StartRound()
         {
             roundMs = 0;
+            roundEnemies = roundAllies = roundKills = 0;
             roundDurMs = cfg.DurationMinutes * 60000.0;
             mvp = null;
             foreach (Supporter s in sups.Values) s.RoundHelpCoins = 0;
@@ -2539,6 +2557,8 @@ namespace TikArena
                 if (pl.IsInVehicle()) Function.Call(Hash.FREEZE_ENTITY_POSITION, pl.CurrentVehicle, false);
             }
             ClearRelationships();
+            StopSpeedFx();
+            popups.Clear();
             shaking = drunkClip = speedOn = freezeOn = gravOn = blackoutOn = false;
             radarHidden = clockLocked = tcApplied = wantedApplied = false;
             appliedWeather = null;
@@ -3350,6 +3370,7 @@ namespace TikArena
             t.NextTask = U.Now + 300;
             t.Animal = animal;
             tracked.Add(t);
+            if (phase == Phase.Running) { if (enemy) roundEnemies++; else roundAllies++; }
             SetupAura(t);
             return t;
         }
@@ -3612,6 +3633,7 @@ namespace TikArena
             if (cfg.KillFxEnabled && t.FxOk && cfg.CorpseCleanupSeconds <= 0.2f && !t.Animal) KillFx(t.Ped.Position);
             if (t.Enemy)
             {
+                if (phase == Phase.Running) roundKills++;
                 if (cfg.FeedEnabled)
                 {
                     FeedItem f = new FeedItem();
@@ -3734,6 +3756,7 @@ namespace TikArena
 
         void RunAction(Job j, string a)
         {
+            try { PlayerFx(j, a); } catch (Exception ex) { U.Error("PlayerFx", ex); }
             Interaction it = j.It;
             Ped pl = Game.Player.Character;
             Vehicle pv = PlayerVehicle();
@@ -4839,7 +4862,7 @@ namespace TikArena
             switch (dz)
             {
                 case "arena":
-                    Gfx.RRect(0, 0, w, h, 12, Color.FromArgb(Math.Max(190, cfg.Opacity), 14, 16, 24));
+                    Gfx.RRect(0, 0, w, h, 12, Color.FromArgb(242, 14, 16, 24));
                     if (title) { Gfx.Text(cfg.Title, w / 2, 2, SMALL, acc, Alignment.Center); y = th; }
                     if (score)
                     {
@@ -4878,7 +4901,8 @@ namespace TikArena
                         break;
                     }
                 case "podium":
-                    Gfx.RRect(0, 0, w, h, Math.Min(22, h / 2), Color.FromArgb(80, 255, 255, 255));
+                    Gfx.RRect(0, 0, w, h, Math.Min(22, h / 2), Color.FromArgb(225, 34, 38, 52));
+                    Gfx.Rect(22, 0, w - 44, 2, Color.FromArgb(150, 255, 255, 255));
                     if (title) { Gfx.Text(cfg.Title, w / 2, 3, SMALL, Color.White, Alignment.Center); y = th; }
                     if (score)
                     {
@@ -4923,6 +4947,7 @@ namespace TikArena
                     if (timer) Gfx.Text(TimerText(), w / 2, y + 5, 0.54f, TimerColor(), Alignment.Center);
                     break;
                 case "minimal":
+                    Gfx.RRect(10, 0, w - 20, h, Math.Min(20, h / 2), Color.FromArgb(200, 10, 12, 18));
                     if (title) { Gfx.Text(cfg.Title, w / 2, 0, SMALL, Color.FromArgb(220, 255, 255, 255), Alignment.Center); y = th; }
                     if (timer) Gfx.Text(TimerText(), w / 2, y - 2, 0.7f, TimerColor(), Alignment.Center);
                     if (score)
@@ -4933,7 +4958,7 @@ namespace TikArena
                     }
                     break;
                 default: // classic
-                    Gfx.RRect(0, 0, w, h, 10, Color.FromArgb(Math.Max(170, cfg.Opacity), 14, 16, 24));
+                    Gfx.RRect(0, 0, w, h, 10, Color.FromArgb(242, 14, 16, 24));
                     if (title) { Gfx.Shape("crown", 10, 4, 14, 10, acc); Gfx.Text(cfg.Title, 30, 1, SMALL, acc, Alignment.Left); y = th; }
                     if (score)
                     {
@@ -5101,6 +5126,288 @@ namespace TikArena
         {
             if (l.Count <= n) return l;
             return l.GetRange(l.Count - n, n);
+        }
+
+        // ================================================================ solid design box (score counters, end screen)
+        void DBox(float x, float y, float w, float h)
+        {
+            Color acc = DesignOn ? DAcc : cAcc;
+            Color bg = Color.FromArgb(240, 14, 16, 24);
+            switch (DesignOn ? Dz : "")
+            {
+                case "arena":
+                case "classic":
+                    Gfx.RRect(x, y, w, h, Math.Min(14, h / 2), bg);
+                    Gfx.Rect(x + 14, y, w - 28, 2, acc);
+                    break;
+                case "broadcast":
+                    Gfx.Rect(x, y, w, h, bg);
+                    Gfx.Shape("slant_r", x + w, y, Math.Min(10, h / 3), h, bg);
+                    Gfx.Rect(x, y, 5, h, acc);
+                    break;
+                case "podium":
+                    Gfx.RRect(x, y, w, h, Math.Min(16, h / 2), Color.FromArgb(225, 34, 38, 52));
+                    Gfx.Rect(x + 16, y, w - 32, 2, Color.FromArgb(150, 255, 255, 255));
+                    break;
+                case "cards":
+                    Gfx.RRect(x, y, w, h, Math.Min(8, h / 2), bg);
+                    Gfx.Rect(x, y + h - 3, w, 3, acc);
+                    break;
+                case "esports":
+                    Gfx.Rect(x + 8, y, w - 16, h, bg);
+                    Gfx.Shape("slant_l", x, y, 8, h, bg);
+                    Gfx.Shape("slant_r", x + w - 8, y, 8, h, bg);
+                    Gfx.Rect(x + 8, y, w - 16, 2, acc);
+                    break;
+                case "minimal":
+                    Gfx.RRect(x, y, w, h, Math.Min(18, h / 2), Color.FromArgb(215, 10, 12, 18));
+                    break;
+                default:
+                    PanelBg(x, y, w, h, 1.3f);
+                    break;
+            }
+        }
+
+        // enemies / allies alive now, drawn at the bottom of the score panel
+        void CountStrip(float w, float y)
+        {
+            DBox(0, y, w, 22);
+            List<string> pe = new List<string> { cfg.Tx("EnemiesShort", "E"), AliveCount(true).ToString(U.IC) };
+            List<string> pa = new List<string> { cfg.Tx("AlliesShort", "A"), AliveCount(false).ToString(U.IC) };
+            float we = Gfx.PartsW(pe, SMALL), wa = Gfx.PartsW(pa, SMALL);
+            float x = (w - (12 + we + 22 + 12 + wa)) / 2;
+            Gfx.Shape("circle", x, y + 7, 8, 8, cLoss);
+            Gfx.Parts(pe, x + 12, y + 3, SMALL, Color.White);
+            x += 12 + we + 22;
+            Gfx.Rect(x - 12, y + 6, 1, 10, Color.FromArgb(120, 255, 255, 255));
+            Gfx.Shape("circle", x, y + 7, 8, 8, cWin);
+            Gfx.Parts(pa, x + 12, y + 3, SMALL, Color.White);
+        }
+
+        SizeF ScorePanel(bool draw)
+        {
+            SizeF a = DesignOn ? DesignScore(false) : ScoreInner(false);
+            bool counts = cfg.ShowCounters;
+            if (a.Width <= 0 && !counts) return SizeF.Empty;
+            float w = Math.Max(a.Width, counts ? 220 : 0);
+            float h = a.Height + (counts ? (a.Height > 0 ? 25 : 22) : 0);
+            if (!draw) return new SizeF(w, h);
+            if (a.Width > 0)
+            {
+                float ox = Gfx.Ox, s = Gfx.S;
+                Gfx.Origin(Gfx.Ox + (w - a.Width) / 2 * s, Gfx.Oy, s);
+                if (DesignOn) DesignScore(true); else ScoreInner(true);
+                Gfx.Origin(ox, Gfx.Oy, s);
+            }
+            if (counts) CountStrip(w, a.Height > 0 ? a.Height + 3 : 0);
+            return new SizeF(w, h);
+        }
+
+        // ================================================================ end screen (win / loss) in the HUD design
+        int roundEnemies, roundAllies, roundKills;
+
+        void EndScreen()
+        {
+            if (phase != Phase.Ended || !cfg.EndScreenEnabled || U.Now >= endScreenUntil) return;
+            float bw = Math.Min(frameW - 24, 470);
+            bool mvpOn = cfg.MvpEnabled && mvp != null;
+            float bh = 118 + (mvpOn ? 86 : 0);
+            float t = U.Clamp((U.Now - (endScreenUntil - (long)(cfg.EndScreenSeconds * 1000))) / 300f, 0, 1);
+            float s = (0.85f + 0.15f * t) * (vertical ? Math.Min(1f, L.Scale + 0.1f) : 1f);
+            float x0 = frameX + (frameW - bw * s) / 2, y0 = frameY + (vertical ? 250 : 170);
+            Gfx.Origin(x0, y0, s);
+            Color c = lastWin ? cWin : cLoss;
+            Color acc = DesignOn ? DAcc : cAcc;
+            DBox(0, 0, bw, bh);
+            // title band
+            Gfx.Rect(0, 0, bw, 52, U.WithAlpha(c, 235));
+            Gfx.Rect(0, 52, bw, 2, Color.FromArgb(120, 255, 255, 255));
+            float pulse = 1f + 0.04f * (float)Math.Sin(U.Now / 180.0);
+            Gfx.Text(lastWin ? cfg.Tx("WinText", "WIN") : cfg.Tx("LossText", "LOSS"), bw / 2, 3, 0.95f * pulse, Color.White, Alignment.Center);
+            // round stats: enemies / allies / kills
+            string[] labels = { cfg.Tx("EnemiesShort", "E"), cfg.Tx("AlliesShort", "A"), cfg.Tx("KillsShort", "K") };
+            int[] vals = { roundEnemies, roundAllies, roundKills };
+            Color[] cols = { cLoss, cWin, acc };
+            float cw = bw / 3;
+            for (int i = 0; i < 3; i++)
+            {
+                float cx = cw * i + cw / 2;
+                Gfx.Text(vals[i].ToString(U.IC), cx, 60, 0.62f, cols[i], Alignment.Center);
+                Gfx.Text(labels[i], cx, 92, SMALL, Color.FromArgb(220, 255, 255, 255), Alignment.Center);
+                if (i > 0) Gfx.Rect(cw * i, 64, 1, 40, Color.FromArgb(70, 255, 255, 255));
+            }
+            if (mvpOn)
+            {
+                float y = 118;
+                Gfx.Rect(14, y, bw - 28, 1, Color.FromArgb(70, 255, 255, 255));
+                AvRing(mvp, 52, y + 42, 56, cfg.HypeColor, true, DesignOn && Dz == "esports");
+                Gfx.Text(cfg.Tx("MvpText", "MVP"), 92, y + 10, 0.42f, cfg.HypeColor, Alignment.Left);
+                Gfx.Text(U.Trunc(mvp.Nick, 22), 92, y + 32, 0.4f, Color.White, Alignment.Left);
+                Gfx.Text(mvpReason, 92, y + 56, SMALL, Color.FromArgb(200, 255, 255, 255), Alignment.Left);
+            }
+        }
+
+        // ================================================================ effects on the player (what a supporter just did to you)
+        //  [PlayerFx]: popup above your head (supporter picture + action picture + text), a burst ring + light,
+        //  and a glow while a timed effect is active (speed, god mode, jump, low gravity, freeze, drunk).
+        class Popup { public Supporter Sup; public string Icon; public List<string> Parts; public Color Col; public long Start, End; }
+        readonly List<Popup> popups = new List<Popup>();
+        long burstStart = -99999;
+        Color burstCol = Color.White;
+        int speedFx;
+
+        Color FxColor(string action)
+        {
+            switch (action)
+            {
+                case "SuperSpeed": case "BoostVehicle": return cfg.FxSpeedColor;
+                case "GodMode": return cfg.FxGodColor;
+                case "SuperJump": case "LowGravity": case "Skyfall": case "Launch": return cfg.FxJumpColor;
+                case "Freeze": return cfg.FxFreezeColor;
+                case "GiveWeapon": case "GiveAllWeapons": return cfg.FxWeaponColor;
+                case "Heal": case "AddHealth": return cfg.FxHealColor;
+            }
+            return IsHelp(action) ? cfg.FxHealColor : cLoss;
+        }
+
+        static string Human(string code)
+        {
+            if (string.IsNullOrEmpty(code)) return "";
+            string s = code.ToUpperInvariant().Replace("WEAPON_", "").Replace("GADGET_", "").Replace("_", " ");
+            return s.Length > 1 ? s.Substring(0, 1) + s.Substring(1).ToLowerInvariant() : s;
+        }
+
+        void PlayerFx(Job j, string action)
+        {
+            if (!cfg.FxEnabled || IsSpawn(action)) return;
+            Interaction it = j.It;
+            Color col = FxColor(action);
+            if (cfg.FxBurst)
+            {
+                burstStart = U.Now;
+                burstCol = col;
+                Ped pl = Game.Player.Character;
+                if (pl.Exists() && (action == "GiveWeapon" || action == "GiveAllWeapons" || action == "Heal" || action == "AddHealth" || action == "GodMode"))
+                    SpawnFx(action == "GiveWeapon" || action == "GiveAllWeapons" ? "Flash" : "SoftSmoke", pl.Position - new Vector3(0, 0, 0.6f));
+            }
+            if (!cfg.FxPopup) return;
+            string detail;
+            switch (action)
+            {
+                case "GiveWeapon": detail = Human(it.Weapon); break;
+                case "AddHealth": detail = "+" + it.Amount + " HP"; break;
+                case "GiveVehicle": detail = Human(it.VehicleModel); break;
+                default: detail = IsTimed(action) ? Math.Round(it.Duration).ToString(U.IC) + "s" : ""; break;
+            }
+            Popup p = new Popup();
+            p.Sup = j.Sup;
+            p.Icon = ImgPath(it.ActionImage);
+            p.Parts = new List<string>();
+            if (j.Sup != null) p.Parts.Add(U.Trunc(j.Sup.Nick, 16));
+            p.Parts.Add(Txt.Prep(it.Title));
+            if (detail.Length > 0) p.Parts.Add(detail);
+            p.Col = col;
+            p.Start = U.Now;
+            p.End = U.Now + (long)(cfg.FxPopupSeconds * 1000);
+            popups.Add(p);
+            while (popups.Count > 3) popups.RemoveAt(0);
+        }
+
+        static bool IsTimed(string a)
+        {
+            return a == "GodMode" || a == "SuperSpeed" || a == "SuperJump" || a == "Freeze" || a == "Drunk" || a == "LowGravity" || a == "SlowMotion"
+                || a == "Airstrike" || a == "Earthquake" || a == "Storm" || a == "Blackout" || a == "CarRain" || a == "Weather";
+        }
+
+        void UpdatePlayerFx()
+        {
+            Ped pl = Game.Player.Character;
+            if (!cfg.FxEnabled || !pl.Exists()) { StopSpeedFx(); return; }
+            float time = U.Now / 1000f;
+            Vector3 p = pl.IsInVehicle() ? pl.CurrentVehicle.Position : pl.Position;
+            Vector3 feet = p - new Vector3(0, 0, pl.IsInVehicle() ? 0.4f : 0.95f);
+            // burst: expanding ring + light flash
+            float bt = (U.Now - burstStart) / 900f;
+            if (bt >= 0 && bt < 1)
+            {
+                float sc = 0.6f + bt * 3.2f;
+                Marker(25, feet, Vector3.Zero, new Vector3(sc, sc, sc), U.WithAlpha(burstCol, (int)(230 * (1 - bt))), false, false);
+                Light(p + new Vector3(0, 0, 0.8f), burstCol, 5f, 12f * (1 - bt));
+            }
+            if (!cfg.FxBuffAura) { StopSpeedFx(); return; }
+            // glow while a timed effect is active
+            string[] buffs = { "SuperSpeed", "GodMode", "SuperJump", "LowGravity", "Freeze", "Drunk" };
+            int k = 0;
+            foreach (string b in buffs)
+            {
+                if (!Active(b)) continue;
+                Color c = b == "Drunk" ? Color.FromArgb(255, 255, 150, 40) : FxColor(b);
+                Light(p + new Vector3(0, 0, 0.6f), c, 3.2f, 6f + 2f * (float)Math.Sin(time * 6));
+                float ph = (time * 1.3f + k * 0.33f) % 1f, rs = 0.8f + ph * 1.6f;
+                Marker(25, feet + new Vector3(0, 0, k * 0.05f), Vector3.Zero, new Vector3(rs, rs, rs), U.WithAlpha(c, (int)(200 * (1 - ph))), false, false);
+                if (b == "GodMode") Marker(0, p + new Vector3(0, 0, 1.2f + (float)Math.Sin(time * 3) * 0.06f), new Vector3(0, 0, time * 90 % 360), new Vector3(0.3f, 0.3f, 0.25f), U.WithAlpha(c, 220), false, false);
+                k++;
+            }
+            if (Active("SuperSpeed") && !pl.IsInVehicle()) StartSpeedFx(pl); else StopSpeedFx();
+        }
+
+        void StartSpeedFx(Ped pl)
+        {
+            if (speedFx != 0 || string.IsNullOrEmpty(cfg.FxSpeedTrail) || cfg.FxSpeedTrail.Equals("None", StringComparison.OrdinalIgnoreCase)) return;
+            try
+            {
+                string[] p = cfg.FxSpeedTrail.Split('|');
+                if (p.Length < 2) return;
+                Function.Call(Hash.REQUEST_NAMED_PTFX_ASSET, p[0].Trim());
+                if (!Function.Call<bool>(Hash.HAS_NAMED_PTFX_ASSET_LOADED, p[0].Trim())) return;
+                Function.Call(Hash.USE_PARTICLE_FX_ASSET, p[0].Trim());
+                speedFx = Function.Call<int>(Hash.START_PARTICLE_FX_LOOPED_ON_ENTITY, p[1].Trim(), pl, 0f, 0f, -0.3f, 0f, 0f, 0f, 1f, false, false, false);
+                if (speedFx != 0)
+                {
+                    Color c = cfg.FxSpeedColor;
+                    Function.Call(Hash.SET_PARTICLE_FX_LOOPED_COLOUR, speedFx, c.R / 255f, c.G / 255f, c.B / 255f, false);
+                }
+            }
+            catch (Exception ex) { U.Error("SpeedFx", ex); speedFx = 0; }
+        }
+
+        void StopSpeedFx()
+        {
+            if (speedFx == 0) return;
+            try { Function.Call(Hash.STOP_PARTICLE_FX_LOOPED, speedFx, false); } catch { }
+            speedFx = 0;
+        }
+
+        // popups above the player's head (world -> screen), rising and fading
+        void DrawPopups()
+        {
+            if (popups.Count == 0) return;
+            long now = U.Now;
+            popups.RemoveAll(delegate(Popup x) { return now >= x.End; });
+            Ped pl = Game.Player.Character;
+            if (!pl.Exists()) return;
+            Vector3 head = (pl.IsInVehicle() ? pl.CurrentVehicle.Position + new Vector3(0, 0, 1.4f) : pl.Position + new Vector3(0, 0, 1.15f));
+            Gfx.Origin(0, 0, 1);
+            int n = 0;
+            for (int i = popups.Count - 1; i >= 0; i--, n++)
+            {
+                Popup pp = popups[i];
+                float life = (now - pp.Start) / (float)Math.Max(1, pp.End - pp.Start);
+                float a = life < 0.1f ? life / 0.1f : (life > 0.8f ? (1 - life) / 0.2f : 1f);
+                PointF sp = Screen.WorldToScreen(head + new Vector3(0, 0, 0.35f + life * 0.35f));
+                if (sp.X == 0 && sp.Y == 0) continue;
+                float y = sp.Y - n * 34;
+                float tw = Gfx.PartsW(pp.Parts, SMALL * 1.1f);
+                float icon = Gfx.FileOk(pp.Icon) ? 26 : 0;
+                float w = 36 + icon + tw + 12, x = sp.X - w / 2;
+                Gfx.Origin(x, y - 15, 1);
+                DBox(0, 0, w, 30);
+                Gfx.Rect(0, 27, w * (1 - life), 3, U.WithAlpha(pp.Col, (int)(255 * a)));
+                Gfx.Image(Avatar(pp.Sup), 4, 3, 24, 24, (int)(255 * a));
+                if (icon > 0) Gfx.Image(pp.Icon, 32, 3, 24, 24, (int)(255 * a));
+                Gfx.Parts(pp.Parts, 34 + icon, 6, SMALL * 1.1f, U.WithAlpha(Color.White, (int)(255 * a)));
+                Gfx.Origin(0, 0, 1);
+            }
         }
 
         // ================================================================ HUD
@@ -5352,6 +5659,7 @@ namespace TikArena
 
             PruneFeeds();
             Overheads();
+            DrawPopups();
             if (VAuto)
             {
                 float top = frameY + 8, bottom = frameY + frameH - cfg.VBottomMargin;
@@ -5442,9 +5750,8 @@ namespace TikArena
             return new List<string> { Math.Abs(streak).ToString(U.IC), win ? cfg.Tx("WinStreakText", "") : cfg.Tx("LossStreakText", "") };
         }
 
-        SizeF ScorePanel(bool draw)
+        SizeF ScoreInner(bool draw)
         {
-            if (DesignOn) return DesignScore(draw);
             string v = cfg.ScoreVariant ?? "Classic";
             bool title = cfg.TitleEnabled && cfg.Title.Length > 0;
             bool timer = cfg.ShowTimer && cfg.ChallengeEnabled;
@@ -5453,7 +5760,7 @@ namespace TikArena
             {
                 float w = 380, h = 38 + (title ? 22 : 0) + (showStreak ? 18 : 0);
                 if (!draw) return new SizeF(w, h);
-                PanelBg(0, 0, w, h, 1);
+                PanelBg(0, 0, w, h, 1.3f);
                 float y = 0;
                 if (title) { Header(cfg.Title, 0, 0, w, 20); y += 22; }
                 if (cfg.ShowScore)
@@ -5474,7 +5781,7 @@ namespace TikArena
             {
                 float w = 250, h = 6 + (title ? 24 : 0) + (timer ? 60 : 0) + (cfg.ShowScore ? 24 : 0) + (showStreak ? 18 : 0) + 4;
                 if (!draw) return new SizeF(w, h);
-                PanelBg(0, 0, w, h, 1);
+                PanelBg(0, 0, w, h, 1.3f);
                 float y = 6;
                 if (title) { Header(cfg.Title, 0, y - 4, w, 22); y += 24; }
                 if (timer)
@@ -5511,7 +5818,7 @@ namespace TikArena
                 foreach (string r in rows) h += r == "title" ? 26 : (r == "score" ? 50 : 22);
                 h += 4;
                 if (!draw) return new SizeF(w, h);
-                PanelBg(0, 0, w, h, 1);
+                PanelBg(0, 0, w, h, 1.3f);
                 foreach (string r in rows)
                 {
                     if (r == "title") { Header(cfg.Title, 0, y, w, 24); y += 26; }
@@ -5551,7 +5858,6 @@ namespace TikArena
             {
                 string k = r.ToLowerInvariant();
                 if (k == "top3" && cfg.ShowTop3) rows.Add(k);
-                else if (k == "counters" && cfg.ShowCounters) rows.Add(k);
                 else if (k == "status" && cfg.ShowStatus && (cfg.LiveEnabled || simOn)) rows.Add(k);
             }
             return rows;
@@ -6047,31 +6353,5 @@ namespace TikArena
             }
         }
 
-        // ---------------------------------------------------------------- end screen
-        void EndScreen()
-        {
-            if (phase != Phase.Ended || !cfg.EndScreenEnabled || U.Now >= endScreenUntil) return;
-            Gfx.Origin(0, 0, 1);
-            float cx = frameX + frameW / 2;
-            Color c = lastWin ? cWin : cLoss;
-            float pulse = 1f + 0.04f * (float)Math.Sin(U.Now / 180.0);
-            Gfx.RectAbs(frameX, 190, frameW, 110, U.WithAlpha(cPan, 170));
-            Gfx.RectAbs(frameX, 190, frameW, 3, c);
-            Gfx.RectAbs(frameX, 297, frameW, 3, c);
-            Gfx.TextAbs(lastWin ? cfg.Tx("WinText", "WIN") : cfg.Tx("LossText", "LOSS"), cx, 205, 1.5f * pulse * cfg.FontScale, c, Alignment.Center, Gfx.F);
-            if (cfg.MvpEnabled && mvp != null)
-            {
-                float y = 320;
-                float bw = Math.Min(frameW - 20, 360);
-                Gfx.Origin(cx - bw / 2, y, 1);
-                PanelBg(0, 0, bw, 96, 1);
-                Gfx.Origin(0, 0, 1);
-                Gfx.ImageAbs(avatars.Ring(Avatar(mvp), cfg.HypeColor), cx - bw / 2 + 12, y + 12, 72, 72, 255);
-                float tx = cx - bw / 2 + 96;
-                Gfx.TextAbs(cfg.Tx("MvpText", "MVP"), tx, y + 8, 0.5f * cfg.FontScale, cfg.HypeColor, Alignment.Left, Gfx.F);
-                Gfx.TextAbs(U.Trunc(mvp.Nick, 20), tx, y + 36, 0.42f * cfg.FontScale, cTxt, Alignment.Left, Gfx.F);
-                Gfx.TextAbs(mvpReason, tx, y + 62, 0.3f * cfg.FontScale, U.WithAlpha(cTxt, 200), Alignment.Left, Gfx.F);
-            }
-        }
     }
 }

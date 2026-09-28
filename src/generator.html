@@ -354,7 +354,7 @@ function defaults(){
   S.Hud = {Enabled:true,Style:"Broadcast",StylePalette:true,StyleCycle:"Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
     AccentColor:"#00e676",TextColor:"#ffffff",PanelColor:"#0a0e16",WinColor:"#00e676",LossColor:"#ff3b5c",LayoutMode:"Normal",
     ScoreEnabled:true,ScoreOrder:"Title,Score,Streak",TitleEnabled:true,Title:"حاول تقتلني",ShowScore:true,ShowTimer:true,ShowStreak:true,
-    Top3Enabled:true,Top3Order:"Top3,Counters,Status",ShowTop3:true,TopCount:3,Top3Title:"أفضل الداعمين",ShowCoins:true,ShowCounters:true,ShowStatus:true,
+    Top3Enabled:true,Top3Order:"Top3,Status",ShowTop3:true,TopCount:3,Top3Title:"أفضل الداعمين",ShowCoins:true,ShowCounters:true,ShowStatus:true,
     HealthEnabled:true,HealthLabel:"health",HealthColor:"#1ed760",ShowArmor:true,ShowHealthPoints:false,HideRadar:false,
     GuideEnabled:true,GuideMax:8,GuideMode:"Cards",GuideRotateCount:3,GuideRotateSeconds:5,GuideRandom:true,GuideShowGiftImage:true,GuideShowActionImage:true,GuideTitleEnabled:false,GuideTitle:"🎁 الهدايا",GuideGiftColor:"#2979ff",GuideActionColor:"#00e676",
     OverheadEnabled:true,OverheadAvatar:true,OverheadName:true,OverheadHealth:true,OverheadHeight:1.2,AvatarShape:"Circle",OverheadStyle:"Classic",OverheadRing:true,OverheadLevel:true,
@@ -374,7 +374,7 @@ function defaults(){
   S.Camera = {InvincibleDuringCam:true,EntryEnabled:true,EntryMinCoins:1000,EntrySeconds:3,KillerEnabled:true,KillerSeconds:3,SlowMoMode:"LastInWave",SlowMoScale:0.3,SlowMoSeconds:1.5,WinEnabled:true,WinSeconds:4};
   S.Graphics = {LockTime:false,Hour:21,Minute:0,LockWeather:false,Weather:"Clear",TimecycleEnabled:false,Timecycle:"rply_saturation",TimecycleStrength:0.6,DensityEnabled:false,PedDensity:1,VehicleDensity:1};
   S.Texts = {WinText:"فوز",LossText:"خسارة",WinShort:"فوز",LossShort:"خسارة",MvpText:"MVP",MvpWinReason:"ساعدك باش تربح",MvpLossReason:"هو السبب ف الخسارة",KillFeedText:"{name} قُتل",
-    WinStreakText:"انتصارات متتالية",LossStreakText:"خسارات متتالية",EnemiesShort:"أعداء",AlliesShort:"مساعدين",QueueShort:"الطابور",PausedText:"إيقاف مؤقت",ResumedText:"استئناف",
+    WinStreakText:"انتصارات متتالية",LossStreakText:"خسارات متتالية",EnemiesShort:"أعداء",AlliesShort:"مساعدين",KillsShort:"قتلات",QueueShort:"الطابور",PausedText:"إيقاف مؤقت",ResumedText:"استئناف",
     StartedText:"بدأ التحدي",EmergencyText:"تم مسح كل شيء",LoadedText:"جاهز. ضغط",ReloadedText:"تحدثات الإعدادات",ImportedText:"تجابو الإعدادات الجداد من Downloads"};
   S.Layout = layoutDefaults(false);
   S.LayoutVertical = layoutDefaults(true);
@@ -383,6 +383,7 @@ function defaults(){
     FireFx:"core|ent_amb_torch_fire",SmokeFx:"core|exp_grd_bzgas_smoke",ElectricFx:"core|ent_amb_elec_crackle",SparklesFx:"core|ent_amb_sparking_wires"};
   S.LiveTest = {Enabled:true,Key:"F9",ShowBadge:true,Names:"أحمد,سارة,Yassine,Nora,Karim,Lina,Omar,Hiba,Adam,Salma,Mehdi,Imane,Zakaria,Khadija,Anas,Rania",AvatarUrls:"",Comments:"GG,🔥,يلاه,اقتلوه,عاونوه,واو",
     MinDelayMs:700,MaxDelayMs:2200,GiftWeight:45,LikeWeight:25,CommentWeight:10,FollowWeight:8,ShareWeight:6,JoinWeight:6,ComboChance:25,MaxCombo:15};
+  S.PlayerFx = {Enabled:true,Popup:true,PopupSeconds:2.5,Burst:true,BuffAura:true,SpeedColor:"#29b6ff",GodColor:"#ffc828",JumpColor:"#39ff14",FreezeColor:"#bff4ff",WeaponColor:"#ff9f1c",HealColor:"#00e676",SpeedTrail:"core|ent_amb_elec_crackle"};
   S.Death = {CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Coffin:true,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
   return {
     v:1, ini:S, interactions:defaultInteractions(),
@@ -807,7 +808,17 @@ function renderInteractions(){
   if (!dl){ dl = document.createElement("datalist"); dl.id = "giftNames"; document.body.appendChild(dl); }
   dl.innerHTML = allGifts().map(g => `<option value="${esc(g[0])}">${esc(g[1])} ≈${g[2]}</option>`).join("");
 }
+const DEFAULT_MSG = {SpawnEnemy:"قام {name} بإنزال عدو",SpawnAlly:"قام {name} بإنزال مساعد",MafiaCar:"{name} صيفط سيارة المافيا",MotoHitman:"{name} صيفط قاتل بالموطور",Animals:"{name} طلق {count} ديال الحيوانات",Clone:"{name} استنسخك",
+  AddHealth:"{name} زادك نقاط الدم",Heal:"{name} عالجك",GodMode:"{name} عطاك درع لا يُقهر",GiveVehicle:"قام {name} بإعطاء سيارة",GiveWeapon:"{name} عطاك سلاح",GiveAllWeapons:"{name} عطاك جميع الأسلحة",SuperSpeed:"{name} عطاك سرعة خارقة",
+  SuperJump:"{name} عطاك قفزة خارقة",BoostVehicle:"{name} شعل النيترو",ClearArea:"{name} خوا المنطقة",KillPlayer:"💀 {name} قتلك!",Airstrike:"{name} صيفط الصواريخ",Fire:"{name} شعل فيك النار",Freeze:"{name} جمدك",
+  RemoveWeapons:"{name} حيد ليك السلاح",RemoveVehicle:"{name} حيد ليك الطوموبيل",EjectVehicle:"{name} طردك من الطوموبيل",ExplodeVehicle:"{name} فجر الطوموبيل ديالك",BurstTires:"{name} فجر العجلات",Launch:"{name} طيرك للسما",
+  Skyfall:"{name} رماك من السحاب",Ragdoll:"{name} طيحك",Drunk:"{name} سكرك",Earthquake:"{name} دار زلزال!",CarRain:"{name} طيح الطوموبيلات من السما",ExplodeNearby:"{name} فجر الطوموبيلات",Storm:"{name} جاب العاصفة",
+  Blackout:"{name} قطع الضو",SlowMotion:"{name} بطا الوقت",LowGravity:"{name} نقص الجاذبية",Teleport:"{name} نقلك لبلاصة أخرى",Weather:"{name} بدل الطقس",Random:"{name} دار حدث عشوائي"};
+// messages that were never edited by hand (defaults of any action, old defaults) follow the action automatically
+const AUTO_MSGS = new Set(Object.values(DEFAULT_MSG).concat(["قام {name} بإنزال عدو","قام {name} بإنزال مساعد","{name} زاد 250 نقطة دم","{name} صيفط المافيا","{name} طلق {count} ديال الحيوانات","{name} دار زلزال!","قام {name} بإعطاء سيارة","{name} دار حدث عشوائي","💀 {name} قتلك!",""]));
 function onActionChange(it, prev){
+  if (AUTO_MSGS.has(String(it.Message || "").trim()) && DEFAULT_MSG[it.Action]) it.Message = DEFAULT_MSG[it.Action];
+  if (!it.Name || (ACT[prev] && it.Name === ACT[prev].name)) it.Name = (ACT[it.Action] || {}).name || it.Name;
   const a = ACT[it.Action];
   if (!a) return;
   if (!it.actImg && (!it.actEmoji || (ACT[prev] && it.actEmoji === ACT[prev].emoji))) it.actEmoji = a.emoji;
@@ -972,8 +983,8 @@ function renderAllForms(){
       ["FeedAnimation","🎬 الحركة","s",{opts:[["Slide","↔️ Slide"],["Fade","🌫️ Fade"],["Pop","💥 Pop"]]}],
       ["OverheadStyle","🧍 فوق الراس","s",{opts:[["Classic","كلاسيك"],["Card","🃏 كارطة"],["Minimal","⚪ صورة فقط"],["Badge","🏅 صورة + ليفل"]]}],
       ["OverheadRing","⭕ حلقة ملونة حول الصورة","b"],["OverheadLevel","🏅 الليفل فوق الصورة","b"]]},
-    {sec:"Hud", title:"🏆 الفوز والخسارة", fields:[["ScoreEnabled","اللوحة","b"],["TitleEnabled","العنوان","b"],["Title","العنوان","t"],["ShowScore","الفوز والخسارة","b"],["ShowTimer","العداد","b"],["ShowStreak","السلسلة","b"]]},
-    {sec:"Hud", title:"👑 لوحة الداعمين", fields:[["Top3Enabled","اللوحة","b"],["ShowTop3","الداعمين","b"],["TopCount","عدد الداعمين","range",{min:1,max:10}],["Top3Title","العنوان","t"],["ShowCoins","الكوينز","b"],["ShowCounters","العدادات","b"],["ShowStatus","حالة TikFinity","b"]]},
+    {sec:"Hud", title:"🏆 الفوز والخسارة", fields:[["ScoreEnabled","اللوحة","b"],["TitleEnabled","العنوان","b"],["Title","العنوان","t"],["ShowScore","الفوز والخسارة","b"],["ShowTimer","العداد","b"],["ShowStreak","السلسلة","b"],["ShowCounters","🦹👮 عدد الأعداء والمساعدين (تحت)","b"]]},
+    {sec:"Hud", title:"👑 لوحة الداعمين", fields:[["Top3Enabled","اللوحة","b"],["ShowTop3","الداعمين","b"],["TopCount","عدد الداعمين","range",{min:1,max:10}],["Top3Title","العنوان","t"],["ShowCoins","الكوينز","b"],["ShowStatus","حالة TikFinity","b"]]},
     {sec:"Hud", title:"❤️ شريط الطاقة", fields:[["HealthEnabled","الشريط","b"],["HealthLabel","الكلمة","t"],["HealthColor","اللون","c"],["ShowArmor","شريط الدرع","b"],["ShowHealthPoints","النقاط (722 / 1000)","b"]]},
     {sec:"Hud", title:"🎁 دليل الهدايا", fields:[["GuideEnabled","الدليل","b"],["GuideMode","الشكل","s",{opts:[["Cards","🃏 كروت"],["List","📋 لائحة"],["Rotate","🔄 كيتبدلو"]]}],["GuideMax","أقصى عدد","i",{min:1,max:30}],
       ["GuideRotateCount","Rotate: شحال فمرة","i",{min:1}],["GuideRotateSeconds","Rotate: كل (ث)","f",{min:1}],["GuideRandom","Rotate: عشوائي","b"],["GuideShowGiftImage","صورة الهدية","b"],["GuideShowActionImage","صورة الأكشن","b"],
@@ -1005,6 +1016,9 @@ function renderAllForms(){
   renderForm("#formFx", [
     {sec:"KillEffects", title:"💀 تأثير القتل", fields:[["Enabled","مشعول","b"],["Effect","التأثير","s",{opts:KILL_EFFECTS}],["SmokeColor","لون الدخان","c"],["OnlyPlayerKills","غير اللي قتلتهم أنا","b"],["SoundEnabled","🎵 صوت WAV ديالك","b"],["Sound","ملف القتل","wav",{slot:"kill"}]]},
     {sec:"Sounds", title:"🔊 أصوات اللعبة", fields:[["EnemySpawn","🦹 نزول عدو","sound"],["AllySpawn","👮 نزول مساعد","sound"],["Help","💚 المساعدة","sound"],["Kill","💀 القتل","sound"],["Hype","🔥 الحماس","sound"]]},
+    {sec:"PlayerFx", title:"⚡ التأثيرات على الشخصية ديالك", hint:"ملي شي داعم كيدير ليك شي أكسيون (سلاح، سرعة، علاج، تجميد...): كتبان فوق راسك بطاقة صغيرة فيها الصورة ديالو + صورة الأكشن + الاسم (مثلاً: أحمد · إعطاء سلاح · Carbinerifle)، مع دائرة ضو كتوسع. ووقت ما التأثير خدام (سرعة خارقة، درع، قفزة...) كيبان توهج ملون وموجات تحت رجليك، والسرعة فيها حتى شرارات (particle، خاصها تجربة).", fields:[
+      ["Enabled","مشعول","b"],["Popup","🏷️ البطاقة فوق الراس","b"],["PopupSeconds","مدة البطاقة (ث)","f",{min:0.5,max:10}],["Burst","💥 دائرة الضو","b"],["BuffAura","✨ التوهج وقت التأثير","b"],
+      ["SpeedColor","⚡ السرعة","c"],["GodColor","🛡️ الدرع","c"],["JumpColor","🦘 القفزة/الجاذبية","c"],["FreezeColor","❄️ التجميد","c"],["WeaponColor","🔫 السلاح","c"],["HealColor","💚 العلاج","c"],["SpeedTrail","⚡ شرارات السرعة (asset|name)","t",{ltr:true}]]},
     {sec:"Aura", title:"🌟 تأثيرات الشخصيات (Aura)", hint:"تأثير دائم حول الأعداء والمساعدين اللي نزلو (ضو، دائرة، عمود، تاج، نار...). الملك (الداعم رقم 1) كيجيه تاج ذهبي. كل تفاعل يقدر يختار التأثير ديالو فـ ⚙️ متقدم. أسماء الـ particles (asset|name) خاصها تجربة.", fields:[
       ["Enabled","مشعول","b"],["EnemyAura","🦹 تأثير الأعداء","s",{opts:AURAS.slice(1)}],["EnemyColor","لون الأعداء","c"],["AllyAura","👮 تأثير المساعدين","s",{opts:AURAS.slice(1)}],["AllyColor","لون المساعدين","c"],
       ["KingCrown","👑 تاج الملك","b"],["KingColor","لون التاج","c"],["Intensity","💡 قوة الضو","range",{min:0,max:20,step:0.5}],["Range","📏 مدى الضو","range",{min:0.5,max:10,step:0.5}],
@@ -1115,7 +1129,7 @@ function pvScore(){
 }
 function pvTop(){
   const H = HV(), v = H.Top3Variant || "List", T = state.ini.Texts;
-  const rows = H.Top3Order.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="top3" && H.ShowTop3) || (r==="counters" && H.ShowCounters) || (r==="status" && H.ShowStatus && state.ini.TikFinity.Enabled));
+  const rows = H.Top3Order.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="top3" && H.ShowTop3) || (r==="status" && H.ShowStatus && state.ini.TikFinity.Enabled));
   if (!rows.length) return null;
   const n = Math.max(1, Math.min(10, H.TopCount)), sups = SAMPLE_SUPS.slice(0, n), medal = ["#ffc828","#c8d2dc","#d78c50"];
   const podium = v === "Podium", compact = v === "Compact";
@@ -1344,7 +1358,7 @@ function dAv(s, d, ring, glow, hex){
 }
 function pvDesignTop(){
   const H = HV(), d = dz(), acc = dAcc(), md = dMed(), T = state.ini.Texts;
-  const rows = H.Top3Order.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="top3" && H.ShowTop3) || (r==="counters" && H.ShowCounters) || (r==="status" && H.ShowStatus && state.ini.TikFinity.Enabled));
+  const rows = H.Top3Order.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="top3" && H.ShowTop3) || (r==="status" && H.ShowStatus && state.ini.TikFinity.Enabled));
   if (!rows.length) return null;
   const showTop = rows.includes("top3");
   const n = d === "classic" ? Math.max(1, Math.min(10, H.TopCount)) : Math.max(1, Math.min(3, H.TopCount));
@@ -1470,6 +1484,17 @@ function pvDesignHealth(L){
   return {w, h, html};
 }
 
+// enemies / allies strip at the bottom of the score panel (solid, in the design)
+function pvScoreWrap(P){
+  const H = HV(), T = state.ini.Texts;
+  if (!H.ShowCounters) return P;
+  const w = Math.max(P ? P.w : 0, 220), top = P ? P.h + 3 : 0;
+  const d = designOn() ? dz() : "", r = {arena:11,classic:11,podium:11,minimal:11,cards:6}[d] || 0;
+  const bg = d === "podium" ? "rgba(34,38,52,.9)" : "rgba(14,16,24,.94)";
+  const strip = abs(0, top, w, 22, `background:${bg};border-radius:${r}px;${d==="broadcast"?`border-left:5px solid ${dAcc()};`:""}${d==="esports"?"transform:skewX(-12deg);":""}display:flex;align-items:center;justify-content:center;gap:10px;font-size:${fpx(.28)};color:#fff`,
+    `<span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${H.LossColor};margin:0 5px"></i>${esc(T.EnemiesShort)} 4</span><span style="opacity:.4">|</span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${H.WinColor};margin:0 5px"></i>${esc(T.AlliesShort)} 2</span>`);
+  return {w, h: top + 22, html: (P ? `<div style="position:absolute;left:${(w - P.w)/2}px;top:0;width:${P.w}px;height:${P.h}px">${P.html}</div>` : "") + strip};
+}
 function renderPreview(){
   const stage = $("#stage"), vp = $("#vp");
   if (!stage.clientWidth) return;
@@ -1480,7 +1505,7 @@ function renderPreview(){
   const sc = +L.Scale || 1;
   const ints = state.interactions.filter(i => i.Enabled);
   const panels = {
-    Score: H.ScoreEnabled && (designOn() ? pvDesignScore() : pvScore()),
+    Score: H.ScoreEnabled && pvScoreWrap(designOn() ? pvDesignScore() : pvScore()),
     Top3: H.Top3Enabled && (designOn() ? pvDesignTop() : pvTop()),
     Health: H.HealthEnabled && (designOn() ? pvDesignHealth(L) : pvHealth(L)),
     Guide: H.GuideEnabled && pvGuide(),
@@ -1525,7 +1550,7 @@ function renderHudSide(){
       <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><div class="pos9" data-pos="${sec}|${p}">${POSITIONS.map(x => `<b class="${L[p+"Position"]===x?"on":""}" data-v="${x}" title="${x}"></b>`).join("")}</div>
       <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:150px">${fieldHTML(sec,[p+"OffsetX","↔ X","i"],L)}${fieldHTML(sec,[p+"OffsetY","↕ Y","i"],L)}</div></div>`;
     if (p === "Score") h += orderList("ScoreOrder", ["Title","Score","Streak"], {Title:"العنوان",Score:"الفوز · العداد · الخسارة",Streak:"السلسلة"});
-    if (p === "Top3") h += orderList("Top3Order", ["Top3","Counters","Status"], {Top3:"الداعمين",Counters:"العدادات",Status:"حالة TikFinity"});
+    if (p === "Top3") h += orderList("Top3Order", ["Top3","Status"], {Top3:"الداعمين",Status:"حالة TikFinity"});
     h += `</div>`;
   });
   $("#hudSide").innerHTML = h;
@@ -1544,7 +1569,7 @@ $("#hudSide").addEventListener("click", e => {
   const mv = e.target.closest("[data-mv]");
   if (mv){
     const key = mv.closest("[data-order]").dataset.order;
-    const all = key === "ScoreOrder" ? ["Title","Score","Streak"] : ["Top3","Counters","Status"];
+    const all = key === "ScoreOrder" ? ["Title","Score","Streak"] : ["Top3","Status"];
     const cur = state.ini.Hud[key].split(",").map(x => x.trim()).filter(x => all.includes(x));
     all.forEach(x => { if (!cur.includes(x)) cur.push(x); });
     const i = cur.indexOf(mv.dataset.x), j = i + (+mv.dataset.mv);
@@ -1623,7 +1648,7 @@ NAV.forEach(([id]) => io.observe(document.getElementById(id)));
 <script>
 "use strict";
 // ------------------------------------------------------------- INI export
-const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest"];
+const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest","PlayerFx"];
 const INTER_KEYS = ["Enabled","Name","Action","Trigger","GiftName","GiftId","LikesCount","CommentText","OncePerUser","TestKey","Units","MultiplyByCombo","Cooldown","Effect","Message","GiftImage","ActionImage","EntryCam","ShowInGuide",
   "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","Amount","Weather","Aura","AuraColor","GiftCoins"];
 function iniVal(v){
