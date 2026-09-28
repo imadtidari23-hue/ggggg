@@ -179,6 +179,8 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
         <div class="styles" id="styleBtns"></div>
         <h3>🧩 تخطيطات جاهزة</h3>
         <div class="chips" id="presets"></div>
+        <h3>🏟️ تصاميم LiveHud</h3>
+        <div class="chips" id="kitChips"></div>
       </div>
       <div id="hudSide"></div>
     </div>
@@ -380,6 +382,12 @@ function defaults(){
     FireFx:"core|ent_amb_torch_fire",SmokeFx:"core|exp_grd_bzgas_smoke",ElectricFx:"core|ent_amb_elec_crackle",SparklesFx:"core|ent_amb_sparking_wires"};
   S.LiveTest = {Enabled:true,Key:"F9",ShowBadge:true,Names:"أحمد,سارة,Yassine,Nora,Karim,Lina,Omar,Hiba,Adam,Salma,Mehdi,Imane,Zakaria,Khadija,Anas,Rania",AvatarUrls:"",Comments:"GG,🔥,يلاه,اقتلوه,عاونوه,واو",
     MinDelayMs:700,MaxDelayMs:2200,GiftWeight:45,LikeWeight:25,CommentWeight:10,FollowWeight:8,ShareWeight:6,JoinWeight:6,ComboChance:25,MaxCombo:15};
+  S.LiveHud = {Enabled:true,Design:"arena",Style:"GOLD",Font:"default",FontCustom:"",AvatarShape:"auto",Panel:"auto",Scale:1,TikTokScale:0.9,PanelAlpha:190,Accent:"#f5b301",DesignKey:"F10",StyleKey:"F5",
+    ShowTop:true,ReplaceTop3:true,PodiumPulse:true,TopCount:3,TopY:170,TopTitle:"أفضل الداعمين",CoinsWord:"كوينز",CoinWord:"كوين",
+    ShowBoard:true,BoardSide:"right",BoardTitle:"الطابور",EmptyText:"صيفط هدية باش تدخل!",BoardRows:5,ListY:300,ListW:420,UnitIcon:"action",
+    ShowGiftSpot:false,GiftSpotInteraction:1,GiftSpotWord:"GIFT",GiftSpotX:130,GiftSpotBottom:150,GiftSpotSize:110,
+    ShowResult:true,ReplaceEndScreen:true,ResultStyle:"design",ResultY:360,WinTitle:"فوز!",LossTitle:"خسارة!",
+    MegaEnabled:true,MegaMinCoins:1000,MegaTitle:"MEGA GIFT!",MegaColor:"#ffd23c",MegaMs:6500};
   S.Death = {CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Coffin:true,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
   return {
     v:1, ini:S, interactions:defaultInteractions(),
@@ -392,7 +400,7 @@ function defaults(){
 const PANELS = [["Score","🏆 الفوز والخسارة"],["Top3","👑 لوحة الداعمين"],["Health","❤️ شريط الطاقة"],["Guide","🎁 دليل الهدايا"],["Notif","🔔 الإشعارات"],["Feed","☠️ Kill Feed"],["Hype","🔥 رسائل الحماس"]];
 function layoutDefaults(v){
   const pos = v ? {Score:"TopCenter",Top3:"TopCenter",Health:"BottomCenter",Guide:"MiddleLeft",Notif:"BottomCenter",Feed:"MiddleCenter",Hype:"TopCenter"}
-                : {Score:"TopCenter",Top3:"TopLeft",Health:"BottomCenter",Guide:"MiddleLeft",Notif:"BottomRight",Feed:"MiddleRight",Hype:"TopRight"};
+                : {Score:"TopCenter",Top3:"TopLeft",Health:"BottomCenter",Guide:"MiddleLeft",Notif:"BottomRight",Feed:"BottomLeft",Hype:"TopRight"};
   const oy = v ? {Top3:100,Notif:-70,Feed:130,Hype:262} : {Hype:70};
   const L = {};
   PANELS.forEach(([p]) => {
@@ -888,7 +896,7 @@ const PROMPT_STYLES = [
 const ACTION_SUBJECT = {SpawnEnemy:"an evil clown thug holding a baseball bat",SpawnAlly:"a SWAT police officer with a rifle giving a thumbs up",MafiaCar:"a black mafia sedan with gunmen leaning out of the windows",MotoHitman:"a hitman on a sport motorcycle aiming a pistol",Animals:"an angry mountain lion (cougar) leaping",Clone:"two identical heroes standing back to back",AddHealth:"a glowing pink heart with a plus sign",Heal:"a first aid kit with a green cross and sparkles",GodMode:"a golden shield with a halo",GiveVehicle:"a shiny supercar with a gift bow",GiveWeapon:"an assault rifle with a golden glow",GiveAllWeapons:"a weapon wheel full of guns",SuperSpeed:"a lightning bolt with speed lines and running shoes",SuperJump:"a character jumping high above rooftops",BoostVehicle:"a car with nitro flames from the exhaust",ClearArea:"a broom sweeping people away in a cartoon cloud",KillPlayer:"a skull with crossbones and red glow",Airstrike:"missiles falling from the sky with explosions",Fire:"a person on fire with big flames",Freeze:"a character frozen in a block of ice",RemoveWeapons:"a crossed-out gun",RemoveVehicle:"a car disappearing in a puff of smoke",EjectVehicle:"a driver flying out of a car seat",ExplodeVehicle:"a car exploding in a fireball",BurstTires:"a burst car tire with sparks",Launch:"a person launched into the sky with balloons",Skyfall:"a skydiver with an open parachute above clouds",Ragdoll:"a clumsy character tripping and falling",Drunk:"a dizzy character with spinning eyes and a beer mug",Earthquake:"a cracked city street during an earthquake",CarRain:"cars falling from a stormy sky like rain",ExplodeNearby:"a row of parked cars exploding",Storm:"a dark thunderstorm with lightning bolts",Blackout:"a city skyline with all lights turned off under the moon",SlowMotion:"an hourglass with bullets frozen in the air",LowGravity:"an astronaut floating above the moon",Teleport:"a swirling purple portal",Weather:"a sun, cloud and rain icon combined",Random:"a pair of glowing dice"};
 function promptsFor(i){
   const it = state.interactions[i];
-  const subj = ACTION_SUBJECT[it.Action] || "a video game power-up";
+  const subj = actionSubject(it);
   const gift = it.Trigger === "Gift" ? (it.GiftName || "gift") : it.Trigger;
   return PROMPT_STYLES.map(([n, s]) => ({style:n,
     action:`Square 1:1 icon of ${subj}, ${s}.`,
@@ -953,6 +961,17 @@ function renderAllForms(){
       ["FontScale","حجم الكتابة","range",{min:0.5,max:2,step:0.05}],["Opacity","الشفافية","range",{min:0,max:255}],["TextOutline","الحواشي","b"],["TextShadow","الظل","b"],
       ["AccentColor","اللون الرئيسي","c"],["TextColor","لون الكتابة","c"],["PanelColor","لون الخلفية","c"],["WinColor","لون الفوز","c"],["LossColor","لون الخسارة","c"],
       ["AvatarShape","شكل الصور","s",{opts:[["Circle","⚪ دائرة"],["Square","⬜ مربع"]]}],["HideRadar","🗺️ إخفاء الرادار","b"]]},
+    {sec:"LiveHud", title:"🏟️ تصاميم LiveHud (7 أشكال × 5 ألوان)", hint:"التصاميم ديال الصورة: Arena · Broadcast · Podium · Cards · Esports · Minimal · Classic. كيبينو أفضل الداعمين (بالكوينز) والطابور (NEXT) بالصور الحقيقية والأسماء العربية، وبانر الفوز/الخسارة، و MEGA GIFT للهدايا الكبار. فاللعبة: F10 = التصميم الموالي، F5 = اللون الموالي. المعاينة فوق تقريبية.", fields:[
+      ["Enabled","مشعول","b"],["Design","🏟️ التصميم","s",{opts:KIT_DESIGNS}],["Style","🎨 اللون","s",{opts:KIT_STYLES}],["Font","🔤 الخط","s",{opts:["default","sport","gta","modern","elegant","mono","fun","custom"]}],["FontCustom","خط مخصص (custom)","t"],
+      ["AvatarShape","⚪ شكل الصور","s",{opts:[["auto","حسب التصميم"],["circle","دائرة"],["rounded","مربع مدور"],["square","مربع"],["hex","سداسي"]]}],["Panel","🪟 الخلفية","s",{opts:[["auto","حسب التصميم"],["dark","داكنة"],["glass","زجاج"],["light","فاتحة"]]}],
+      ["Scale","📏 الحجم","range",{min:0.4,max:2,step:0.05}],["TikTokScale","📱 الحجم فـ 9:16","range",{min:0.4,max:2,step:0.05}],["PanelAlpha","الشفافية","range",{min:0,max:255}],["Accent","اللون الرئيسي (Gold/Classic)","c"],
+      ["DesignKey","⌨️ زر التصميم","k"],["StyleKey","⌨️ زر اللون","k"]]},
+    {sec:"LiveHud", title:"🏆 LiveHud: أفضل الداعمين", fields:[["ShowTop","مشعول","b"],["ReplaceTop3","يعوض لوحة الداعمين القديمة","b"],["TopCount","العدد","range",{min:1,max:3}],["TopY","↕ Y (من 1080)","i"],["TopTitle","العنوان","t"],["CoinsWord","كلمة الكوينز","t"],["CoinWord","المفرد","t"],["PodiumPulse","نبض المرتبة 1","b"]]},
+    {sec:"LiveHud", title:"📋 LiveHud: الطابور (NEXT)", fields:[["ShowBoard","مشعول","b"],["BoardSide","الجهة","s",{opts:[["right","اليمين"],["left","اليسار"]]}],["BoardTitle","العنوان","t"],["EmptyText","ملي يكون خاوي","t"],["BoardRows","عدد السطور","i",{min:1,max:12}],["ListY","↕ Y (من 1080)","i"],["ListW","↔ العرض","i",{min:200,max:900}],
+      ["UnitIcon","🔹 أيقونة كل وحدة","s",{opts:[["action","صورة الأكشن"],["gift","صورة الهدية"],["ball","⚽ الكرة"]]}]]},
+    {sec:"LiveHud", title:"🎁 LiveHud: هدية مميزة (تحت يسار)", fields:[["ShowGiftSpot","مشعول","b"],["GiftSpotInteraction","رقم التفاعل","i",{min:1}],["GiftSpotWord","الكلمة","t"],["GiftSpotX","X","i"],["GiftSpotBottom","البعد من التحت","i"],["GiftSpotSize","الحجم","i",{min:40,max:300}]]},
+    {sec:"LiveHud", title:"🏁 LiveHud: النتيجة و MEGA GIFT", fields:[["ShowResult","بانر الفوز/الخسارة (مع MVP)","b"],["ReplaceEndScreen","يعوض شاشة النهاية القديمة","b"],["ResultStyle","الشكل","s",{opts:[["design","حسب التصميم"],["gta","ستايل GTA (Wasted)"]]}],["ResultY","↕ Y","i"],["WinTitle","الفوز","t"],["LossTitle","الخسارة","t"],
+      ["MegaEnabled","💎 MEGA GIFT","b"],["MegaMinCoins","للهدايا ≥ (كوينز)","i",{min:1}],["MegaTitle","العنوان","t"],["MegaColor","اللون","c"],["MegaMs","المدة (ms)","i",{min:1000}]]},
     {sec:"Hud", title:"🔤 العربية وأسماء الداعمين", hint:"الخطوط ديال GTA ما فيهاش الحروف العربية. Auto: أي كتابة عربية (أسماء، جمل، عناوين) كتترسم كصورة بخط ديال Windows (الحروف مربوطة ومن اليمين لليسار) وكتبان فالهود. Latin: كتتحول لحروف لاتينية (أحمد → Ahmd). Always: كلشي كصورة. الأسماء المزخرفة (𝓐𝓶𝓲𝓷𝓮) كتولي عادية.", fields:[
       ["TextMode","🔤 طريقة الكتابة","s",{opts:[["Auto","✅ Auto (العربية كصورة)"],["Always","🖼️ كلشي كصورة"],["Latin","🔠 تحويل للاتيني"],["Off","⛔ بلا (GTA فقط)"]]}],
       ["UnicodeFont","🅰️ خط Windows","s",{opts:["Segoe UI","Tahoma","Arial","Calibri","Traditional Arabic","Sakkal Majalla","Simplified Arabic","Cairo","Dubai","Noto Sans Arabic"]}],
@@ -1230,6 +1249,166 @@ function pvOverhead(x, y, s, enemy, king){
   else head = `<div style="position:relative;display:inline-block">${avatarHTML(sup, st==="Badge"?38:32, ring)}${st==="Badge"&&H.OverheadLevel?`<b style="position:absolute;right:-6px;bottom:-2px;background:${state.ini.Hype.Color};color:#000;font-size:10px;padding:0 3px">25</b>`:""}</div><div style="color:${side}">${sup[0]}</div>${bar}`;
   return `<div style="position:absolute;left:${x}px;top:${y}px;width:50px;transform:scale(${s});${txtCss()}text-align:center;font-size:${fpx(.3)}"><div style="position:relative;height:0">${crown}</div><div style="position:absolute;bottom:-58px;left:0;width:50px;height:0">${under}</div><div style="position:relative;width:120px;margin-left:-35px">${head}</div><div style="font-size:44px;line-height:1">${enemy?"🤡":"👮"}</div></div>`;
 }
+// ------------------------------------------------------------- English descriptions (for image prompts that follow the chosen skin / weapon / car)
+const SKIN_EN = {
+ s_m_y_clown_01:"an evil circus clown",s_m_y_swat_01:"a SWAT officer in black tactical gear and helmet",s_m_y_cop_01:"a police officer in uniform",s_f_y_cop_01:"a female police officer",s_m_y_sheriff_01:"a sheriff with a cowboy hat",
+ s_m_y_hwaycop_01:"a highway patrol officer with a motorcycle helmet",s_m_y_ranger_01:"a park ranger",s_m_y_marine_01:"a marine soldier in camouflage",s_m_y_marine_03:"a marine soldier in combat gear",s_m_m_marine_01:"a navy officer",
+ s_m_y_blackops_01:"a black ops commando with a balaclava",s_m_y_blackops_02:"a masked special forces operator",s_m_m_ciasec_01:"a secret agent in a black suit and sunglasses",s_m_m_fiboffice_01:"an FIB federal agent in a suit",s_m_y_armymech_01:"an army mechanic",
+ s_m_m_security_01:"a security guard",s_m_m_highsec_01:"a VIP bodyguard in a suit",s_m_m_bouncer_01:"a big nightclub bouncer",s_m_y_devinsec_01:"a private security guard",s_m_y_fireman_01:"a firefighter in full gear",
+ s_m_m_paramedic_01:"a paramedic",s_m_m_doctor_01:"a doctor in a white coat",s_m_y_prisoner_01:"a prisoner in an orange jumpsuit",s_m_y_prismuscl_01:"a muscular tattooed prisoner",s_m_y_robber_01:"a masked robber with a money bag",
+ s_m_y_dealer_01:"a street dealer in a hoodie",s_m_y_chef_01:"a chef",s_m_y_construct_01:"a construction worker with a hard hat",s_m_y_dockwork_01:"a dock worker",s_m_y_mime_01:"a mime artist",
+ s_m_m_movalien_01:"a green alien",s_m_m_movspace_01:"an astronaut in a space suit",s_m_y_baywatch_01:"a beach lifeguard",s_m_y_pilot_01:"a pilot",s_m_m_janitor:"a janitor",
+ s_m_y_waiter_01:"a waiter",s_m_m_gardener_01:"a gardener",s_m_y_ammucity_01:"a gun shop clerk",s_m_m_strperf_01:"a street performer",s_m_y_xmech_02:"a mechanic",
+ u_m_y_zombie_01:"a zombie",u_m_y_juggernaut_01:"a heavily armored juggernaut",u_m_y_pogo_01:"a monkey in a costume (Pogo)",u_m_m_jesus_01:"a bearded man in a robe",u_m_y_imporage:"a masked superhero (Impotent Rage)",
+ u_m_y_rsranger_01:"a toy space ranger",u_m_y_babyd:"a man in a baby costume",u_m_m_streetart_01:"a street artist",u_m_y_mani:"a flamboyant dancer",u_m_m_prolsec_01:"a winter security guard",
+ ig_orleans:"Bigfoot",ig_lamardavis:"a cool street guy with a cap",ig_stretch:"a tall gangster in a tank top",ig_wade:"a scruffy young man with a cap",ig_lestercrest:"an old hacker with glasses",
+ ig_brad:"a bank robber in a jacket",ig_ballasog:"a purple-clad Ballas gangster",ig_claypain:"a rock singer",player_zero:"Michael, a middle-aged man in a suit",player_one:"Franklin, a young man in streetwear",
+ player_two:"Trevor, a crazy bald man in a dirty t-shirt",g_m_y_ballasout_01:"a Ballas gang member in purple",g_m_y_famca_01:"a Families gang member in green",g_m_y_lost_01:"a biker gang member in a leather vest",g_m_y_mexgoon_01:"a Vagos gang member in yellow",
+ g_m_y_salvagoon_01:"a Salvadoran gang member in blue",g_m_m_chicold_01:"a mafia gangster in a black coat",g_m_y_korean_01:"a Korean gang member",g_m_m_armboss_01:"an Armenian mafia boss",g_m_y_armgoon_02:"an Armenian gangster",
+ g_m_m_chigoon_01:"a Chinese triad gangster",a_m_y_musclbeac_01:"a bodybuilder",a_m_y_hipster_01:"a hipster with a beard",a_f_y_fitness_01:"a fitness woman",a_m_m_hillbilly_01:"a hillbilly",
+ a_m_o_tramp_01:"a homeless man",a_m_y_skater_01:"a skater",a_m_y_surfer_01:"a surfer",a_m_m_tourist_01:"a tourist with a camera",a_m_y_acult_01:"a cult member",
+ a_c_mtlion:"a mountain lion (cougar)",a_c_chimp:"a chimpanzee",a_c_rottweiler:"a rottweiler dog",a_c_shepherd:"a German shepherd dog",a_c_husky:"a husky",a_c_boar:"a wild boar",a_c_coyote:"a coyote",a_c_chop:"a rottweiler (Chop)",a_c_panther:"a black panther"
+};
+const WEAPON_EN = {
+ UNARMED:"bare fists",KNIFE:"a combat knife",DAGGER:"an antique dagger",BAT:"a baseball bat",BOTTLE:"a broken bottle",CROWBAR:"a crowbar",FLASHLIGHT:"a flashlight",GOLFCLUB:"a golf club",HAMMER:"a hammer",HATCHET:"a hatchet",
+ KNUCKLE:"brass knuckles",MACHETE:"a machete",SWITCHBLADE:"a switchblade",NIGHTSTICK:"a police baton",WRENCH:"a pipe wrench",BATTLEAXE:"a battle axe",POOLCUE:"a pool cue",PISTOL:"a pistol",COMBATPISTOL:"a combat pistol",APPISTOL:"an automatic pistol",
+ STUNGUN:"a stun gun (taser)",PISTOL50:"a Desert Eagle .50 pistol",SNSPISTOL:"a small pocket pistol",HEAVYPISTOL:"a heavy pistol",VINTAGEPISTOL:"a vintage pistol",FLAREGUN:"a flare gun",MARKSMANPISTOL:"a single-shot marksman pistol",REVOLVER:"a heavy revolver",RAYPISTOL:"a sci-fi ray gun",MICROSMG:"a compact micro SMG (Uzi-style submachine gun)",
+ SMG:"an SMG (MP5-style submachine gun)",ASSAULTSMG:"an assault SMG (P90-style)",COMBATPDW:"a combat PDW",MACHINEPISTOL:"a machine pistol (TEC-9 style)",MINISMG:"a mini SMG (Skorpion style)",PUMPSHOTGUN:"a pump-action shotgun",SAWNOFFSHOTGUN:"a sawed-off shotgun",ASSAULTSHOTGUN:"an automatic assault shotgun",BULLPUPSHOTGUN:"a bullpup shotgun",MUSKET:"an old musket",
+ HEAVYSHOTGUN:"a heavy drum-fed shotgun",DBSHOTGUN:"a double-barrel shotgun",AUTOSHOTGUN:"an automatic shotgun",ASSAULTRIFLE:"an AK-47 assault rifle",CARBINERIFLE:"an M4 carbine assault rifle",ADVANCEDRIFLE:"a futuristic bullpup rifle",SPECIALCARBINE:"a G36 special carbine",BULLPUPRIFLE:"a bullpup assault rifle",COMPACTRIFLE:"a compact AK rifle",MG:"a light machine gun",
+ COMBATMG:"a heavy combat machine gun",GUSENBERG:"a Tommy gun (Gusenberg sweeper)",SNIPERRIFLE:"a sniper rifle with a scope",HEAVYSNIPER:"a .50 heavy sniper rifle",MARKSMANRIFLE:"a marksman rifle",RPG:"an RPG rocket launcher",GRENADELAUNCHER:"a grenade launcher",MINIGUN:"a minigun (rotary machine gun)",FIREWORK:"a firework launcher",RAILGUN:"a glowing railgun",
+ HOMINGLAUNCHER:"a homing missile launcher",GRENADE:"a hand grenade",MOLOTOV:"a Molotov cocktail",STICKYBOMB:"a sticky bomb (C4)",PROXMINE:"a proximity mine",SNOWBALL:"a snowball",CARBINERIFLE_MK2:"an M4 carbine MK2",PISTOL_MK2:"a pistol MK2",SMG_MK2:"an SMG MK2",PETROLCAN:"a jerry can",None:"bare hands"
+};
+const VEH_EN = {
+ zentorno:"a Lamborghini-style supercar (Zentorno)",adder:"a Bugatti-style hypercar (Adder)",t20:"a McLaren-style supercar (T20)",osiris:"a Pagani-style supercar (Osiris)",turismor:"a Ferrari-style supercar (Turismo R)",entityxf:"a Koenigsegg-style supercar (Entity XF)",infernus:"a Lamborghini Diablo-style supercar",cheetah:"a Ferrari Enzo-style supercar",vacca:"a Lamborghini Gallardo-style car",bullet:"a Ford GT-style sports car",
+ voltic:"an electric Tesla Roadster-style car",banshee:"a Dodge Viper-style sports car",comet2:"a Porsche 911-style sports car",carbonizzare:"a Ferrari California-style car",elegy2:"a Nissan GT-R-style car",sultan:"a Subaru-style rally sedan",kuruma:"a Mitsubishi Evo-style sedan",kuruma2:"an armored sedan",jester:"a Toyota Supra-style sports car",massacro:"an Aston Martin-style sports car",
+ feltzer2:"a Mercedes SL-style roadster",coquette:"a Corvette-style sports car",ninef:"an Audi R8-style sports car",rapidgt:"an Aston Martin-style coupe",schafter2:"a black Mercedes-style luxury sedan",tailgater:"an Audi A6-style sedan",oracle:"a BMW-style sedan",felon:"a Jaguar-style coupe",buffalo:"a Dodge Charger-style muscle sedan",dominator:"a Ford Mustang-style muscle car",
+ gauntlet:"a Dodge Challenger-style muscle car",dukes:"a classic 70s muscle car",sabregt:"a classic Buick-style muscle car",blade:"a classic Chevy muscle car",vigero:"a classic Camaro-style muscle car",phoenix:"a Pontiac Firebird-style muscle car",sandking:"a big lifted off-road pickup truck",rebel:"a rusty off-road pickup",bifta:"a dune buggy",dune:"a sand dune buggy",
+ insurgent:"an armored military truck",technical:"a pickup truck with a mounted machine gun",dubsta:"a Mercedes G-Class-style SUV",baller:"a Range Rover-style SUV",granger:"a Chevrolet Suburban-style SUV",mesa3:"a military off-road jeep",crusader:"a military Humvee-style jeep",barracks:"a military cargo truck",rhino:"a battle tank",bati:"a Ducati-style sport motorcycle",
+ akuma:"a Kawasaki-style sport motorcycle",hakuchou:"a Suzuki Hayabusa-style motorcycle",sanchez:"a dirt bike",pcj:"a sport motorcycle",faggio:"a small scooter",bmx:"a BMX bike",police:"a police cruiser car",policet:"a police transporter van",riot:"an armored riot police truck",fbi:"an unmarked FBI car",
+ ambulance:"an ambulance",firetruk:"a fire truck",bus:"a city bus",taxi:"a yellow taxi",stretch:"a stretch limousine",mule:"a box delivery truck",phantom:"a semi truck",dump:"a giant mining dump truck",buzzard:"an attack helicopter"
+};
+function skinEn(m){ if (!m) return "a gangster"; const k = String(m).toLowerCase(); return SKIN_EN[k] || ("a character (" + k + ")"); }
+function weaponEn(w){ if (!w || w === "None") return null; const k = String(w).toUpperCase().replace(/^WEAPON_/, "").replace(/^GADGET_/, ""); return WEAPON_EN[k] || ("a " + k.toLowerCase().replace(/_/g, " ")); }
+function vehEn(v){ const k = String(v || "").toLowerCase(); return VEH_EN[k] || (k ? "a " + k + " car" : "a car"); }
+const WEATHER_EN = {CLEAR:"clear sunny sky",EXTRASUNNY:"blazing sun",CLOUDS:"cloudy sky",OVERCAST:"dark overcast sky",RAIN:"heavy rain",CLEARING:"rain clearing up with a rainbow",THUNDER:"thunderstorm with lightning",SMOG:"smoggy city",FOGGY:"thick fog",XMAS:"snowy christmas city",SNOWLIGHT:"light snowfall",BLIZZARD:"snow blizzard",HALLOWEEN:"spooky halloween night with a full moon",Random:"a sun, cloud and rain combined"};
+// subject of the ACTION image, built from what the interaction really does (skin, weapon, car, amount, duration...)
+function actionSubject(it){
+  const w = weaponEn(it.Weapon), n = Math.max(1, +it.Units || 1), many = n > 1 ? n + " " : "";
+  switch (it.Action){
+    case "SpawnEnemy": return `${n > 1 ? many + "hostile copies of " : "a hostile "}${skinEn(it.Model).replace(/^an? /, "")}${w ? " holding " + w : ""}, aggressive attack pose, red evil glow`;
+    case "SpawnAlly": return `${n > 1 ? many + "friendly " : "a friendly "}${skinEn(it.Model).replace(/^an? /, "")}${w ? " holding " + w : ""}, heroic bodyguard pose, green friendly glow`;
+    case "Animals": return `${n > 1 ? many + "angry " : "an angry "}${skinEn(it.Model).replace(/^an? /, "")} attacking, sharp teeth, leaping`;
+    case "MafiaCar": return `${vehEn(it.VehicleModel)} speeding forward with ${skinEn(it.Model).replace(/^an? /, "")}s leaning out of the windows aiming ${w || "guns"}`;
+    case "MotoHitman": return `a hitman (${skinEn(it.Model).replace(/^an? /, "")}) riding ${vehEn(it.VehicleModel)} and aiming ${w || "a pistol"}`;
+    case "Clone": return `two identical heroes back to back${w ? ", each holding " + w : ""}`;
+    case "AddHealth": return `a glowing pink heart with a bold "+${it.Amount} HP"`;
+    case "Heal": return "a first aid kit with a green cross, sparkles and a blue armor shield";
+    case "GodMode": return `a golden invincibility shield with a halo${it.Duration ? ' and a small "' + it.Duration + 's" timer' : ""}`;
+    case "GiveVehicle": return `${vehEn(it.VehicleModel)}, shiny, with a big gift bow on the roof`;
+    case "GiveWeapon": return `${w || "an assault rifle"} floating with a golden glow, weapon pickup`;
+    case "GiveAllWeapons": return "a weapon wheel full of guns (pistol, SMG, rifle, shotgun, RPG)";
+    case "SuperSpeed": return "a sprinting runner with lightning bolts and speed lines";
+    case "SuperJump": return "a character jumping high above city rooftops";
+    case "BoostVehicle": return "a sports car with blue nitro flames from the exhaust";
+    case "ClearArea": return "a giant broom sweeping pedestrians away in a cartoon dust cloud";
+    case "KillPlayer": return "a skull with crossbones and a red glow";
+    case "Airstrike": return "missiles falling from the sky with explosions below";
+    case "Fire": return "a person engulfed in flames";
+    case "Freeze": return "a character frozen inside a block of ice";
+    case "RemoveWeapons": return "a gun with a red crossed-out sign";
+    case "RemoveVehicle": return "a car vanishing in a puff of smoke";
+    case "EjectVehicle": return "a driver flying out of a car seat";
+    case "ExplodeVehicle": return "a car exploding in a huge fireball";
+    case "BurstTires": return "a burst car tire with sparks";
+    case "Launch": return "a person launched into the sky";
+    case "Skyfall": return "a skydiver with an open parachute above the clouds";
+    case "Ragdoll": return "a clumsy character tripping and falling";
+    case "Drunk": return "a dizzy character with spinning eyes and a beer mug";
+    case "Earthquake": return "a city street cracking open during an earthquake";
+    case "CarRain": return `${it.Amount > 1 ? "many cars" : "cars"} falling from a stormy sky like rain`;
+    case "ExplodeNearby": return "a row of parked cars exploding";
+    case "Storm": return "a dark thunderstorm with lightning bolts";
+    case "Blackout": return "a city skyline with every light turned off under the moon";
+    case "SlowMotion": return "an hourglass with bullets frozen in the air (matrix effect)";
+    case "LowGravity": return "an astronaut floating above the moon";
+    case "Teleport": return "a swirling purple teleport portal";
+    case "Weather": return WEATHER_EN[it.Weather] || WEATHER_EN.Random;
+    case "Random": return "a pair of glowing dice";
+  }
+  return "a video game power-up";
+}
+
+// ------------------------------------------------------------- LiveHud designs (approximate preview of the in-game kit)
+const KIT_DESIGNS = [["arena","🏟️ Arena"],["broadcast","📺 Broadcast"],["podium","🏆 Podium"],["cards","🃏 Cards"],["esports","🎮 Esports"],["minimal","✨ Minimal"],["classic","📋 Classic"]];
+const KIT_STYLES = [["GOLD","🥇 Gold"],["NEON","💜 Neon"],["FIRE","🔥 Fire"],["ICE","❄️ Ice"],["CLASSIC","🎖️ Classic"]];
+const KIT_MEDALS = {GOLD:["#f5be28","#c0c6ce","#cd7f32"],NEON:["#d73cff","#00d7ff","#28e178"],FIRE:["#ff8c00","#f05f1e","#d72828"],ICE:["#96d7ff","#afe4f2","#7da5e1"],CLASSIC:["#f5be28","#c0c6ce","#cd7f32"]};
+function kitAccent(K){ return {NEON:"#00e5ff",FIRE:"#ff6a00",ICE:"#7fd8ff"}[K.Style] || K.Accent; }
+function kitAv(s, d, shape, ring){
+  const r = shape === "square" ? "12%" : (shape === "rounded" ? "28%" : "50%");
+  const clip = shape === "hex" ? "clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);border-radius:0;" : `border-radius:${r};`;
+  return `<span style="display:inline-grid;place-items:center;width:${d}px;height:${d}px;${clip}background:${s[2]};font:900 ${d*0.45}px Arial;color:#fff;flex:none;${ring && shape!=="hex"?`box-shadow:0 0 0 ${Math.max(2,d/16)}px ${ring},0 0 ${d/3}px ${ring}`:""}">${s[1]}</span>`;
+}
+function pvKit(vert){
+  const K = state.ini.LiveHud; if (!K.Enabled) return "";
+  const acc = kitAccent(K), med = KIT_MEDALS[K.Style] || KIT_MEDALS.GOLD, d = K.Design;
+  const shape = K.AvatarShape !== "auto" ? K.AvatarShape : ({broadcast:"square",podium:"rounded",cards:"rounded",esports:"hex"}[d] || "circle");
+  const panelKind = K.Panel !== "auto" ? K.Panel : ({podium:"glass",minimal:"glass"}[d] || "dark");
+  const pbg = panelKind === "glass" ? "rgba(255,255,255,.22)" : (panelKind === "light" ? "rgba(248,249,252,.92)" : `rgba(14,16,24,${K.PanelAlpha/255})`);
+  const ptx = panelKind === "light" ? "#16181e" : "#fff";
+  // kit space (1920x1080 wide, 1080x1920 tiktok) -> preview 1280x720
+  const VK = vert ? 1080/1920 : 1, VOX = vert ? (1920 - 1080*VK)/2 : 0, VW = vert ? 1080 : 1920, U = 1280/1920;
+  const sc = (+K.Scale || 1) * (vert ? (+K.TikTokScale || 0.9) : 1);
+  const X = x => (VOX + x*VK)*U, Y = y => y*VK*U, Z = v => v*VK*U;
+  const sups = SAMPLE_SUPS.slice(0, Math.max(1, Math.min(3, K.TopCount))).map((s, i) => [s[0], s[1].length > 2 ? s[0][0] : s[1], ["#e0592a","#6b2ed8","#3cbf3c"][i], s[3]]);
+  const top = [sups[1], sups[0], sups[2]].filter(Boolean), order = sups.length > 1 ? [1,0,2] : [0];
+  const word = K.CoinsWord, title = K.TopTitle;
+  let h = "";
+  const box = (x, y, w, hh, css, inner) => `<div style="position:absolute;left:${X(x)}px;top:${Y(y)}px;width:${Z(w)}px;height:${Z(hh)}px;${css}">${inner||""}</div>`;
+  const f = px => `font-size:${Z(px*sc)}px`;
+  const coins = n => n >= 10000 ? (n/1000).toFixed(1)+"K" : n;
+  if (K.ShowTop){
+    const cx = VW/2, ty = K.TopY * (vert ? 1920/1080 : 1);
+    if (d === "arena" || d === "esports"){
+      if (d === "esports") h += box(cx-300, ty-38, 600, 30, `text-align:center;color:${acc};font:italic 900 ${Z(24*sc)}px Arial;letter-spacing:2px`, `// ${esc(title)} //`);
+      order.forEach((ix, c) => { const s = sups[ix]; if (!s) return; const big = ix === 0, dd = (big?120:96)*sc, x = cx + (c-1)*220*sc, y = ty + (big?0:20*sc);
+        h += box(x-dd/2, y, dd, dd+80*sc, `text-align:center;color:#fff;${f(20)}`, `${big&&d==="arena"?`<div style="position:absolute;top:${-Z(26*sc)}px;left:0;right:0;color:${med[0]};font-size:${Z(30*sc)}px">♛</div>`:""}${kitAv(s, Z(dd), shape, med[ix])}<div style="margin-top:4px"><span style="background:${d==="esports"?"#111":"rgba(0,0,0,.75)"};padding:1px 8px;${d==="esports"?"transform:skewX(-12deg);display:inline-block;":"border-radius:10px"}">${d==="esports"?"#"+(ix+1)+" ":""}${s[0]}</span></div><div style="color:${med[ix]};font-weight:900">${coins(s[3])} ${esc(word)}</div>`); });
+    } else if (d === "broadcast"){
+      h += box(cx-100, ty-26, 200, 24, `background:${acc};color:#111;font:900 ${Z(18*sc)}px Arial;text-align:center;transform:skewX(-15deg)`, esc(title));
+      sups.forEach((s, i) => { const x = cx - 330*sc + i*220*sc; h += box(x, ty, 210*sc, 62*sc, `display:flex;align-items:center;gap:6px;background:${pbg};color:${ptx};transform:skewX(-12deg);border-bottom:3px solid ${med[i]};${f(18)}`, `<b style="background:${med[i]};color:#111;padding:0 8px;font-size:${Z(34*sc)}px">${i+1}</b>${kitAv(s, Z(46*sc), "square")}<div><b>${s[0]}</b><div style="color:${med[i]}">${coins(s[3])} ${esc(word)}</div></div>`); });
+    } else if (d === "podium"){
+      order.forEach((ix, c) => { const s = sups[ix]; if (!s) return; const hh = [110,80,60][ix]*sc, w = 160*sc, x = cx - 240*sc + c*160*sc, base = ty + 230*sc;
+        h += box(x, base-hh, w, hh, `background:linear-gradient(${med[ix]},${med[ix]}aa);color:#111;text-align:center;font:900 ${Z(40*sc)}px Arial`, `${ix+1}<div style="font-size:${Z(14*sc)}px">${coins(s[3])} ${esc(word)}</div>`);
+        h += box(x+w/2-45*sc, base-hh-120*sc, 90*sc, 115*sc, `text-align:center;color:#fff;${f(16)}`, `${kitAv(s, Z(84*sc), shape, med[ix])}<div style="background:rgba(255,255,255,.3);border-radius:8px;margin-top:3px">${s[0]}</div>`); });
+    } else if (d === "cards"){
+      order.forEach((ix, c) => { const s = sups[ix]; if (!s) return; const big = ix === 0, w = (big?150:130)*sc, hh = (big?190:160)*sc, x = cx - 230*sc + c*160*sc - w/2 + 65*sc;
+        h += box(x, ty + (big?0:14*sc), w, hh, `background:linear-gradient(160deg,#fff,${med[ix]});clip-path:polygon(0 0,100% 0,100% 80%,50% 100%,0 80%);color:#222;text-align:center;${f(16)}`, `<div style="display:flex;justify-content:space-between;padding:4px 8px;font:900 ${Z(36*sc)}px Arial"><span>${coins(s[3])}</span><small style="font-size:${Z(18*sc)}px">#${ix+1}</small></div>${kitAv(s, Z(64*sc), shape)}<div style="font-weight:700">${s[0]}</div>`); });
+    } else if (d === "minimal"){
+      h += box(cx-270*sc, ty, 540*sc, 58*sc, `display:flex;align-items:center;justify-content:space-around;background:rgba(255,255,255,.25);border-radius:40px;color:#fff;${f(16)}`, `🏆` + sups.map((s,i)=>`<span style="display:flex;align-items:center;gap:4px">${kitAv(s, Z(40*sc), shape)}<span>${s[0]}<br><small style="color:${med[i]}">${coins(s[3])} ${esc(word)}</small></span></span>`).join(""));
+    } else {
+      h += box(cx-210*sc, ty, 420*sc, (60+sups.length*50)*sc, `background:${pbg};color:${ptx};border-radius:12px;padding:8px 14px;${f(22)}`, `<div style="color:${acc};font-weight:700">🏆 ${esc(title)}</div>` + sups.map((s,i)=>`<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><b style="background:${med[i]};color:#111;border-radius:50%;width:${Z(26*sc)}px;text-align:center">${i+1}</b>${kitAv(s, Z(36*sc), "circle")}<span style="flex:1">${s[0]}</span><span style="color:${med[i]}">${coins(s[3])} ${esc(word)}</span></div>`).join(""));
+    }
+  }
+  if (K.ShowBoard){
+    const w = K.ListW * sc, x = K.BoardSide === "left" ? 30 : VW - 30 - w, y = K.ListY * (vert ? 1920/1080 : 1);
+    const rows = SAMPLE_SUPS.slice(0, Math.min(5, K.BoardRows)), rowH = 50*sc, n = [5,3,2,1,1];
+    const icon = "⚡";
+    const hdr = {broadcast:`background:#000;color:#fff;font-weight:900`, esports:`background:${acc};color:#111;font-style:italic;font-weight:900;transform:skewX(-12deg)`, podium:`color:#fff`, minimal:`color:#fff;font-size:${Z(14*sc)}px;letter-spacing:2px`}[d] || `color:${acc};font-weight:700`;
+    let inner = `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;${hdr}"><span>${icon} ${esc(K.BoardTitle)}</span><b style="background:${acc};color:#111;border-radius:9px;padding:0 7px">12</b></div>`;
+    rows.forEach((s, i) => {
+      const rowCss = d === "podium" ? `background:rgba(255,255,255,.28);border-radius:12px;margin:4px 6px` : (d === "minimal" ? `background:rgba(255,255,255,.3);border-radius:30px;margin:4px 0 4px auto;width:70%` : (d === "esports" ? `background:rgba(10,12,20,.85);transform:skewX(-10deg);margin:3px 0` : `margin:2px 6px;${i===0?`background:linear-gradient(90deg,${acc}55,transparent);border-left:3px solid ${acc}`:""}`));
+      const lead = d === "cards" ? `<b style="background:${acc};color:#111;padding:0 5px">${n[i]}</b>` : (d === "broadcast" ? `<b style="background:#fff;color:#111;padding:0 5px">${i+1}</b>` : (d === "esports" ? `<i style="color:${acc}">#${i+1}</i>` : ""));
+      inner += `<div style="display:flex;align-items:center;gap:6px;height:${Z(rowH*0.8)}px;padding:0 8px;${rowCss}">${lead}${kitAv(s, Z(30*sc), shape)}<span style="flex:1">${s[0]}</span><span>${d==="cards"?"#"+(i+1):icon+" ×"+n[i]}</span></div>`;
+    });
+    const bg = d === "podium" || d === "minimal" || d === "esports" ? "" : `background:${pbg};border-radius:${d==="broadcast"?0:14}px;`;
+    h += `<div style="position:absolute;left:${X(x)}px;top:${Y(y)}px;width:${Z(w)}px;${bg}color:${ptx};font-size:${Z(18*sc)}px">${inner}</div>`;
+  }
+  if (K.ShowGiftSpot){
+    const it = state.interactions[(+K.GiftSpotInteraction || 1) - 1];
+    h += box(K.GiftSpotX - K.GiftSpotSize/2, 1080*(vert?1920/1080:1) - K.GiftSpotBottom - K.GiftSpotSize, K.GiftSpotSize, K.GiftSpotSize + 40, `text-align:center;color:#fff;${f(22)}`, `<div style="font-size:${Z(K.GiftSpotSize*0.7)}px">${it ? (it.giftImg ? `<img src="${it.giftImg}" style="width:${Z(K.GiftSpotSize)}px">` : esc(it.giftEmoji)) : "🎁"}</div><b style="background:${acc};color:#111;padding:0 8px;border-radius:8px">${esc(K.GiftSpotWord)}</b>`);
+  }
+  return `<div class="pp" data-panel="Kit" style="left:0;top:0;width:1280px;height:720px;pointer-events:none;font-family:Arial,sans-serif">${h}</div>`;
+}
+
 function renderPreview(){
   const stage = $("#stage"), vp = $("#vp");
   if (!stage.clientWidth) return;
@@ -1241,7 +1420,7 @@ function renderPreview(){
   const ints = state.interactions.filter(i => i.Enabled);
   const panels = {
     Score: H.ScoreEnabled && pvScore(),
-    Top3: H.Top3Enabled && pvTop(),
+    Top3: H.Top3Enabled && !(state.ini.LiveHud.Enabled && state.ini.LiveHud.ReplaceTop3 && state.ini.LiveHud.ShowTop) && pvTop(),
     Health: H.HealthEnabled && pvHealth(L),
     Guide: H.GuideEnabled && pvGuide(),
     Notif: state.ini.Notifications.Enabled && pvFeed(ints.slice(0, Math.min(3, state.ini.Notifications.MaxVisible)).map((it, n) => ({s:SAMPLE_SUPS[n], t:fill(it.Message || it.Name, SAMPLE_SUPS[n][0]), icon:state.ini.Notifications.ShowGiftIcon ? {img:it.giftImg, emoji:it.giftEmoji} : null})), 30, 24, .34, false, "Notif", L),
@@ -1256,6 +1435,7 @@ function renderPreview(){
     const [x, y] = anchor(L, p, P.w * sc, P.h * sc, frame);
     html += `<div class="pp ${state.ui.selPanel===p?"sel":""}" data-panel="${p}" style="left:${x}px;top:${y}px;width:${P.w}px;height:${P.h}px;transform:scale(${sc});${txtCss()}">${P.html}</div>`;
   });
+  html += pvKit(vert);
   if (state.ini.LiveTest.Enabled && state.ini.LiveTest.ShowBadge) html += `<div style="position:absolute;left:${frame.x + frame.w - 110}px;top:4px;background:#fe2c55;color:#fff;font:700 12px Arial;padding:2px 8px">● LIVE TEST</div>`;
   vp.innerHTML = html;
 }
@@ -1279,6 +1459,8 @@ function renderHudSide(){
   });
   $("#hudSide").innerHTML = h;
   $("#styleBtns").innerHTML = STYLES.map(s => { const old = H.Style; H.Style = s; const css = bgCss(); H.Style = old; return `<div class="stylebtn ${H.Style===s?"on":""}" data-style="${s}"><div class="sw8" style="${css}"></div>${s}</div>`; }).join("");
+  const K = state.ini.LiveHud;
+  $("#kitChips").innerHTML = `<span class="chip ${K.Enabled?"":"on"}" data-kit="off">⛔ بلا</span>` + KIT_DESIGNS.map(([v, n]) => `<span class="chip ${K.Enabled && K.Design===v?"on":""}" data-kit="${v}">${n}</span>`).join("") + " · " + KIT_STYLES.map(([v, n]) => `<span class="chip ${K.Style===v?"on":""}" data-kitstyle="${v}">${n}</span>`).join("");
   $("#pvNormal").classList.toggle("pri", !vert); $("#pvVertical").classList.toggle("pri", vert);
 }
 function orderList(key, all, names){
@@ -1319,6 +1501,14 @@ const PRESETS = {
   "✨ بسيط": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Style = "Minimal"; s.ini.Hud.GuideMode = "List"; s.ini.Hud.ShowCounters = false; s.ini.Hud.ShowStatus = false; s.ini.Hud.ShowStreak = false; s.ini.Hud.TitleEnabled = false; s.ui.preview = "Normal"; }
 };
 $("#presets").innerHTML = Object.keys(PRESETS).map(k => `<span class="chip" data-preset="${k}">${k}</span>`).join("");
+$("#kitChips").addEventListener("click", e => {
+  const c = e.target.closest("[data-kit],[data-kitstyle]"); if (!c) return;
+  const K = state.ini.LiveHud;
+  if (c.dataset.kitstyle) K.Style = c.dataset.kitstyle;
+  else if (c.dataset.kit === "off") K.Enabled = false;
+  else { K.Enabled = true; K.Design = c.dataset.kit; }
+  renderAllForms(); renderHudSide(); changed();
+});
 $("#presets").addEventListener("click", e => { const c = e.target.closest("[data-preset]"); if (!c) return; PRESETS[c.dataset.preset](state); renderAllForms(); renderHudSide(); changed(); toast("✅ " + c.dataset.preset); });
 
 // ------------------------------------------------------------- OBS
@@ -1364,7 +1554,7 @@ NAV.forEach(([id]) => io.observe(document.getElementById(id)));
 <script>
 "use strict";
 // ------------------------------------------------------------- INI export
-const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest"];
+const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest","LiveHud"];
 const INTER_KEYS = ["Enabled","Name","Action","Trigger","GiftName","GiftId","LikesCount","CommentText","OncePerUser","TestKey","Units","MultiplyByCombo","Cooldown","Effect","Message","GiftImage","ActionImage","EntryCam","ShowInGuide",
   "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","Amount","Weather","Aura","AuraColor","GiftCoins"];
 function iniVal(v){
@@ -1555,6 +1745,7 @@ function validate(){
   const out = [], G = state.ini.General;
   const gk = {};
   ["PowerKey","StartKey","HudStyleKey","HudFontKey","EmergencyKey","PauseKey","LayoutKey","HypeTestKey"].forEach(k => { const v = G[k]; if (v && v !== "None"){ (gk[v] = gk[v] || []).push(k); } });
+  if (state.ini.LiveHud.Enabled) ["DesignKey","StyleKey"].forEach(k => { const v = state.ini.LiveHud[k]; if (v && v !== "None") (gk[v] = gk[v] || []).push("LiveHud." + k); });
   if (state.ini.LiveTest.Enabled && state.ini.LiveTest.Key !== "None") (gk[state.ini.LiveTest.Key] = gk[state.ini.LiveTest.Key] || []).push("LiveTest");
   Object.keys(gk).forEach(v => { if (gk[v].length > 1) out.push(["err", `⌨️ الزر ${v} مستعمل جوج مرات: ${gk[v].join(" · ")}`]); });
   const tk = {};
