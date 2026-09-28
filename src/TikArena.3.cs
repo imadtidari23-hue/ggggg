@@ -16,6 +16,7 @@ using System.Linq;
 using System.Media;
 using System.Net;
 using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -408,9 +409,10 @@ namespace TikArena
             return s == "true" || s == "1";
         }
 
-        // First http(s) url found under any key containing "profilepicture" or "avatar".
-        public static string FindAvatar(object root)
+        // Every http(s) url found under keys containing "profilepicture" or "avatar" (breadth-first order).
+        public static List<string> FindAvatars(object root)
         {
+            List<string> r = new List<string>();
             Queue<object> q = new Queue<object>();
             q.Enqueue(root);
             int guard = 0;
@@ -423,11 +425,7 @@ namespace TikArena
                     foreach (KeyValuePair<string, object> kv in d)
                     {
                         string k = kv.Key.ToLowerInvariant();
-                        if (k.Contains("profilepicture") || k.Contains("avatar"))
-                        {
-                            string u = FirstUrl(kv.Value, 0);
-                            if (u != null) return u;
-                        }
+                        if (k.Contains("profilepicture") || k.Contains("avatar")) AllUrls(kv.Value, 0, r);
                     }
                     foreach (object v in d.Values) if (v is Dictionary<string, object> || v is List<object>) q.Enqueue(v);
                     continue;
@@ -435,26 +433,22 @@ namespace TikArena
                 List<object> l = o as List<object>;
                 if (l != null) foreach (object v in l) if (v is Dictionary<string, object> || v is List<object>) q.Enqueue(v);
             }
-            return null;
+            return r;
         }
 
-        static string FirstUrl(object o, int depth)
+        static void AllUrls(object o, int depth, List<string> r)
         {
-            if (o == null || depth > 6) return null;
+            if (o == null || depth > 6 || r.Count > 12) return;
             string s = o as string;
-            if (s != null) return s.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? s : null;
+            if (s != null)
+            {
+                if (s.StartsWith("http", StringComparison.OrdinalIgnoreCase) && !r.Contains(s)) r.Add(s);
+                return;
+            }
             List<object> l = o as List<object>;
-            if (l != null)
-            {
-                foreach (object v in l) { string r = FirstUrl(v, depth + 1); if (r != null) return r; }
-                return null;
-            }
+            if (l != null) { foreach (object v in l) AllUrls(v, depth + 1, r); return; }
             Dictionary<string, object> d = o as Dictionary<string, object>;
-            if (d != null)
-            {
-                foreach (object v in d.Values) { string r = FirstUrl(v, depth + 1); if (r != null) return r; }
-            }
-            return null;
+            if (d != null) foreach (object v in d.Values) AllUrls(v, depth + 1, r);
         }
     }
 
@@ -537,6 +531,9 @@ namespace TikArena
         public float Duration = 15;
         public int Amount = 5;
         public string Weather = "Random";
+        public string Aura = "Default";
+        public string AuraColor = "";
+        public int GiftCoins;
 
         // runtime
         public long LastFire = -999999;
@@ -583,6 +580,9 @@ namespace TikArena
             it.Duration = Math.Max(0.5f, ini.F(s, "Duration", 15));
             it.Amount = Math.Max(1, ini.I(s, "Amount", 5));
             it.Weather = ini.S(s, "Weather", "Random");
+            it.Aura = ini.S(s, "Aura", "Default");
+            it.AuraColor = ini.S(s, "AuraColor", "");
+            it.GiftCoins = Math.Max(0, ini.I(s, "GiftCoins", 0));
             return it;
         }
 
@@ -646,6 +646,18 @@ namespace TikArena
         public bool OverheadEnabled, OverheadAvatar, OverheadName, OverheadHealth;
         public float OverheadHeight;
         public string AvatarShape;
+        public bool StylePalette, OverheadRing, OverheadLevel;
+        public string ScoreVariant, Top3Variant, HealthVariant, NotifVariant, FeedAnimation, OverheadStyle;
+        // [Aura]
+        public bool AuraEnabled, AuraKingCrown;
+        public string AuraEnemy, AuraAlly, FxFire, FxSmoke, FxElectric, FxSparkles;
+        public Color AuraEnemyColor, AuraAllyColor, AuraKingColor;
+        public float AuraIntensity, AuraRange, AuraRingSize, AuraMaxDistance, AuraFxScale;
+        // [LiveTest]
+        public bool LiveTestEnabled, LiveTestBadge;
+        public Keys LiveTestKey;
+        public List<string> LiveTestNames, LiveTestAvatars, LiveTestComments;
+        public int LiveTestMinMs, LiveTestMaxMs, LtGift, LtLike, LtComment, LtFollow, LtShare, LtJoin, LiveTestComboChance, LiveTestMaxCombo;
         // [Notifications] / [KillFeed]
         public bool NotifEnabled, NotifAvatar, NotifGiftIcon, FeedEnabled;
         public float NotifSeconds, FeedSeconds;
@@ -770,8 +782,9 @@ namespace TikArena
             }
 
             c.HudEnabled = ini.B("Hud", "Enabled", true);
-            c.HudStyle = ini.S("Hud", "Style", "Classic");
-            c.StyleCycle = ini.L("Hud", "StyleCycle", "Classic,Glass,Neon,Minimal,Esports,Retro");
+            c.HudStyle = ini.S("Hud", "Style", "Broadcast");
+            c.StyleCycle = ini.L("Hud", "StyleCycle", "Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro");
+            c.StylePalette = ini.B("Hud", "StylePalette", true);
             c.HudFont = ini.S("Hud", "Font", "ChaletLondon");
             c.FontCycle = ini.L("Hud", "FontCycle", "ChaletLondon,ChaletComprimeCologne,Pricedown");
             c.FontScale = U.Clamp(ini.F("Hud", "FontScale", 1), 0.3f, 3f);
@@ -823,6 +836,48 @@ namespace TikArena
             c.OverheadHealth = ini.B("Hud", "OverheadHealth", true);
             c.OverheadHeight = ini.F("Hud", "OverheadHeight", 1.2f);
             c.AvatarShape = ini.S("Hud", "AvatarShape", "Circle");
+            c.ScoreVariant = ini.S("Hud", "ScoreVariant", "Classic");
+            c.Top3Variant = ini.S("Hud", "Top3Variant", "List");
+            c.HealthVariant = ini.S("Hud", "HealthVariant", "Bar");
+            c.NotifVariant = ini.S("Hud", "NotifVariant", "Card");
+            c.FeedAnimation = ini.S("Hud", "FeedAnimation", "Slide");
+            c.OverheadStyle = ini.S("Hud", "OverheadStyle", "Classic");
+            c.OverheadRing = ini.B("Hud", "OverheadRing", true);
+            c.OverheadLevel = ini.B("Hud", "OverheadLevel", true);
+
+            c.AuraEnabled = ini.B("Aura", "Enabled", true);
+            c.AuraEnemy = ini.S("Aura", "EnemyAura", "Ring");
+            c.AuraAlly = ini.S("Aura", "AllyAura", "Glow");
+            c.AuraEnemyColor = ini.C("Aura", "EnemyColor", "#ff3b5c");
+            c.AuraAllyColor = ini.C("Aura", "AllyColor", "#00e676");
+            c.AuraKingCrown = ini.B("Aura", "KingCrown", true);
+            c.AuraKingColor = ini.C("Aura", "KingColor", "#ffc828");
+            c.AuraIntensity = U.Clamp(ini.F("Aura", "Intensity", 4f), 0f, 30f);
+            c.AuraRange = U.Clamp(ini.F("Aura", "Range", 3f), 0.5f, 20f);
+            c.AuraRingSize = U.Clamp(ini.F("Aura", "RingSize", 1.4f), 0.2f, 6f);
+            c.AuraMaxDistance = U.Clamp(ini.F("Aura", "MaxDistance", 60f), 5f, 300f);
+            c.AuraFxScale = U.Clamp(ini.F("Aura", "FxScale", 1f), 0.1f, 5f);
+            c.FxFire = ini.S("Aura", "FireFx", "core|ent_amb_torch_fire");
+            c.FxSmoke = ini.S("Aura", "SmokeFx", "core|exp_grd_bzgas_smoke");
+            c.FxElectric = ini.S("Aura", "ElectricFx", "core|ent_amb_elec_crackle");
+            c.FxSparkles = ini.S("Aura", "SparklesFx", "core|ent_amb_sparking_wires");
+
+            c.LiveTestEnabled = ini.B("LiveTest", "Enabled", true);
+            c.LiveTestKey = ini.K("LiveTest", "Key", "F9");
+            c.LiveTestBadge = ini.B("LiveTest", "ShowBadge", true);
+            c.LiveTestNames = ini.L("LiveTest", "Names", "أحمد,سارة,Yassine,Nora,Karim,Lina,Omar,Hiba,Adam,Salma,Mehdi,Imane,Zakaria,Khadija,Anas,Rania");
+            c.LiveTestAvatars = ini.L("LiveTest", "AvatarUrls", "");
+            c.LiveTestComments = ini.L("LiveTest", "Comments", "GG,🔥,يلاه,اقتلوه,عاونوه,واو");
+            c.LiveTestMinMs = U.Clamp(ini.I("LiveTest", "MinDelayMs", 700), 50, 60000);
+            c.LiveTestMaxMs = Math.Max(c.LiveTestMinMs, ini.I("LiveTest", "MaxDelayMs", 2200));
+            c.LtGift = Math.Max(0, ini.I("LiveTest", "GiftWeight", 45));
+            c.LtLike = Math.Max(0, ini.I("LiveTest", "LikeWeight", 25));
+            c.LtComment = Math.Max(0, ini.I("LiveTest", "CommentWeight", 10));
+            c.LtFollow = Math.Max(0, ini.I("LiveTest", "FollowWeight", 8));
+            c.LtShare = Math.Max(0, ini.I("LiveTest", "ShareWeight", 6));
+            c.LtJoin = Math.Max(0, ini.I("LiveTest", "JoinWeight", 6));
+            c.LiveTestComboChance = U.Clamp(ini.I("LiveTest", "ComboChance", 25), 0, 100);
+            c.LiveTestMaxCombo = U.Clamp(ini.I("LiveTest", "MaxCombo", 15), 2, 200);
 
             c.NotifEnabled = ini.B("Notifications", "Enabled", true);
             c.NotifSeconds = Math.Max(1, ini.F("Notifications", "Seconds", 5));
@@ -938,7 +993,10 @@ namespace TikArena
     class LiveEvent
     {
         public string Type = "";
-        public string UserKey = "", Nick = "", Avatar;
+        public string UserKey = "", Nick = "";
+        public List<string> Avatars = new List<string>();
+        public bool Sim;
+        public Color SimColor;
         public int Level;
         public string GiftName = "", GiftId = "";
         public int Count = 1;
@@ -953,7 +1011,10 @@ namespace TikArena
 
     class Supporter
     {
-        public string Key = "", Nick = "", AvatarUrl;
+        public string Key = "", Nick = "";
+        public List<string> AvatarUrls = new List<string>();
+        public bool Sim;
+        public Color SimColor;
         public int Level;
         public long Coins;
         public long RoundHelpCoins;
@@ -987,6 +1048,9 @@ namespace TikArena
         public bool Animal;
         public bool Parachuting;
         public bool FxOk = true;
+        public string AuraType = "None";
+        public Color AuraCol = Color.White;
+        public int LoopFx;
     }
 
     class FeedItem
@@ -1075,19 +1139,112 @@ namespace TikArena
     }
 
     // ------------------------------------------------------------------------
+    //  WebP (and any other format Windows knows) through WIC, for TikTok avatars.
+    //  System.Drawing cannot read .webp; Windows 10/11 ship a WebP WIC codec.
+    // ------------------------------------------------------------------------
+    static class Wic
+    {
+        [ComImport, Guid("ec5ec8a9-c395-4314-9c77-54d7a935ff70"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        interface IWICImagingFactory
+        {
+            [PreserveSig]
+            int CreateDecoderFromFilename([MarshalAs(UnmanagedType.LPWStr)] string name, IntPtr vendor, uint access, int options, out IWICBitmapDecoder decoder);
+        }
+
+        [ComImport, Guid("9edde9e7-8dee-47ea-99df-e6faf2ed44bf"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        interface IWICBitmapDecoder
+        {
+            void QueryCapability();
+            void Initialize();
+            void GetContainerFormat();
+            void GetDecoderInfo();
+            void CopyPalette();
+            void GetMetadataQueryReader();
+            void GetPreview();
+            void GetColorContexts();
+            void GetThumbnail();
+            void GetFrameCount();
+            [PreserveSig]
+            int GetFrame(uint index, out IWICBitmapSource frame);
+        }
+
+        [ComImport, Guid("00000120-a8f2-4877-ba0a-fd2b6645fb94"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        interface IWICBitmapSource
+        {
+            [PreserveSig]
+            int GetSize(out uint width, out uint height);
+            void GetPixelFormat();
+            void GetResolution();
+            void CopyPalette();
+            [PreserveSig]
+            int CopyPixels(IntPtr rect, uint stride, uint size, [Out] byte[] buffer);
+        }
+
+        [DllImport("windowscodecs.dll")]
+        static extern int WICConvertBitmapSource(ref Guid dstFormat, IWICBitmapSource src, out IWICBitmapSource dst);
+
+        static readonly Guid FactoryClsid = new Guid("cacaf262-9370-4615-a13b-9f5539da4c0a");
+        static Guid Bgra32 = new Guid("6fddc324-4e03-4bfe-b185-3d77768dc90f");
+
+        public static Bitmap Decode(byte[] data)
+        {
+            string tmp = Path.Combine(Path.GetTempPath(), "tikarena_" + Guid.NewGuid().ToString("N") + ".img");
+            object fac = null;
+            IWICBitmapDecoder dec = null;
+            IWICBitmapSource frame = null, conv = null;
+            try
+            {
+                File.WriteAllBytes(tmp, data);
+                fac = Activator.CreateInstance(Type.GetTypeFromCLSID(FactoryClsid));
+                if (((IWICImagingFactory)fac).CreateDecoderFromFilename(tmp, IntPtr.Zero, 0x80000000, 0, out dec) != 0 || dec == null) return null;
+                if (dec.GetFrame(0, out frame) != 0 || frame == null) return null;
+                if (WICConvertBitmapSource(ref Bgra32, frame, out conv) != 0 || conv == null) return null;
+                uint w, h;
+                conv.GetSize(out w, out h);
+                if (w == 0 || h == 0 || w > 4096 || h > 4096) return null;
+                byte[] buf = new byte[w * h * 4];
+                if (conv.CopyPixels(IntPtr.Zero, w * 4, (uint)buf.Length, buf) != 0) return null;
+                Bitmap bmp = new Bitmap((int)w, (int)h, PixelFormat.Format32bppArgb);
+                BitmapData bd = bmp.LockBits(new Rectangle(0, 0, (int)w, (int)h), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+                for (int y = 0; y < h; y++) Marshal.Copy(buf, (int)(y * w * 4), new IntPtr(bd.Scan0.ToInt64() + y * bd.Stride), (int)(w * 4));
+                bmp.UnlockBits(bd);
+                return bmp;
+            }
+            catch { return null; }
+            finally
+            {
+                try { if (conv != null) Marshal.ReleaseComObject(conv); } catch { }
+                try { if (frame != null) Marshal.ReleaseComObject(frame); } catch { }
+                try { if (dec != null) Marshal.ReleaseComObject(dec); } catch { }
+                try { if (fac != null) Marshal.ReleaseComObject(fac); } catch { }
+                try { File.Delete(tmp); } catch { }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
     //  Profile pictures: download -> round/square 128x128 PNG in cache/
+    //  - several candidate urls per user (TikFinity sends webp + jpeg variants)
+    //  - jpeg/png first, webp decoded through WIC, retry later on failure
+    //  - optional colored ring variants for overhead avatars
+    //  - generated avatars (initials) for Live Test viewers
     // ------------------------------------------------------------------------
     class Avatars
     {
-        readonly ConcurrentQueue<string[]> work = new ConcurrentQueue<string[]>();
+        class AJob { public string Id, Target; public List<string> Urls; public Color Ring; public string Source; }
+
+        readonly ConcurrentQueue<AJob> work = new ConcurrentQueue<AJob>();
         readonly ConcurrentDictionary<string, string> ready = new ConcurrentDictionary<string, string>();
-        readonly ConcurrentDictionary<string, bool> pending = new ConcurrentDictionary<string, bool>();
+        readonly ConcurrentDictionary<string, long> pending = new ConcurrentDictionary<string, long>();
+        readonly ConcurrentDictionary<string, int> fails = new ConcurrentDictionary<string, int>();
         readonly AutoResetEvent signal = new AutoResetEvent(false);
         Thread thread;
         volatile bool run;
+        int logged;
         public string CacheDir = "";
         public bool Circle = true;
         public string DefaultFile;
+        public volatile int Downloaded, Failed;
 
         public void Start(string cacheDir)
         {
@@ -1132,59 +1289,190 @@ namespace TikArena
             catch { DefaultFile = null; }
         }
 
-        // Returns local png path (or default) for a user; queues a download on first call.
-        public string Get(string key, string url)
+        // Local png for a user (or the default one while downloading).
+        public string Get(string key, List<string> urls)
         {
             if (string.IsNullOrEmpty(key)) return DefaultFile;
-            string file;
             string id = U.SafeName(key);
+            string file;
             if (ready.TryGetValue(id, out file)) return file;
-            if (string.IsNullOrEmpty(url)) return DefaultFile;
-            if (pending.TryAdd(id, true))
+            string target = Path.Combine(CacheDir, id + Suffix);
+            if (urls == null || urls.Count == 0) return DefaultFile;
+            long retryAt;
+            if (pending.TryGetValue(id, out retryAt) && (retryAt == 0 || U.Now < retryAt)) return DefaultFile;
+            pending[id] = 0;
+            AJob j = new AJob();
+            j.Id = id; j.Target = target; j.Urls = new List<string>(urls);
+            work.Enqueue(j);
+            signal.Set();
+            return DefaultFile;
+        }
+
+        // Same picture with a colored ring (made in the background, base picture meanwhile).
+        public string Ring(string baseFile, Color ring)
+        {
+            if (string.IsNullOrEmpty(baseFile)) return baseFile;
+            string hex = ring.R.ToString("x2") + ring.G.ToString("x2") + ring.B.ToString("x2");
+            string id = "ring|" + baseFile + "|" + hex;
+            string file;
+            if (ready.TryGetValue(id, out file)) return file;
+            if (pending.TryAdd(id, 0))
             {
-                string target = Path.Combine(CacheDir, id + Suffix);
-                work.Enqueue(new string[] { id, url, target });
+                AJob j = new AJob();
+                j.Id = id; j.Source = baseFile; j.Ring = ring;
+                j.Target = baseFile.Substring(0, baseFile.Length - 4) + "_r" + hex + ".png";
+                work.Enqueue(j);
                 signal.Set();
             }
-            return DefaultFile;
+            return baseFile;
+        }
+
+        // Generated avatar (colored gradient + initials) for simulated viewers. Main thread, once per user.
+        public string Synthetic(string key, string name, Color color)
+        {
+            string id = U.SafeName(key);
+            string file;
+            if (ready.TryGetValue(id, out file)) return file;
+            string target = Path.Combine(CacheDir, "sim_" + id + Suffix);
+            try
+            {
+                if (!File.Exists(target))
+                {
+                    using (Bitmap b = new Bitmap(128, 128, PixelFormat.Format32bppArgb))
+                    using (Graphics g = Graphics.FromImage(b))
+                    {
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+                        g.Clear(Color.Transparent);
+                        Color c2 = Color.FromArgb(255, Math.Max(0, color.R - 90), Math.Max(0, color.G - 90), Math.Max(0, color.B - 90));
+                        using (LinearGradientBrush br = new LinearGradientBrush(new Rectangle(0, 0, 128, 128), color, c2, 45f))
+                        {
+                            if (Circle) g.FillEllipse(br, 0, 0, 127, 127); else g.FillRectangle(br, 0, 0, 128, 128);
+                        }
+                        string ini = string.IsNullOrEmpty(name) ? "?" : name.Substring(0, 1).ToUpperInvariant();
+                        using (System.Drawing.Font f = new System.Drawing.Font("Segoe UI", 56, FontStyle.Bold, GraphicsUnit.Pixel))
+                        using (StringFormat sf = new StringFormat())
+                        {
+                            sf.Alignment = StringAlignment.Center;
+                            sf.LineAlignment = StringAlignment.Center;
+                            g.DrawString(ini, f, Brushes.White, new RectangleF(0, 4, 128, 128), sf);
+                        }
+                        b.Save(target, ImageFormat.Png);
+                    }
+                }
+                ready[id] = target;
+                return target;
+            }
+            catch { return DefaultFile; }
+        }
+
+        void Log(string msg)
+        {
+            if (logged > 60) return;
+            logged++;
+            try { File.AppendAllText(Path.Combine(U.DataDir, "avatars-log.txt"), DateTime.Now.ToString("HH:mm:ss") + "  " + msg + "\r\n", Encoding.UTF8); }
+            catch { }
         }
 
         void Loop()
         {
             while (run)
             {
-                string[] job;
+                AJob job;
                 if (!work.TryDequeue(out job)) { signal.WaitOne(1000); continue; }
                 try
                 {
-                    string target = job[2];
-                    if (!File.Exists(target) || (DateTime.Now - File.GetLastWriteTime(target)).TotalHours > 24)
+                    if (job.Source != null) { MakeRing(job); continue; }
+                    bool fresh = File.Exists(job.Target) && (DateTime.Now - File.GetLastWriteTime(job.Target)).TotalHours < 24;
+                    if (!fresh)
                     {
-                        Image img = Download(job[1]);
-                        if (img == null && job[1].IndexOf(".webp", StringComparison.OrdinalIgnoreCase) >= 0)
-                            img = Download(job[1].Replace(".webp", ".jpeg").Replace(".WEBP", ".jpeg"));
-                        if (img == null) continue;
-                        using (img) Convert(img, target, Circle);
+                        Image img = null;
+                        foreach (string u in Candidates(job.Urls))
+                        {
+                            img = Download(u);
+                            if (img != null) break;
+                        }
+                        if (img == null)
+                        {
+                            int n = fails.AddOrUpdate(job.Id, 1, delegate(string k, int v) { return v + 1; });
+                            pending[job.Id] = U.Now + Math.Min(300000, 20000L * n);  // retry later
+                            Failed++;
+                            Log("FAILED " + job.Id + " (" + job.Urls.Count + " urls) first=" + (job.Urls.Count > 0 ? job.Urls[0] : ""));
+                            continue;
+                        }
+                        using (img) Convert(img, job.Target, Circle);
+                        Downloaded++;
                     }
-                    ready[job[0]] = target;
+                    ready[job.Id] = job.Target;
                 }
-                catch { }
+                catch (Exception ex) { Log("ERROR " + job.Id + " " + ex.Message); pending[job.Id] = U.Now + 60000; }
             }
+        }
+
+        static List<string> Candidates(List<string> urls)
+        {
+            List<string> r = new List<string>();
+            foreach (string u in urls) if (u.IndexOf(".webp", StringComparison.OrdinalIgnoreCase) < 0 && !r.Contains(u)) r.Add(u);
+            foreach (string u in urls) if (!r.Contains(u)) r.Add(u);
+            foreach (string u in urls)
+            {
+                if (u.IndexOf(".webp", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                string j = u.Replace(".webp", ".jpeg").Replace(".WEBP", ".jpeg");
+                if (!r.Contains(j)) r.Add(j);
+            }
+            return r;
         }
 
         static Image Download(string url)
         {
+            byte[] data;
             try
             {
                 using (WebClient wc = new WebClient())
                 {
-                    wc.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)";
-                    byte[] data = wc.DownloadData(url);
-                    MemoryStream ms = new MemoryStream(data);
-                    return Image.FromStream(ms);
+                    wc.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+                    wc.Headers[HttpRequestHeader.Referer] = "https://www.tiktok.com/";
+                    wc.Headers[HttpRequestHeader.Accept] = "image/jpeg,image/png,image/webp,image/*;q=0.8";
+                    data = wc.DownloadData(url);
                 }
             }
             catch { return null; }
+            if (data == null || data.Length < 16) return null;
+            try { return Image.FromStream(new MemoryStream(data)); }
+            catch { }
+            return Wic.Decode(data);  // webp / heic ...
+        }
+
+        void MakeRing(AJob job)
+        {
+            long dummy;
+            if (!File.Exists(job.Source)) { pending.TryRemove(job.Id, out dummy); return; }
+            if (!File.Exists(job.Target))
+            {
+                using (Bitmap src = new Bitmap(job.Source))
+                using (Bitmap b = new Bitmap(128, 128, PixelFormat.Format32bppArgb))
+                using (Graphics g = Graphics.FromImage(b))
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.Clear(Color.Transparent);
+                    Color c = Color.FromArgb(255, job.Ring);
+                    // soft outer glow + solid ring + picture inside
+                    for (int i = 0; i < 4; i++)
+                        using (Pen p = new Pen(Color.FromArgb(40 + i * 25, c), 2f))
+                        {
+                            if (Circle) g.DrawEllipse(p, 1 + i, 1 + i, 125 - 2 * i, 125 - 2 * i);
+                            else g.DrawRectangle(p, 1 + i, 1 + i, 125 - 2 * i, 125 - 2 * i);
+                        }
+                    using (SolidBrush br = new SolidBrush(c))
+                    {
+                        if (Circle) g.FillEllipse(br, 5, 5, 117, 117); else g.FillRectangle(br, 5, 5, 118, 118);
+                    }
+                    g.DrawImage(src, new Rectangle(12, 12, 104, 104));
+                    Save(b, job.Target);
+                }
+            }
+            ready[job.Id] = job.Target;
         }
 
         public static void Convert(Image src, string target, bool circle)
@@ -1210,11 +1498,16 @@ namespace TikArena
                     }
                     else g.DrawImage(sq, 0, 0);
                 }
-                string tmp = target + ".tmp";
-                b.Save(tmp, ImageFormat.Png);
-                if (File.Exists(target)) File.Delete(target);
-                File.Move(tmp, target);
+                Save(b, target);
             }
+        }
+
+        static void Save(Bitmap b, string target)
+        {
+            string tmp = target + ".tmp";
+            b.Save(tmp, ImageFormat.Png);
+            if (File.Exists(target)) File.Delete(target);
+            File.Move(tmp, target);
         }
     }
 
@@ -1570,12 +1863,14 @@ namespace TikArena
             if (!powered) return;
 
             try { ProcessInbox(); } catch (Exception ex) { U.Error("Inbox", ex); }
+            try { UpdateLiveTest(); } catch (Exception ex) { U.Error("LiveTest", ex); }
             try { WorldRules(); } catch (Exception ex) { U.Error("World", ex); }
             try { UpdateRound(dt); } catch (Exception ex) { U.Error("Round", ex); }
             try { UpdateQueues(); } catch (Exception ex) { U.Error("Queue", ex); }
             try { UpdateTracked(); } catch (Exception ex) { U.Error("Tracked", ex); }
             try { UpdateEffects(dt); } catch (Exception ex) { U.Error("Effects", ex); }
             try { UpdateCamera(dt); } catch (Exception ex) { U.Error("Camera", ex); }
+            try { UpdateAuras(); } catch (Exception ex) { U.Error("Aura", ex); }
             try { UpdateCelebration(); } catch (Exception ex) { U.Error("Death", ex); }
             try { UpdateHypeChecks(); } catch (Exception ex) { U.Error("Hype", ex); }
             try { DrawHud(); } catch (Exception ex) { U.Error("Hud", ex); }
@@ -1589,6 +1884,7 @@ namespace TikArena
                 if (k == Keys.None) return;
                 if (k == cfg.PowerKey) { TogglePower(); return; }
                 if (!powered) return;
+                if (k == cfg.LiveTestKey && cfg.LiveTestEnabled) { ToggleLiveTest(); return; }
                 if (k == cfg.StartKey) { StartSession(); return; }
                 if (k == cfg.HudStyleKey) { style = Cycle(cfg.StyleCycle, style); Status("HUD: " + style); return; }
                 if (k == cfg.HudFontKey) { fontName = Cycle(cfg.FontCycle, fontName); Status("Font: " + fontName); return; }
@@ -1645,6 +1941,8 @@ namespace TikArena
                 if (cfg.CleanupOnPowerOff) Cleanup();
                 else RestoreWorld();
                 live.Stop();
+                simOn = false;
+                simQueue.Clear();
                 powered = false;
                 started = false;
                 phase = Phase.Idle;
@@ -1906,7 +2204,7 @@ namespace TikArena
             LiveEvent e = new LiveEvent();
             e.UserKey = Json.FindStr(data, "uniqueId", "userId", "username", "secUid") ?? "";
             e.Nick = Json.FindStr(data, "nickname", "displayName", "uniqueId") ?? e.UserKey;
-            e.Avatar = Json.FindAvatar(data);
+            e.Avatars = Json.FindAvatars(data);
             double lv = Json.FindNum(data, "gifterLevel", "level", "payGrade", "userLevel");
             e.Level = double.IsNaN(lv) ? 0 : (int)lv;
             if (e.UserKey.Length == 0) e.UserKey = e.Nick;
@@ -1957,7 +2255,7 @@ namespace TikArena
             HandleEvent(e);
         }
 
-        Supporter GetSup(string key, string nick, string avatar, int level)
+        Supporter GetSup(string key, string nick, List<string> urls, int level)
         {
             Supporter s;
             if (!sups.TryGetValue(key, out s))
@@ -1968,7 +2266,7 @@ namespace TikArena
             }
             if (!string.IsNullOrEmpty(nick)) s.Nick = nick;
             if (string.IsNullOrEmpty(s.Nick)) s.Nick = key;
-            if (!string.IsNullOrEmpty(avatar)) s.AvatarUrl = avatar;
+            if (urls != null && urls.Count > 0) s.AvatarUrls = urls;
             if (level > s.Level) s.Level = level;
             return s;
         }
@@ -1976,13 +2274,15 @@ namespace TikArena
         string Avatar(Supporter s)
         {
             if (s == null) return avatars.DefaultFile;
-            return avatars.Get(s.Key, s.AvatarUrl);
+            if (s.Sim && s.AvatarUrls.Count == 0) return avatars.Synthetic(s.Key, s.Nick, s.SimColor);
+            return avatars.Get(s.Key, s.AvatarUrls);
         }
 
         void HandleEvent(LiveEvent e)
         {
             long now = U.Now;
-            Supporter s = GetSup(e.UserKey, e.Nick, e.Avatar, e.Level);
+            Supporter s = GetSup(e.UserKey, e.Nick, e.Avatars, e.Level);
+            if (e.Sim) { s.Sim = true; s.SimColor = e.SimColor; }
             s.LastActive = now;
             Avatar(s); // start download early
 
@@ -2544,6 +2844,7 @@ namespace TikArena
             t.NextTask = U.Now + 300;
             t.Animal = animal;
             tracked.Add(t);
+            SetupAura(t);
             return t;
         }
 
@@ -2768,6 +3069,7 @@ namespace TikArena
 
         void DeleteTracked(Tracked t)
         {
+            StopAura(t);
             try
             {
                 if (t.Ped != null && t.Ped.Exists())
@@ -2794,6 +3096,7 @@ namespace TikArena
 
         void OnPedDeath(Tracked t)
         {
+            StopAura(t);
             Ped pl = Game.Player.Character;
             try { if (t.Ped.AttachedBlip != null && t.Ped.AttachedBlip.Exists()) t.Ped.AttachedBlip.Delete(); } catch { }
             Entity killer = null;
@@ -3474,10 +3777,264 @@ namespace TikArena
             if (deathPaused) { Function.Call(Hash.PAUSE_DEATH_ARREST_RESTART, false); deathPaused = false; }
         }
 
+        // ================================================================ auras (effects around spawned characters)
+
+        void SetupAura(Tracked t)
+        {
+            if (!cfg.AuraEnabled || t.Ped == null || !t.Leader && t.Veh != null) { t.AuraType = "None"; return; }
+            string type = t.It != null ? t.It.Aura : "Default";
+            if (string.IsNullOrEmpty(type) || type.Equals("Default", StringComparison.OrdinalIgnoreCase)) type = t.Enemy ? cfg.AuraEnemy : cfg.AuraAlly;
+            t.AuraType = string.IsNullOrEmpty(type) ? "None" : type;
+            Color side = t.Enemy ? cfg.AuraEnemyColor : cfg.AuraAllyColor;
+            t.AuraCol = t.It != null && t.It.AuraColor.Length > 0 ? U.ParseColor(t.It.AuraColor, side) : side;
+            string fx = null;
+            switch (t.AuraType.ToLowerInvariant())
+            {
+                case "fire": fx = cfg.FxFire; break;
+                case "smoke": fx = cfg.FxSmoke; break;
+                case "electric": fx = cfg.FxElectric; break;
+                case "sparkles": fx = cfg.FxSparkles; break;
+            }
+            if (fx == null) return;
+            try
+            {
+                string[] p = fx.Split('|');
+                if (p.Length < 2) return;
+                string asset = p[0].Trim(), name = p[1].Trim();
+                Function.Call(Hash.REQUEST_NAMED_PTFX_ASSET, asset);
+                int guard = 0;
+                while (!Function.Call<bool>(Hash.HAS_NAMED_PTFX_ASSET_LOADED, asset) && guard++ < 30) Script.Yield();
+                Function.Call(Hash.USE_PARTICLE_FX_ASSET, asset);
+                t.LoopFx = Function.Call<int>(Hash.START_PARTICLE_FX_LOOPED_ON_ENTITY, name, t.Ped, 0f, 0f, -0.2f, 0f, 0f, 0f, cfg.AuraFxScale, false, false, false);
+                if (t.LoopFx != 0 && t.AuraType.ToLowerInvariant() != "fire")
+                    Function.Call(Hash.SET_PARTICLE_FX_LOOPED_COLOUR, t.LoopFx, t.AuraCol.R / 255f, t.AuraCol.G / 255f, t.AuraCol.B / 255f, false);
+            }
+            catch (Exception ex) { U.Error("Aura", ex); }
+        }
+
+        void StopAura(Tracked t)
+        {
+            if (t.LoopFx == 0) return;
+            try { Function.Call(Hash.STOP_PARTICLE_FX_LOOPED, t.LoopFx, false); } catch { }
+            t.LoopFx = 0;
+        }
+
+        static Color Rainbow(float phase, int alpha)
+        {
+            double h = (phase % 1f) * 6.0;
+            int i = (int)h;
+            float f = (float)(h - i);
+            float q = 1 - f;
+            float r, g, b;
+            switch (i)
+            {
+                case 0: r = 1; g = f; b = 0; break;
+                case 1: r = q; g = 1; b = 0; break;
+                case 2: r = 0; g = 1; b = f; break;
+                case 3: r = 0; g = q; b = 1; break;
+                case 4: r = f; g = 0; b = 1; break;
+                default: r = 1; g = 0; b = q; break;
+            }
+            return Color.FromArgb(alpha, (int)(r * 255), (int)(g * 255), (int)(b * 255));
+        }
+
+        void Marker(int type, Vector3 pos, Vector3 rot, Vector3 scale, Color c, bool faceCam, bool bob)
+        {
+            Function.Call(Hash.DRAW_MARKER, type, pos.X, pos.Y, pos.Z, 0f, 0f, 0f, rot.X, rot.Y, rot.Z, scale.X, scale.Y, scale.Z,
+                (int)c.R, (int)c.G, (int)c.B, (int)c.A, bob, faceCam, 2, false, 0, 0, false);
+        }
+
+        void Light(Vector3 pos, Color c, float range, float intensity)
+        {
+            Function.Call(Hash.DRAW_LIGHT_WITH_RANGE, pos.X, pos.Y, pos.Z, (int)c.R, (int)c.G, (int)c.B, range, intensity);
+        }
+
+        void UpdateAuras()
+        {
+            if (!cfg.AuraEnabled || tracked.Count == 0) return;
+            Ped pl = Game.Player.Character;
+            if (!pl.Exists()) return;
+            Vector3 me = pl.Position;
+            float time = U.Now / 1000f;
+            foreach (Tracked t in tracked)
+            {
+                if (t.DeadAt != 0 || t.Ped == null || !t.Ped.Exists()) continue;
+                bool crown = cfg.AuraKingCrown && king != null && t.Sup == king && t.Leader;
+                if (t.AuraType == "None" && !crown) continue;
+                bool inVeh = t.Veh != null && t.Veh.Exists() && t.Ped.IsInVehicle();
+                if (inVeh && !t.Leader) continue;
+                Vector3 p = inVeh ? t.Veh.Position : t.Ped.Position;
+                if (p.DistanceTo(me) > cfg.AuraMaxDistance) continue;
+                Vector3 feet = p - new Vector3(0, 0, inVeh ? 0.4f : 0.95f);
+                Color c = t.AuraCol;
+                string a = t.AuraType.ToLowerInvariant();
+                if (a == "rainbow") c = Rainbow(time * 0.35f + (t.SpawnAt % 1000) / 1000f, 255);
+                float rs = cfg.AuraRingSize * (inVeh ? 2.6f : 1f);
+                switch (a)
+                {
+                    case "glow":
+                        Light(p + new Vector3(0, 0, 0.4f), c, cfg.AuraRange, cfg.AuraIntensity);
+                        break;
+                    case "ring":
+                        Marker(25, feet, new Vector3(0, 0, time * 60f % 360f), new Vector3(rs, rs, rs), U.WithAlpha(c, 210), false, false);
+                        Light(p, c, cfg.AuraRange * 0.6f, cfg.AuraIntensity * 0.5f);
+                        break;
+                    case "pulse":
+                    case "rainbow":
+                        for (int k = 0; k < 2; k++)
+                        {
+                            float ph = (time * 0.8f + k * 0.5f) % 1f;
+                            float sc = rs * (0.5f + ph * 1.4f);
+                            Marker(25, feet, Vector3.Zero, new Vector3(sc, sc, sc), U.WithAlpha(c, (int)(230 * (1 - ph))), false, false);
+                        }
+                        Light(p, c, cfg.AuraRange, cfg.AuraIntensity * (0.6f + 0.4f * (float)Math.Sin(time * 5)));
+                        break;
+                    case "beam":
+                        Marker(1, feet, Vector3.Zero, new Vector3(rs * 0.7f, rs * 0.7f, 9f), U.WithAlpha(c, 60), false, false);
+                        Marker(25, feet, new Vector3(0, 0, time * 90f % 360f), new Vector3(rs, rs, rs), U.WithAlpha(c, 200), false, false);
+                        Light(p + new Vector3(0, 0, 1f), c, cfg.AuraRange * 1.4f, cfg.AuraIntensity);
+                        break;
+                    case "crown":
+                        crown = true;
+                        break;
+                    case "fire":
+                    case "smoke":
+                    case "electric":
+                    case "sparkles":
+                        Light(p, c, cfg.AuraRange * 0.8f, cfg.AuraIntensity * 0.6f);
+                        break;
+                }
+                if (crown)
+                {
+                    Color kc = a == "crown" ? c : cfg.AuraKingColor;
+                    float bob = (float)Math.Sin(time * 3) * 0.08f;
+                    Marker(0, p + new Vector3(0, 0, (inVeh ? 2.2f : 1.25f) + bob), new Vector3(0, 0, time * 120f % 360f), new Vector3(0.35f, 0.35f, 0.3f), U.WithAlpha(kc, 230), false, false);
+                    Light(p + new Vector3(0, 0, 1.4f), kc, 2.2f, cfg.AuraIntensity);
+                }
+            }
+        }
+
+        // ================================================================ Live Test (simulated viewers)
+        bool simOn;
+        long simNext;
+        readonly List<KeyValuePair<long, LiveEvent>> simQueue = new List<KeyValuePair<long, LiveEvent>>();
+
+        void ToggleLiveTest()
+        {
+            if (!cfg.LiveTestEnabled) return;
+            simOn = !simOn;
+            if (simOn)
+            {
+                if (!started) StartSession();
+                simNext = U.Now + 300;
+                Status("LIVE TEST ● ON");
+            }
+            else
+            {
+                simQueue.Clear();
+                Status("LIVE TEST ■ OFF");
+            }
+        }
+
+        LiveEvent SimBase(string name)
+        {
+            LiveEvent e = new LiveEvent();
+            uint h = U.Joaat(name);
+            e.UserKey = "sim:" + name;
+            e.Nick = name;
+            e.Sim = true;
+            e.SimColor = Rainbow((h % 360) / 360f, 255);
+            e.Level = (int)(h % 48) + 1;
+            if (cfg.LiveTestAvatars.Count > 0) e.Avatars.Add(cfg.LiveTestAvatars[(int)(h % (uint)cfg.LiveTestAvatars.Count)]);
+            return e;
+        }
+
+        void UpdateLiveTest()
+        {
+            long now = U.Now;
+            for (int i = 0; i < simQueue.Count; i++)
+            {
+                if (simQueue[i].Key > now) continue;
+                LiveEvent q = simQueue[i].Value;
+                simQueue.RemoveAt(i--);
+                HandleEvent(q);
+            }
+            if (!simOn || paused || now < simNext) return;
+            simNext = now + U.Rng.Next(cfg.LiveTestMinMs, cfg.LiveTestMaxMs + 1);
+            if (cfg.LiveTestNames.Count == 0) return;
+            string name = U.Pick(cfg.LiveTestNames);
+            int total = cfg.LtGift + cfg.LtLike + cfg.LtComment + cfg.LtFollow + cfg.LtShare + cfg.LtJoin;
+            if (total <= 0) return;
+            int r = U.Rng.Next(total);
+            LiveEvent e = SimBase(name);
+            if ((r -= cfg.LtGift) < 0)
+            {
+                List<Interaction> gifts = new List<Interaction>();
+                foreach (Interaction it in cfg.Interactions)
+                    if (it.Enabled && it.Trigger.Equals("Gift", StringComparison.OrdinalIgnoreCase) && (it.GiftName.Length > 0 || it.GiftId.Length > 0)) gifts.Add(it);
+                Interaction g = U.Pick(gifts);
+                e.Type = "gift";
+                e.GiftName = g != null ? g.GiftName : "Rose";
+                e.GiftId = g != null ? g.GiftId : "";
+                e.Diamonds = g != null && g.GiftCoins > 0 ? g.GiftCoins : 1;
+                if (U.Rng.Next(100) < cfg.LiveTestComboChance)
+                {
+                    int n = U.Rng.Next(2, cfg.LiveTestMaxCombo + 1);
+                    for (int k = 1; k <= n; k++)
+                    {
+                        LiveEvent c = SimBase(name);
+                        c.Type = "gift"; c.GiftName = e.GiftName; c.GiftId = e.GiftId; c.Diamonds = e.Diamonds;
+                        c.GiftType = 1; c.RepeatCount = k; c.RepeatEnd = k == n;
+                        simQueue.Add(new KeyValuePair<long, LiveEvent>(now + k * 180, c));
+                    }
+                    return;
+                }
+                e.GiftType = 0;
+                e.RepeatCount = 1;
+            }
+            else if ((r -= cfg.LtLike) < 0) { e.Type = "like"; e.Likes = U.Rng.Next(5, 45); }
+            else if ((r -= cfg.LtComment) < 0)
+            {
+                e.Type = "chat";
+                List<string> words = new List<string>(cfg.LiveTestComments);
+                foreach (Interaction it in cfg.Interactions)
+                    if (it.Enabled && it.Trigger.Equals("Comment", StringComparison.OrdinalIgnoreCase) && it.CommentText.Length > 0) words.Add(it.CommentText);
+                e.Comment = words.Count > 0 ? U.Pick(words) : "GG";
+            }
+            else if ((r -= cfg.LtFollow) < 0) e.Type = "follow";
+            else if ((r -= cfg.LtShare) < 0) e.Type = "share";
+            else e.Type = "join";
+            HandleEvent(e);
+        }
+
         // ================================================================ HUD
         const float TXT = 0.34f, SMALL = 0.28f, BIG = 0.62f;
         float frameX, frameY, frameW = 1280, frameH = 720;
         LayoutCfg L;
+        Color cAcc, cPan, cTxt, cWin, cLoss;
+
+        // Own palettes of the pro styles: accent, panel, text, win, loss (used when [Hud] StylePalette=true)
+        static readonly Dictionary<string, string[]> Palettes = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Broadcast", new string[] { "#e10600", "#111418", "#ffffff", "#1fc16b", "#e10600" } },
+            { "Cyber",     new string[] { "#00f0ff", "#05060d", "#e0fbff", "#39ff14", "#ff2a6d" } },
+            { "Royal",     new string[] { "#ffc828", "#1a0f2e", "#fff4d6", "#ffd54a", "#ff4d6d" } },
+            { "Hologram",  new string[] { "#7df9ff", "#041a24", "#d9fbff", "#7dffb3", "#ff7d9b" } },
+            { "Gradient",  new string[] { "#ff4fd8", "#1b1036", "#ffffff", "#4dffb5", "#ff5c7a" } },
+            { "Stream",    new string[] { "#fe2c55", "#000000", "#ffffff", "#25f4ee", "#fe2c55" } },
+            { "Carbon",    new string[] { "#ff7a00", "#121212", "#f2f2f2", "#7cff6b", "#ff3b3b" } }
+        };
+
+        void ApplyPalette()
+        {
+            cAcc = cfg.Accent; cPan = cfg.PanelColor; cTxt = cfg.TextColor; cWin = cfg.WinColor; cLoss = cfg.LossColor;
+            string[] p;
+            if (cfg.StylePalette && Palettes.TryGetValue(style ?? "", out p))
+            {
+                cAcc = U.ParseColor(p[0], cAcc); cPan = U.ParseColor(p[1], cPan); cTxt = U.ParseColor(p[2], cTxt);
+                cWin = U.ParseColor(p[3], cWin); cLoss = U.ParseColor(p[4], cLoss);
+            }
+        }
 
         static Font FontOf(string n)
         {
@@ -3491,17 +4048,28 @@ namespace TikArena
             }
         }
 
-        Color PanelCol(float mul) { return U.WithAlpha(cfg.PanelColor, (int)(cfg.Opacity * mul)); }
-        Color TextCol(int a) { return U.WithAlpha(cfg.TextColor, a); }
+        Color PanelCol(float mul) { return U.WithAlpha(cPan, (int)(cfg.Opacity * mul)); }
+        Color TextCol(int a) { return U.WithAlpha(cTxt, a); }
         string St { get { return (style ?? "Classic").ToLowerInvariant(); } }
+        static bool Is(string a, string b) { return string.Equals(a, b, StringComparison.OrdinalIgnoreCase); }
+
+        void Brackets(float x, float y, float w, float h, float len, float t, Color c)
+        {
+            Gfx.Rect(x, y, len, t, c); Gfx.Rect(x, y, t, len, c);
+            Gfx.Rect(x + w - len, y, len, t, c); Gfx.Rect(x + w - t, y, t, len, c);
+            Gfx.Rect(x, y + h - t, len, t, c); Gfx.Rect(x, y + h - len, t, len, c);
+            Gfx.Rect(x + w - len, y + h - t, len, t, c); Gfx.Rect(x + w - t, y + h - len, t, len, c);
+        }
 
         void PanelBg(float x, float y, float w, float h, float alpha)
         {
-            Color acc = cfg.Accent;
+            Color acc = cAcc;
+            int A = (int)(255 * alpha);
+            long now = U.Now;
             switch (St)
             {
                 case "glass":
-                    Gfx.Rect(x, y, w, h, U.WithAlpha(U.Mix(cfg.PanelColor, Color.White, 0.12f), (int)(cfg.Opacity * 0.55f * alpha)));
+                    Gfx.Rect(x, y, w, h, U.WithAlpha(U.Mix(cPan, Color.White, 0.12f), (int)(cfg.Opacity * 0.55f * alpha)));
                     Gfx.Border(x, y, w, h, 1, U.WithAlpha(Color.White, (int)(55 * alpha)));
                     break;
                 case "neon":
@@ -3514,28 +4082,111 @@ namespace TikArena
                     break;
                 case "esports":
                     Gfx.Rect(x, y, w, h, PanelCol(alpha));
-                    Gfx.Rect(x, y, 4, h, U.WithAlpha(acc, (int)(255 * alpha)));
+                    Gfx.Rect(x, y, 4, h, U.WithAlpha(acc, A));
                     Gfx.Rect(x, y + h - 2, w, 2, U.WithAlpha(acc, (int)(120 * alpha)));
                     break;
                 case "retro":
                     Gfx.Rect(x, y, w, h, PanelCol(alpha));
-                    Gfx.Border(x, y, w, h, 2, U.WithAlpha(cfg.TextColor, (int)(170 * alpha)));
+                    Gfx.Border(x, y, w, h, 2, U.WithAlpha(cTxt, (int)(170 * alpha)));
+                    break;
+                case "broadcast":
+                    // TV sports graphics: solid plate, colored side block, white hairline
+                    Gfx.Rect(x, y, w, h, PanelCol(alpha * 1.1f));
+                    Gfx.Rect(x, y, 6, h, U.WithAlpha(acc, A));
+                    Gfx.Rect(x + 6, y, w - 6, 1, U.WithAlpha(Color.White, (int)(90 * alpha)));
+                    Gfx.Rect(x, y + h - 3, w, 3, U.WithAlpha(acc, (int)(200 * alpha)));
+                    break;
+                case "cyber":
+                    // cut corners + brackets + scanlines
+                    {
+                        const float cut = 7;
+                        Color bg = PanelCol(alpha);
+                        Gfx.Rect(x + cut, y, w - cut * 2, h, bg);
+                        Gfx.Rect(x, y + cut, cut, h - cut * 2, bg);
+                        Gfx.Rect(x + w - cut, y + cut, cut, h - cut * 2, bg);
+                        for (int i = 1; i < cut; i += 2) { Gfx.Rect(x + cut - i, y + i, i, 2, bg); Gfx.Rect(x + w - cut, y + h - i - 2, i, 2, bg); }
+                        for (float sy = y + 3; sy < y + h - 2; sy += 6) Gfx.Rect(x + 2, sy, w - 4, 1, U.WithAlpha(acc, (int)(14 * alpha)));
+                        Brackets(x - 2, y - 2, w + 4, h + 4, 12, 2, U.WithAlpha(acc, A));
+                        Gfx.Rect(x + w * 0.3f, y + h - 1, w * 0.4f, 1, U.WithAlpha(acc, (int)(160 * alpha)));
+                    }
+                    break;
+                case "royal":
+                    Gfx.Rect(x, y, w, h, PanelCol(alpha));
+                    Gfx.Border(x, y, w, h, 2, U.WithAlpha(acc, A));
+                    Gfx.Border(x + 4, y + 4, w - 8, h - 8, 1, U.WithAlpha(acc, (int)(110 * alpha)));
+                    Gfx.Rect(x - 2, y - 2, 6, 6, U.WithAlpha(acc, A)); Gfx.Rect(x + w - 4, y - 2, 6, 6, U.WithAlpha(acc, A));
+                    Gfx.Rect(x - 2, y + h - 4, 6, 6, U.WithAlpha(acc, A)); Gfx.Rect(x + w - 4, y + h - 4, 6, 6, U.WithAlpha(acc, A));
+                    break;
+                case "hologram":
+                    {
+                        float fl = 0.85f + 0.15f * (float)Math.Sin(now / 90.0);
+                        Gfx.Rect(x, y, w, h, U.WithAlpha(U.Mix(cPan, acc, 0.18f), (int)(cfg.Opacity * 0.45f * alpha * fl)));
+                        Gfx.Border(x, y, w, h, 1, U.WithAlpha(acc, (int)(90 * alpha)));
+                        Brackets(x, y, w, h, 10, 2, U.WithAlpha(acc, (int)(230 * alpha * fl)));
+                        float band = (now / 12) % Math.Max(1, (int)h);
+                        Gfx.Rect(x + 1, y + band, w - 2, 2, U.WithAlpha(acc, (int)(70 * alpha)));
+                    }
+                    break;
+                case "gradient":
+                    {
+                        const int n = 14;
+                        Color from = U.Mix(cPan, acc, 0.45f), to = cPan;
+                        for (int i = 0; i < n; i++)
+                            Gfx.Rect(x + w * i / n, y, w / n + 0.6f, h, U.WithAlpha(U.Mix(from, to, i / (float)(n - 1)), (int)(cfg.Opacity * alpha)));
+                        for (int i = 0; i < n; i++)
+                            Gfx.Rect(x + w * i / n, y, w / n + 0.6f, 2, U.WithAlpha(U.Mix(acc, cWin, i / (float)(n - 1)), A));
+                    }
+                    break;
+                case "stream":
+                    // TikTok glitch: cyan / red offset plates behind a black plate
+                    Gfx.Rect(x - 2, y - 1, w, h, U.WithAlpha(cWin, (int)(120 * alpha)));
+                    Gfx.Rect(x + 2, y + 1, w, h, U.WithAlpha(acc, (int)(120 * alpha)));
+                    Gfx.Rect(x, y, w, h, U.WithAlpha(cPan, (int)(Math.Max(cfg.Opacity, 190) * alpha)));
+                    break;
+                case "carbon":
+                    Gfx.Rect(x, y, w, h, PanelCol(alpha));
+                    for (float sx = x + 2; sx < x + w - 2; sx += 4) Gfx.Rect(sx, y, 2, h, U.WithAlpha(Color.White, (int)(7 * alpha)));
+                    Gfx.Rect(x, y, 3, h, U.WithAlpha(acc, A));
+                    Gfx.Rect(x, y + h - 2, w, 2, U.WithAlpha(acc, (int)(170 * alpha)));
+                    Gfx.Rect(x + w - 14, y, 14, 3, U.WithAlpha(acc, A));
                     break;
                 default:
                     Gfx.Rect(x, y, w, h, PanelCol(alpha));
-                    Gfx.Rect(x, y, w, 2, U.WithAlpha(acc, (int)(255 * alpha)));
+                    Gfx.Rect(x, y, w, 2, U.WithAlpha(acc, A));
                     break;
             }
         }
 
         void Header(string text, float x, float y, float w, float h)
         {
-            if (St == "esports")
+            switch (St)
             {
-                Gfx.Rect(x, y, w, h, cfg.Accent);
-                Gfx.Text(text, x + w / 2, y + 2, TXT, cfg.PanelColor, Alignment.Center);
+                case "esports":
+                case "broadcast":
+                    Gfx.Rect(x, y, w, h, cAcc);
+                    Gfx.Text(text, x + w / 2, y + 2, TXT, St == "broadcast" ? Color.White : cPan, Alignment.Center);
+                    break;
+                case "royal":
+                    {
+                        float tw = Gfx.TextW(text, TXT);
+                        Gfx.Text(text, x + w / 2, y + 2, TXT, cAcc, Alignment.Center);
+                        Gfx.Rect(x + 10, y + h / 2, Math.Max(0, (w - tw) / 2 - 18), 1, U.WithAlpha(cAcc, 180));
+                        Gfx.Rect(x + (w + tw) / 2 + 8, y + h / 2, Math.Max(0, (w - tw) / 2 - 18), 1, U.WithAlpha(cAcc, 180));
+                    }
+                    break;
+                case "cyber":
+                case "hologram":
+                    Gfx.Text("[ " + text + " ]", x + w / 2, y + 2, TXT, cAcc, Alignment.Center);
+                    break;
+                case "stream":
+                    Gfx.Text(text, x + w / 2, y + 2, TXT, cTxt, Alignment.Center);
+                    Gfx.Rect(x + w / 2 - 22, y + h - 2, 22, 2, cWin);
+                    Gfx.Rect(x + w / 2, y + h - 2, 22, 2, cAcc);
+                    break;
+                default:
+                    Gfx.Text(text, x + w / 2, y + 2, TXT, cAcc, Alignment.Center);
+                    break;
             }
-            else Gfx.Text(text, x + w / 2, y + 2, TXT, cfg.Accent, Alignment.Center);
         }
 
         PointF Anchor(PanelPos p, float w, float h)
@@ -3585,6 +4236,7 @@ namespace TikArena
             if (!started || !cfg.HudEnabled) return;
             if (Function.Call<bool>(Hash.IS_PAUSE_MENU_ACTIVE)) return;
             Gfx.BeginFrame();
+            ApplyPalette();
             Gfx.F = FontOf(fontName);
             Gfx.FontScale = cfg.FontScale;
             Gfx.Outline = cfg.TextOutline;
@@ -3610,11 +4262,24 @@ namespace TikArena
             Place("Feed", cfg.FeedEnabled && feed.Count > 0, fFeed);
             Place("Hype", cfg.HypeEnabled && hypes.Count > 0, fHype);
             EndScreen();
+            LiveBadge();
             if (paused)
             {
                 Gfx.Origin(0, 0, 1);
-                Gfx.Text(cfg.Tx("PausedText", "PAUSED"), frameX + frameW / 2, 300, 0.7f, cfg.Accent, Alignment.Center);
+                Gfx.Text(cfg.Tx("PausedText", "PAUSED"), frameX + frameW / 2, 300, 0.7f, cAcc, Alignment.Center);
             }
+        }
+
+        void LiveBadge()
+        {
+            if (!simOn || !cfg.LiveTestBadge) return;
+            Gfx.Origin(0, 0, 1);
+            string t = "LIVE TEST";
+            float w = Gfx.TextW(t, SMALL) + 26, x = frameX + frameW - w - 8, y = frameY + 4;
+            bool blink = (U.Now / 500) % 2 == 0;
+            Gfx.Rect(x, y, w, 18, Color.FromArgb(220, 254, 44, 85));
+            Gfx.Rect(x + 6, y + 6, 6, 6, blink ? Color.White : Color.FromArgb(120, 255, 255, 255));
+            Gfx.Text(t, x + 16, y + 1, SMALL, Color.White, Alignment.Left);
         }
 
         void PruneFeeds()
@@ -3645,126 +4310,240 @@ namespace TikArena
             return (s / 60).ToString("00", U.IC) + ":" + (s % 60).ToString("00", U.IC);
         }
 
+        Color TimerColor()
+        {
+            double left = roundDurMs - roundMs;
+            return phase == Phase.Running && left < 30000 && (U.Now / 500) % 2 == 0 ? cLoss : cTxt;
+        }
+
+        string StreakText()
+        {
+            bool win = streak > 0;
+            return Math.Abs(streak).ToString(U.IC) + " " + (win ? cfg.Tx("WinStreakText", "") : cfg.Tx("LossStreakText", ""));
+        }
+
         SizeF ScorePanel(bool draw)
         {
-            float w = 290, y = 6;
-            List<string> rows = new List<string>();
-            foreach (string r in cfg.ScoreOrder)
+            string v = cfg.ScoreVariant ?? "Classic";
+            bool title = cfg.TitleEnabled && cfg.Title.Length > 0;
+            bool timer = cfg.ShowTimer && cfg.ChallengeEnabled;
+            bool showStreak = cfg.ShowStreak && Math.Abs(streak) >= 2;
+            if (Is(v, "Bar"))
             {
-                string k = r.ToLowerInvariant();
-                if (k == "title" && cfg.TitleEnabled && cfg.Title.Length > 0) rows.Add(k);
-                else if (k == "score" && (cfg.ShowScore || (cfg.ShowTimer && cfg.ChallengeEnabled))) rows.Add(k);
-                else if (k == "streak" && cfg.ShowStreak && Math.Abs(streak) >= 2) rows.Add(k);
+                float w = 380, h = 38 + (title ? 22 : 0) + (showStreak ? 18 : 0);
+                if (!draw) return new SizeF(w, h);
+                PanelBg(0, 0, w, h, 1);
+                float y = 0;
+                if (title) { Header(cfg.Title, 0, 0, w, 20); y += 22; }
+                if (cfg.ShowScore)
+                {
+                    Gfx.Rect(8, y + 4, 110, 30, U.WithAlpha(cWin, 200));
+                    Gfx.Text(cfg.Tx("WinShort", "W"), 16, y + 9, TXT, Color.White, Alignment.Left);
+                    Gfx.Text(wins.ToString(U.IC), 110, y + 4, 0.5f, Color.White, Alignment.Right);
+                    Gfx.Rect(w - 118, y + 4, 110, 30, U.WithAlpha(cLoss, 200));
+                    Gfx.Text(losses.ToString(U.IC), w - 110, y + 4, 0.5f, Color.White, Alignment.Left);
+                    Gfx.Text(cfg.Tx("LossShort", "L"), w - 16, y + 9, TXT, Color.White, Alignment.Right);
+                }
+                if (timer) Gfx.Text(TimerText(), w / 2, y + 5, 0.52f, TimerColor(), Alignment.Center);
+                y += 38;
+                if (showStreak) Gfx.Text(StreakText(), w / 2, y - 2, SMALL, streak > 0 ? cWin : cLoss, Alignment.Center);
+                return new SizeF(w, h);
             }
-            if (rows.Count == 0) return SizeF.Empty;
-            float h = 6;
-            foreach (string r in rows) h += r == "title" ? 26 : (r == "score" ? 50 : 22);
-            h += 4;
-            if (!draw) return new SizeF(w, h);
+            if (Is(v, "BigTimer"))
+            {
+                float w = 250, h = 6 + (title ? 24 : 0) + (timer ? 60 : 0) + (cfg.ShowScore ? 24 : 0) + (showStreak ? 18 : 0) + 4;
+                if (!draw) return new SizeF(w, h);
+                PanelBg(0, 0, w, h, 1);
+                float y = 6;
+                if (title) { Header(cfg.Title, 0, y - 4, w, 22); y += 24; }
+                if (timer)
+                {
+                    Gfx.Text(TimerText(), w / 2, y - 4, 1.05f, TimerColor(), Alignment.Center);
+                    float frac = roundDurMs > 0 ? (float)U.Clamp((float)(roundMs / roundDurMs), 0, 1) : 0;
+                    Gfx.Bar(14, y + 50, w - 28, 4, 1 - frac, cAcc, U.WithAlpha(Color.Black, 150));
+                    y += 60;
+                }
+                if (cfg.ShowScore)
+                {
+                    Gfx.Text(wins.ToString(U.IC) + " " + cfg.Tx("WinShort", "W"), w / 2 - 12, y, TXT, cWin, Alignment.Right);
+                    Gfx.Text("—", w / 2, y, TXT, TextCol(160), Alignment.Center);
+                    Gfx.Text(losses.ToString(U.IC) + " " + cfg.Tx("LossShort", "L"), w / 2 + 12, y, TXT, cLoss, Alignment.Left);
+                    y += 24;
+                }
+                if (showStreak) Gfx.Text(StreakText(), w / 2, y - 2, SMALL, streak > 0 ? cWin : cLoss, Alignment.Center);
+                return new SizeF(w, h);
+            }
 
-            PanelBg(0, 0, w, h, 1);
-            foreach (string r in rows)
+            // Classic
             {
-                if (r == "title")
+                float w = 290, y = 6;
+                List<string> rows = new List<string>();
+                foreach (string r in cfg.ScoreOrder)
                 {
-                    Header(cfg.Title, 0, y, w, 24);
-                    y += 26;
+                    string k = r.ToLowerInvariant();
+                    if (k == "title" && title) rows.Add(k);
+                    else if (k == "score" && (cfg.ShowScore || timer)) rows.Add(k);
+                    else if (k == "streak" && showStreak) rows.Add(k);
                 }
-                else if (r == "score")
+                if (rows.Count == 0) return SizeF.Empty;
+                float h = 6;
+                foreach (string r in rows) h += r == "title" ? 26 : (r == "score" ? 50 : 22);
+                h += 4;
+                if (!draw) return new SizeF(w, h);
+                PanelBg(0, 0, w, h, 1);
+                foreach (string r in rows)
                 {
-                    if (cfg.ShowScore)
+                    if (r == "title") { Header(cfg.Title, 0, y, w, 24); y += 26; }
+                    else if (r == "score")
                     {
-                        Gfx.Rect(8, y + 3, 72, 44, U.WithAlpha(cfg.WinColor, 60));
-                        Gfx.Rect(8, y + 3, 72, 3, cfg.WinColor);
-                        Gfx.Text(wins.ToString(U.IC), 44, y + 4, 0.55f, cfg.WinColor, Alignment.Center);
-                        Gfx.Text(cfg.Tx("WinShort", "W"), 44, y + 29, SMALL, TextCol(230), Alignment.Center);
-                        Gfx.Rect(w - 80, y + 3, 72, 44, U.WithAlpha(cfg.LossColor, 60));
-                        Gfx.Rect(w - 80, y + 3, 72, 3, cfg.LossColor);
-                        Gfx.Text(losses.ToString(U.IC), w - 44, y + 4, 0.55f, cfg.LossColor, Alignment.Center);
-                        Gfx.Text(cfg.Tx("LossShort", "L"), w - 44, y + 29, SMALL, TextCol(230), Alignment.Center);
+                        if (cfg.ShowScore)
+                        {
+                            Gfx.Rect(10, y + 3, 72, 44, U.WithAlpha(cWin, 60));
+                            Gfx.Rect(10, y + 3, 72, 3, cWin);
+                            Gfx.Text(wins.ToString(U.IC), 46, y + 4, 0.55f, cWin, Alignment.Center);
+                            Gfx.Text(cfg.Tx("WinShort", "W"), 46, y + 29, SMALL, TextCol(230), Alignment.Center);
+                            Gfx.Rect(w - 82, y + 3, 72, 44, U.WithAlpha(cLoss, 60));
+                            Gfx.Rect(w - 82, y + 3, 72, 3, cLoss);
+                            Gfx.Text(losses.ToString(U.IC), w - 46, y + 4, 0.55f, cLoss, Alignment.Center);
+                            Gfx.Text(cfg.Tx("LossShort", "L"), w - 46, y + 29, SMALL, TextCol(230), Alignment.Center);
+                        }
+                        if (timer) Gfx.Text(TimerText(), w / 2, y + 8, BIG, TimerColor(), Alignment.Center);
+                        y += 50;
                     }
-                    if (cfg.ShowTimer && cfg.ChallengeEnabled)
+                    else if (r == "streak")
                     {
-                        double left = roundDurMs - roundMs;
-                        Color tc = phase == Phase.Running && left < 30000 && (U.Now / 500) % 2 == 0 ? cfg.LossColor : cfg.TextColor;
-                        Gfx.Text(TimerText(), w / 2, y + 8, BIG, tc, Alignment.Center);
+                        Gfx.Text(StreakText(), w / 2, y + 2, TXT, streak > 0 ? cWin : cLoss, Alignment.Center);
+                        y += 22;
                     }
-                    y += 50;
                 }
-                else if (r == "streak")
-                {
-                    bool win = streak > 0;
-                    string txt = Math.Abs(streak).ToString(U.IC) + " " + (win ? cfg.Tx("WinStreakText", "") : cfg.Tx("LossStreakText", ""));
-                    Gfx.Text(txt, w / 2, y + 2, TXT, win ? cfg.WinColor : cfg.LossColor, Alignment.Center);
-                    y += 22;
-                }
+                return new SizeF(w, h);
             }
-            return new SizeF(w, h);
         }
 
         // ---------------------------------------------------------------- top supporters
-        SizeF TopPanel(bool draw)
+        static readonly Color[] Medal = { Color.FromArgb(255, 255, 200, 40), Color.FromArgb(255, 200, 210, 220), Color.FromArgb(255, 215, 140, 80) };
+
+        List<string> TopRows()
         {
-            float w = 236;
-            List<Supporter> top = TopList(cfg.TopCount);
             List<string> rows = new List<string>();
             foreach (string r in cfg.Top3Order)
             {
                 string k = r.ToLowerInvariant();
                 if (k == "top3" && cfg.ShowTop3) rows.Add(k);
                 else if (k == "counters" && cfg.ShowCounters) rows.Add(k);
-                else if (k == "status" && cfg.ShowStatus && cfg.LiveEnabled) rows.Add(k);
+                else if (k == "status" && cfg.ShowStatus && (cfg.LiveEnabled || simOn)) rows.Add(k);
             }
+            return rows;
+        }
+
+        void CountersRow(float w, float y)
+        {
+            string c = cfg.Tx("EnemiesShort", "E") + " " + AliveCount(true) + "  ·  " +
+                       cfg.Tx("AlliesShort", "A") + " " + AliveCount(false) + "  ·  " +
+                       cfg.Tx("QueueShort", "Q") + " " + QueueCount();
+            Gfx.Text(c, w / 2, y + 3, SMALL, TextCol(230), Alignment.Center);
+        }
+
+        void StatusRow(float w, float y)
+        {
+            bool ok = live.Connected;
+            string t = simOn ? "LIVE TEST" : "TikFinity";
+            Gfx.Rect(w / 2 - 44, y + 8, 7, 7, simOn ? Color.FromArgb(255, 254, 44, 85) : (ok ? cWin : cLoss));
+            Gfx.Text(t, w / 2 - 32, y + 3, SMALL, TextCol(220), Alignment.Left);
+        }
+
+        SizeF TopPanel(bool draw)
+        {
+            string v = cfg.Top3Variant ?? "List";
+            List<Supporter> top = TopList(cfg.TopCount);
+            List<string> rows = TopRows();
             if (rows.Count == 0) return SizeF.Empty;
+            bool podium = Is(v, "Podium"), compact = Is(v, "Compact");
+            float w = podium ? 256 : (compact ? Math.Max(230, Math.Max(1, top.Count) * 44 + 16) : 236);
             float h = 6;
             foreach (string r in rows)
             {
-                if (r == "top3") h += 24 + Math.Max(1, top.Count) * 30;
-                else h += 22;
+                if (r != "top3") { h += 22; continue; }
+                h += 24;
+                if (podium) h += 118 + Math.Max(0, top.Count - 3) * 24;
+                else if (compact) h += 62;
+                else h += Math.Max(1, top.Count) * 30;
             }
             h += 4;
             if (!draw) return new SizeF(w, h);
 
             PanelBg(0, 0, w, h, 1);
             float y = 6;
-            Color[] medal = { Color.FromArgb(255, 255, 200, 40), Color.FromArgb(255, 200, 210, 220), Color.FromArgb(255, 215, 140, 80) };
             foreach (string r in rows)
             {
-                if (r == "top3")
+                if (r == "counters") { CountersRow(w, y); y += 22; continue; }
+                if (r == "status") { StatusRow(w, y); y += 22; continue; }
+                Header(cfg.Top3Title, 0, y, w, 22);
+                y += 24;
+                if (podium)
                 {
-                    Header(cfg.Top3Title, 0, y, w, 22);
-                    y += 24;
-                    if (top.Count == 0)
+                    // 2 - 1 - 3 columns on pedestals
+                    int[] order = { 1, 0, 2 };
+                    float[] ped = { 30, 44, 22 };
+                    float colW = (w - 16) / 3;
+                    for (int c = 0; c < 3; c++)
                     {
-                        Gfx.Text("—", w / 2, y + 6, TXT, TextCol(150), Alignment.Center);
-                        y += 30;
+                        int i = order[c];
+                        float cx = 8 + colW * c + colW / 2;
+                        float baseY = y + 118;
+                        float av = i == 0 ? 44 : 34;
+                        Gfx.Rect(cx - colW / 2 + 3, baseY - ped[c], colW - 6, ped[c], U.WithAlpha(Medal[i], 170));
+                        Gfx.Text((i + 1).ToString(U.IC), cx, baseY - ped[c] + 2, 0.42f, Color.FromArgb(230, 20, 20, 20), Alignment.Center);
+                        if (i < top.Count)
+                        {
+                            Supporter s = top[i];
+                            float ay = baseY - ped[c] - av - 30;
+                            Gfx.Image(avatars.Ring(Avatar(s), Medal[i]), cx - av / 2, ay, av, av, 255);
+                            Gfx.Text(U.Trunc(s.Nick, 9), cx, ay + av + 1, SMALL, TextCol(255), Alignment.Center);
+                            if (cfg.ShowCoins) Gfx.Text(U.Coins(s.Coins), cx, ay + av + 14, SMALL * 0.9f, cAcc, Alignment.Center);
+                        }
                     }
+                    y += 118;
+                    for (int i = 3; i < top.Count; i++)
+                    {
+                        Supporter s = top[i];
+                        Gfx.Text((i + 1).ToString(U.IC), 16, y + 4, SMALL, TextCol(180), Alignment.Center);
+                        Gfx.Image(Avatar(s), 28, y + 2, 20, 20, 255);
+                        Gfx.Text(U.Trunc(s.Nick, 16), 54, y + 4, SMALL, TextCol(240), Alignment.Left);
+                        if (cfg.ShowCoins) Gfx.Text(U.Coins(s.Coins), w - 12, y + 4, SMALL, cAcc, Alignment.Right);
+                        y += 24;
+                    }
+                }
+                else if (compact)
+                {
+                    if (top.Count == 0) Gfx.Text("—", w / 2, y + 20, TXT, TextCol(150), Alignment.Center);
+                    float x0 = (w - top.Count * 44) / 2;
                     for (int i = 0; i < top.Count; i++)
                     {
                         Supporter s = top[i];
-                        Color mc = i < 3 ? medal[i] : TextCol(200);
+                        float cx = x0 + i * 44 + 22;
+                        Color mc = i < 3 ? Medal[i] : TextCol(200);
+                        Gfx.Image(avatars.Ring(Avatar(s), mc), cx - 18, y + 2, 36, 36, 255);
+                        Gfx.Rect(cx + 8, y, 14, 13, mc);
+                        Gfx.Text((i + 1).ToString(U.IC), cx + 15, y - 1, SMALL * 0.85f, Color.Black, Alignment.Center);
+                        if (cfg.ShowCoins) Gfx.Text(U.Coins(s.Coins), cx, y + 40, SMALL * 0.9f, cAcc, Alignment.Center);
+                    }
+                    y += 62;
+                }
+                else
+                {
+                    if (top.Count == 0) { Gfx.Text("—", w / 2, y + 6, TXT, TextCol(150), Alignment.Center); y += 30; }
+                    for (int i = 0; i < top.Count; i++)
+                    {
+                        Supporter s = top[i];
+                        Color mc = i < 3 ? Medal[i] : TextCol(200);
                         Gfx.Rect(6, y + 2, w - 12, 26, U.WithAlpha(mc, 28));
                         Gfx.Text((i + 1).ToString(U.IC), 16, y + 6, TXT, mc, Alignment.Center);
                         Gfx.Image(Avatar(s), 28, y + 3, 24, 24, 255);
                         Gfx.Text(U.Trunc(s.Nick, 16), 58, y + 6, TXT, TextCol(255), Alignment.Left);
-                        if (cfg.ShowCoins) Gfx.Text(U.Coins(s.Coins), w - 12, y + 6, TXT, cfg.Accent, Alignment.Right);
+                        if (cfg.ShowCoins) Gfx.Text(U.Coins(s.Coins), w - 12, y + 6, TXT, cAcc, Alignment.Right);
                         y += 30;
                     }
-                }
-                else if (r == "counters")
-                {
-                    string c = cfg.Tx("EnemiesShort", "E") + " " + AliveCount(true) + "  ·  " +
-                               cfg.Tx("AlliesShort", "A") + " " + AliveCount(false) + "  ·  " +
-                               cfg.Tx("QueueShort", "Q") + " " + QueueCount();
-                    Gfx.Text(c, w / 2, y + 3, SMALL, TextCol(230), Alignment.Center);
-                    y += 22;
-                }
-                else if (r == "status")
-                {
-                    bool ok = live.Connected;
-                    Gfx.Rect(w / 2 - 44, y + 8, 7, 7, ok ? cfg.WinColor : cfg.LossColor);
-                    Gfx.Text("TikFinity", w / 2 - 32, y + 3, SMALL, TextCol(220), Alignment.Left);
-                    y += 22;
                 }
             }
             return new SizeF(w, h);
@@ -3773,10 +4552,15 @@ namespace TikArena
         // ---------------------------------------------------------------- health
         SizeF HealthPanel(bool draw)
         {
+            string v = cfg.HealthVariant ?? "Bar";
             float w = Math.Max(80, L.HealthWidth);
             bool armor = cfg.ShowArmor;
-            float h = 22 + 12 + (armor ? 8 : 0) + 8;
+            float h;
+            if (Is(v, "Numbers")) h = 46 + (armor ? 5 : 0);
+            else if (Is(v, "Slim")) h = 30;
+            else h = 22 + 12 + (armor ? 8 : 0) + 8;
             if (!draw) return new SizeF(w, h);
+
             Ped pl = Game.Player.Character;
             float frac = 0, af = 0;
             int hpNow = 0, hpMax = 0;
@@ -3787,12 +4571,56 @@ namespace TikArena
                 frac = U.Clamp(hpNow / (float)hpMax, 0, 1);
                 af = U.Clamp(pl.Armor / 100f, 0, 1);
             }
-            PanelBg(0, 0, w, h, 0.85f);
-            Color hc = frac < 0.25f ? cfg.LossColor : cfg.HealthColor;
-            Gfx.Text(cfg.HealthLabel + " " + (frac * 100).ToString("0.0", U.IC) + "%", 8, 3, TXT, TextCol(255), Alignment.Left);
-            if (cfg.ShowHealthPoints) Gfx.Text(hpNow + " / " + hpMax, w - 8, 3, TXT, TextCol(220), Alignment.Right);
-            Gfx.Bar(8, 22, w - 16, 12, frac, hc, U.WithAlpha(Color.Black, 150));
-            if (armor) Gfx.Bar(8, 37, w - 16, 5, af, Color.FromArgb(255, 90, 170, 255), U.WithAlpha(Color.Black, 150));
+            bool low = frac < 0.25f;
+            Color hc = low ? cLoss : cfg.HealthColor;
+            if (low && (U.Now / 300) % 2 == 0) hc = U.Mix(hc, Color.White, 0.35f);
+            string pct = (frac * 100).ToString("0.0", U.IC) + "%";
+            Color back = U.WithAlpha(Color.Black, 150);
+            Color armorC = Color.FromArgb(255, 90, 170, 255);
+
+            if (Is(v, "Segmented"))
+            {
+                PanelBg(0, 0, w, h, 0.85f);
+                Gfx.Text(cfg.HealthLabel + " " + pct, 8, 3, TXT, TextCol(255), Alignment.Left);
+                if (cfg.ShowHealthPoints) Gfx.Text(hpNow + " / " + hpMax, w - 8, 3, TXT, TextCol(220), Alignment.Right);
+                const int segs = 10;
+                float sw = (w - 16 - (segs - 1) * 3) / segs;
+                for (int i = 0; i < segs; i++)
+                {
+                    float f = U.Clamp(frac * segs - i, 0, 1);
+                    float sx = 8 + i * (sw + 3);
+                    Gfx.Rect(sx, 22, sw, 12, back);
+                    if (f > 0) Gfx.Rect(sx, 22, sw * f, 12, hc);
+                }
+                if (armor) Gfx.Bar(8, 37, w - 16, 5, af, armorC, back);
+            }
+            else if (Is(v, "Numbers"))
+            {
+                PanelBg(0, 0, w, h, 0.85f);
+                Gfx.Text(hpNow.ToString(U.IC), 10, 0, 0.72f, hc, Alignment.Left);
+                float nw = Gfx.TextW(hpNow.ToString(U.IC), 0.72f);
+                Gfx.Text("/ " + hpMax, 14 + nw, 14, TXT, TextCol(200), Alignment.Left);
+                Gfx.Text(cfg.HealthLabel + " " + pct, w - 10, 14, SMALL, TextCol(220), Alignment.Right);
+                Gfx.Bar(10, 38, w - 20, 4, frac, hc, back);
+                if (armor) Gfx.Bar(10, 44, w - 20, 3, af, armorC, back);
+            }
+            else if (Is(v, "Slim"))
+            {
+                Gfx.Text(cfg.HealthLabel, 2, 0, SMALL, TextCol(230), Alignment.Left);
+                Gfx.Text(cfg.ShowHealthPoints ? hpNow + " / " + hpMax : pct, w - 2, 0, SMALL, TextCol(230), Alignment.Right);
+                Gfx.Rect(0, 18, w, 6, back);
+                Gfx.Rect(0, 18, w * frac, 6, hc);
+                Gfx.Rect(0, 24, w * frac, 2, U.WithAlpha(hc, 90));
+                if (armor) Gfx.Rect(0, 27, w * af, 2, armorC);
+            }
+            else
+            {
+                PanelBg(0, 0, w, h, 0.85f);
+                Gfx.Text(cfg.HealthLabel + " " + pct, 8, 3, TXT, TextCol(255), Alignment.Left);
+                if (cfg.ShowHealthPoints) Gfx.Text(hpNow + " / " + hpMax, w - 8, 3, TXT, TextCol(220), Alignment.Right);
+                Gfx.Bar(8, 22, w - 16, 12, frac, hc, back);
+                if (armor) Gfx.Bar(8, 37, w - 16, 5, af, armorC, back);
+            }
             return new SizeF(w, h);
         }
 
@@ -3897,8 +4725,10 @@ namespace TikArena
                 {
                     float gw = w * 0.42f;
                     Gfx.Rect(0, y, gw, rowH, U.WithAlpha(cfg.GuideGiftColor, (int)(cfg.Opacity * 0.9f)));
-                    Gfx.Rect(gw, y, w - gw, rowH, U.WithAlpha(U.Mix(cfg.PanelColor, cfg.GuideActionColor, 0.25f), cfg.Opacity));
+                    Gfx.Rect(gw, y, w - gw, rowH, U.WithAlpha(U.Mix(cPan, cfg.GuideActionColor, 0.25f), cfg.Opacity));
                     Gfx.Rect(gw, y, 3, rowH, cfg.GuideActionColor);
+                    if (St == "cyber" || St == "hologram") Brackets(0, y, w, rowH, 6, 1, U.WithAlpha(cAcc, 200));
+                    if (St == "royal") Gfx.Border(0, y, w, rowH, 1, U.WithAlpha(cAcc, 200));
                     float x = 6;
                     if (cfg.GuideShowGiftImage && Gfx.FileOk(gi)) { Gfx.Image(gi, x, y + 4, 28, 28, 255); x += 32; }
                     Gfx.Text(gift, x, y + 9, TXT, Color.White, Alignment.Left);
@@ -3911,46 +4741,75 @@ namespace TikArena
             return new SizeF(w, h);
         }
 
-        // ---------------------------------------------------------------- feeds
+        // ---------------------------------------------------------------- feeds (notifications, kill feed, hype)
+        float RowWidth(FeedItem f, float img, float size, bool hype)
+        {
+            float rw = 12 + (f.Avatar != null ? img + 6 : 0) + Gfx.TextW(f.Text, size) + (f.Icon != null && Gfx.FileOk(f.Icon) ? img + 6 : 0);
+            if (hype && cfg.HypeShowLevel && f.Level > 0) rw += Gfx.TextW("Lv " + f.Level, SMALL) + 12;
+            return rw;
+        }
+
         SizeF FeedList(bool draw, List<FeedItem> items, string panel, float rowH, float img, float size, bool hype)
         {
+            string variant = hype ? "Card" : (cfg.NotifVariant ?? "Card");
+            bool banner = Is(variant, "Banner"), pill = Is(variant, "Pill");
             float w = 0;
-            foreach (FeedItem f in items)
-            {
-                float rw = 12 + (f.Avatar != null ? img + 6 : 0) + Gfx.TextW(f.Text, size) + (f.Icon != null && Gfx.FileOk(f.Icon) ? img + 6 : 0);
-                if (hype && cfg.HypeShowLevel && f.Level > 0) rw += Gfx.TextW("Lv " + f.Level, SMALL) + 12;
-                if (rw > w) w = rw;
-            }
-            w = Math.Min(Math.Max(w, 150), 520);
-            float h = items.Count * (rowH + 4);
+            foreach (FeedItem f in items) w = Math.Max(w, RowWidth(f, img, size, hype) + (pill ? 10 : 0));
+            w = Math.Min(Math.Max(w, banner ? 260 : 150), 520);
+            float gap = banner ? 3 : 4;
+            float h = items.Count * (rowH + gap);
             if (!draw) return new SizeF(w, h);
             string al = HAlign(panel);
+            string anim = (cfg.FeedAnimation ?? "Slide").ToLowerInvariant();
             float y = 0;
             foreach (FeedItem f in items)
             {
                 float a = FeedAlpha(f);
-                float rw = 12 + (f.Avatar != null ? img + 6 : 0) + Gfx.TextW(f.Text, size) + (f.Icon != null && Gfx.FileOk(f.Icon) ? img + 6 : 0);
+                float rw = banner ? w : Math.Min(w, RowWidth(f, img, size, hype) + (pill ? 10 : 0));
                 string lv = hype && cfg.HypeShowLevel && f.Level > 0 ? "Lv " + f.Level : null;
-                if (lv != null) rw += Gfx.TextW(lv, SMALL) + 12;
-                rw = Math.Min(rw, w);
                 float x = al == "right" ? w - rw : (al == "center" ? (w - rw) / 2 : 0);
-                float slide = (1 - Math.Min(1f, (U.Now - f.Start) / 250f)) * 30 * (al == "right" ? 1 : -1);
-                x += slide;
-                PanelBg(x, y, rw, rowH, a);
-                if (hype) Gfx.Border(x, y, rw, rowH, 1, U.WithAlpha(cfg.HypeColor, (int)(220 * a)));
+                float t = Math.Min(1f, (U.Now - f.Start) / 250f);
+                float dy = 0;
+                if (anim == "slide") x += (1 - t) * 30 * (al == "right" ? 1 : -1);
+                else if (anim == "pop") { float e = 1 - t; dy = e * 14 - (float)Math.Sin(t * Math.PI) * 3; }
+                float ry = y + dy;
+                Color tc = hype ? f.Col : cTxt;
+                if (banner)
+                {
+                    PanelBg(x, ry, rw, rowH, a);
+                    Gfx.Rect(x, ry, rw, 2, U.WithAlpha(cAcc, (int)(255 * a)));
+                }
+                else if (pill)
+                {
+                    Gfx.Rect(x + rowH / 2, ry, rw - rowH, rowH, U.WithAlpha(cPan, (int)(Math.Max(cfg.Opacity, 180) * a)));
+                    for (int k = 0; k < 4; k++)
+                    {
+                        float inset = (4 - k) * 1.6f;
+                        Gfx.Rect(x + k * rowH / 8f, ry + inset, rowH / 8f + 0.5f, rowH - inset * 2, U.WithAlpha(cAcc, (int)(230 * a)));
+                        Gfx.Rect(x + rw - (k + 1) * rowH / 8f, ry + inset, rowH / 8f + 0.5f, rowH - inset * 2, U.WithAlpha(cPan, (int)(Math.Max(cfg.Opacity, 180) * a)));
+                    }
+                    x += 6;
+                }
+                else PanelBg(x, ry, rw, rowH, a);
+                if (hype)
+                {
+                    Gfx.Border(x, ry, rw, rowH, 1, U.WithAlpha(cfg.HypeColor, (int)(220 * a)));
+                    Gfx.Rect(x, ry, 3, rowH, U.WithAlpha(cfg.HypeColor, (int)(255 * a)));
+                }
                 float cx = x + 6;
-                if (f.Avatar != null) { Gfx.Image(f.Avatar, cx, y + (rowH - img) / 2, img, img, (int)(255 * a)); cx += img + 6; }
+                if (banner) cx = x + (rw - RowWidth(f, img, size, hype)) / 2 + 6;
+                if (f.Avatar != null) { Gfx.Image(f.Avatar, cx, ry + (rowH - img) / 2, img, img, (int)(255 * a)); cx += img + 6; }
                 if (lv != null)
                 {
                     float lw = Gfx.TextW(lv, SMALL) + 8;
-                    Gfx.Rect(cx, y + (rowH - 14) / 2, lw, 14, U.WithAlpha(cfg.HypeColor, (int)(230 * a)));
-                    Gfx.Text(lv, cx + lw / 2, y + (rowH - 14) / 2, SMALL * 0.9f, U.WithAlpha(Color.Black, (int)(255 * a)), Alignment.Center);
+                    Gfx.Rect(cx, ry + (rowH - 14) / 2, lw, 14, U.WithAlpha(cfg.HypeColor, (int)(230 * a)));
+                    Gfx.Text(lv, cx + lw / 2, ry + (rowH - 14) / 2, SMALL * 0.9f, U.WithAlpha(Color.Black, (int)(255 * a)), Alignment.Center);
                     cx += lw + 4;
                 }
-                Gfx.Text(f.Text, cx, y + (rowH - Gfx.LineH(size)) / 2, size, U.WithAlpha(f.Col, (int)(255 * a)), Alignment.Left);
+                Gfx.Text(f.Text, cx, ry + (rowH - Gfx.LineH(size)) / 2, size, U.WithAlpha(tc, (int)(255 * a)), Alignment.Left);
                 cx += Gfx.TextW(f.Text, size) + 6;
-                if (f.Icon != null && Gfx.FileOk(f.Icon)) Gfx.Image(f.Icon, cx, y + (rowH - img) / 2, img, img, (int)(255 * a));
-                y += rowH + 4;
+                if (f.Icon != null && Gfx.FileOk(f.Icon)) Gfx.Image(f.Icon, cx, ry + (rowH - img) / 2, img, img, (int)(255 * a));
+                y += rowH + gap;
             }
             return new SizeF(w, h);
         }
@@ -3959,13 +4818,15 @@ namespace TikArena
         SizeF FeedPanel(bool draw) { return FeedList(draw, feed, "Feed", 26, 20, TXT, false); }
         SizeF HypePanel(bool draw) { return FeedList(draw, hypes, "Hype", 38, 30, 0.38f, true); }
 
-        // ---------------------------------------------------------------- overhead
+        // ---------------------------------------------------------------- overhead (real profile picture above the character)
         void Overheads()
         {
             if (!cfg.OverheadEnabled) return;
             Ped pl = Game.Player.Character;
             if (!pl.Exists()) return;
             Vector3 camPos = GameplayCamera.Position;
+            if (cam != null && cam.Exists() && camMode.Length > 0) camPos = cam.Position;
+            string ostyle = (cfg.OverheadStyle ?? "Classic").ToLowerInvariant();
             Gfx.Origin(0, 0, 1);
             foreach (Tracked t in tracked)
             {
@@ -3977,27 +4838,58 @@ namespace TikArena
                 PointF sp = Screen.WorldToScreen(wp);
                 if (sp.X == 0 && sp.Y == 0) continue;
                 float s = U.Clamp(1.35f - dist / 70f, 0.5f, 1.25f);
-                float y = sp.Y;
-                if (cfg.OverheadHealth)
+                Color side = t.Enemy ? cLoss : cWin;
+                bool isKing = king != null && t.Sup == king;
+                Color ringC = isKing ? cfg.AuraKingColor : side;
+                string av = Avatar(t.Sup);
+                if (cfg.OverheadRing) av = avatars.Ring(av, ringC);
+                int hp = Math.Max(0, t.Ped.Health - 100);
+                float fr = U.Clamp(hp / (float)t.MaxHp, 0, 1);
+                string name = t.Sup != null ? U.Trunc(t.Sup.Nick, 18) : "";
+                float ts = TXT * s * cfg.FontScale;
+                float lh = 40 * ts;
+
+                if (ostyle == "card")
                 {
-                    int hp = Math.Max(0, t.Ped.Health - 100);
-                    float fr = U.Clamp(hp / (float)t.MaxHp, 0, 1);
-                    float bw = 56 * s;
-                    Gfx.RectAbs(sp.X - bw / 2, y - 6 * s, bw, 5 * s, U.WithAlpha(Color.Black, 170));
-                    Gfx.RectAbs(sp.X - bw / 2, y - 6 * s, bw * fr, 5 * s, t.Enemy ? cfg.LossColor : cfg.WinColor);
-                    y -= 8 * s;
+                    float nw = Math.Max(60 * s, TextElement.GetStringWidth(name, Gfx.F, ts) + 10 * s);
+                    float ch = lh + 12 * s, sz = 34 * s;
+                    float cx = sp.X - (nw + sz) / 2 + sz, cy = sp.Y - ch;
+                    Gfx.RectAbs(cx, cy, nw, ch, U.WithAlpha(cPan, 200));
+                    Gfx.RectAbs(cx, cy, nw, 2 * s, side);
+                    if (cfg.OverheadName) Gfx.TextAbs(name, cx + 5 * s, cy + 2 * s, ts, cTxt, Alignment.Left, Gfx.F);
+                    if (cfg.OverheadHealth)
+                    {
+                        Gfx.RectAbs(cx + 5 * s, cy + ch - 7 * s, nw - 10 * s, 4 * s, U.WithAlpha(Color.Black, 170));
+                        Gfx.RectAbs(cx + 5 * s, cy + ch - 7 * s, (nw - 10 * s) * fr, 4 * s, side);
+                    }
+                    if (cfg.OverheadAvatar) Gfx.ImageAbs(av, cx - sz - 2, cy + ch / 2 - sz / 2, sz, sz, 255);
+                    continue;
                 }
-                if (cfg.OverheadName && t.Sup != null)
+                float y = sp.Y;
+                if (ostyle != "minimal" && cfg.OverheadHealth)
                 {
-                    float ts = TXT * s * cfg.FontScale;
-                    y -= 40 * ts + 2;
-                    Gfx.TextAbs(U.Trunc(t.Sup.Nick, 18), sp.X, y, ts, t.Enemy ? cfg.LossColor : cfg.WinColor, Alignment.Center, Gfx.F);
+                    float bw = 56 * s;
+                    Gfx.RectAbs(sp.X - bw / 2 - 1, y - 7 * s, bw + 2, 5 * s + 2, U.WithAlpha(Color.Black, 170));
+                    Gfx.RectAbs(sp.X - bw / 2, y - 6 * s, bw * fr, 5 * s, side);
+                    y -= 9 * s;
+                }
+                if (ostyle != "minimal" && cfg.OverheadName && name.Length > 0)
+                {
+                    y -= lh + 2;
+                    Gfx.TextAbs(name, sp.X, y, ts, side, Alignment.Center, Gfx.F);
                 }
                 if (cfg.OverheadAvatar)
                 {
-                    float sz = 30 * s;
+                    float sz = (ostyle == "minimal" ? 42 : (ostyle == "badge" ? 38 : 32)) * s;
                     y -= sz + 2;
-                    Gfx.ImageAbs(Avatar(t.Sup), sp.X - sz / 2, y, sz, sz, 255);
+                    Gfx.ImageAbs(av, sp.X - sz / 2, y, sz, sz, 255);
+                    if (ostyle == "badge" && cfg.OverheadLevel && t.Sup != null && t.Sup.Level > 0)
+                    {
+                        string lv = t.Sup.Level.ToString(U.IC);
+                        float bw2 = TextElement.GetStringWidth(lv, Gfx.F, SMALL * s) + 8 * s;
+                        Gfx.RectAbs(sp.X + sz / 2 - bw2 + 4 * s, y + sz - 12 * s, bw2, 13 * s, cfg.HypeColor);
+                        Gfx.TextAbs(lv, sp.X + sz / 2 - bw2 / 2 + 4 * s, y + sz - 13 * s, SMALL * s, Color.Black, Alignment.Center, Gfx.F);
+                    }
                 }
             }
         }
@@ -4008,9 +4900,9 @@ namespace TikArena
             if (phase != Phase.Ended || !cfg.EndScreenEnabled || U.Now >= endScreenUntil) return;
             Gfx.Origin(0, 0, 1);
             float cx = frameX + frameW / 2;
-            Color c = lastWin ? cfg.WinColor : cfg.LossColor;
+            Color c = lastWin ? cWin : cLoss;
             float pulse = 1f + 0.04f * (float)Math.Sin(U.Now / 180.0);
-            Gfx.RectAbs(frameX, 190, frameW, 110, U.WithAlpha(cfg.PanelColor, 170));
+            Gfx.RectAbs(frameX, 190, frameW, 110, U.WithAlpha(cPan, 170));
             Gfx.RectAbs(frameX, 190, frameW, 3, c);
             Gfx.RectAbs(frameX, 297, frameW, 3, c);
             Gfx.TextAbs(lastWin ? cfg.Tx("WinText", "WIN") : cfg.Tx("LossText", "LOSS"), cx, 205, 1.5f * pulse * cfg.FontScale, c, Alignment.Center, Gfx.F);
@@ -4018,13 +4910,14 @@ namespace TikArena
             {
                 float y = 320;
                 float bw = Math.Min(frameW - 20, 360);
-                Gfx.RectAbs(cx - bw / 2, y, bw, 96, U.WithAlpha(cfg.PanelColor, 200));
-                Gfx.RectAbs(cx - bw / 2, y, bw, 2, cfg.HypeColor);
-                Gfx.ImageAbs(Avatar(mvp), cx - bw / 2 + 12, y + 12, 72, 72, 255);
+                Gfx.Origin(cx - bw / 2, y, 1);
+                PanelBg(0, 0, bw, 96, 1);
+                Gfx.Origin(0, 0, 1);
+                Gfx.ImageAbs(avatars.Ring(Avatar(mvp), cfg.HypeColor), cx - bw / 2 + 12, y + 12, 72, 72, 255);
                 float tx = cx - bw / 2 + 96;
                 Gfx.TextAbs(cfg.Tx("MvpText", "MVP"), tx, y + 8, 0.5f * cfg.FontScale, cfg.HypeColor, Alignment.Left, Gfx.F);
-                Gfx.TextAbs(U.Trunc(mvp.Nick, 20), tx, y + 36, 0.42f * cfg.FontScale, cfg.TextColor, Alignment.Left, Gfx.F);
-                Gfx.TextAbs(mvpReason, tx, y + 62, 0.3f * cfg.FontScale, U.WithAlpha(cfg.TextColor, 200), Alignment.Left, Gfx.F);
+                Gfx.TextAbs(U.Trunc(mvp.Nick, 20), tx, y + 36, 0.42f * cfg.FontScale, cTxt, Alignment.Left, Gfx.F);
+                Gfx.TextAbs(mvpReason, tx, y + 62, 0.3f * cfg.FontScale, U.WithAlpha(cTxt, 200), Alignment.Left, Gfx.F);
             }
         }
     }

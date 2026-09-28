@@ -285,7 +285,8 @@ const EFFECTS = [["None","بلا تأثير"],["SoftSmoke","دخان ناعم م
 const KILL_EFFECTS = EFFECTS.filter(e => e[0] !== "SkyDrop");
 const TRIGGERS = [["Gift","🎁 هدية"],["Likes","❤️ لايكات"],["Share","🔁 بارتاج"],["Follow","➕ فولو"],["Comment","💬 تعليق"],["Subscribe","⭐ اشتراك"],["Key","⌨️ زر فقط"]];
 const WEATHERS = ["Random","CLEAR","EXTRASUNNY","CLOUDS","OVERCAST","RAIN","CLEARING","THUNDER","SMOG","FOGGY","XMAS","SNOWLIGHT","BLIZZARD","HALLOWEEN"];
-const STYLES = ["Classic","Glass","Neon","Minimal","Esports","Retro"];
+const STYLES = ["Broadcast","Cyber","Royal","Hologram","Gradient","Stream","Carbon","Classic","Glass","Neon","Minimal","Esports","Retro"];
+const AURAS = [["Default","↩️ حسب النوع (عدو/مساعد)"],["None","بلا"],["Glow","💡 توهج"],["Ring","⭕ دائرة تحت الرجلين"],["Pulse","📡 موجات"],["Beam","🔦 عمود ضو"],["Crown","👑 تاج"],["Rainbow","🌈 قوس قزح"],["Fire","🔥 نار"],["Smoke","💨 دخان ملون"],["Electric","⚡ كهرباء"],["Sparkles","✨ شرارات"]];
 const FONTS = ["ChaletLondon","ChaletComprimeCologne","Pricedown","HouseScript","Monospace"];
 const POSITIONS = ["TopLeft","TopCenter","TopRight","MiddleLeft","MiddleCenter","MiddleRight","BottomLeft","BottomCenter","BottomRight"];
 const KEYS = ["None","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12","NumPad0","NumPad1","NumPad2","NumPad3","NumPad4","NumPad5","NumPad6","NumPad7","NumPad8","NumPad9","Add","Subtract","Multiply","Divide","Decimal","Insert","Delete","Home","End","PageUp","PageDown","Pause","Scroll","Up","Down","Left","Right","Space","Tab","Back",
@@ -348,13 +349,14 @@ function defaults(){
   S.Random = {Duration:15,Effect:"SoftSmoke",EnemyModel:"s_m_y_clown_01",EnemyWeapon:"WEAPON_BAT",EnemyHealth:150,AllyModel:"s_m_y_swat_01",AllyWeapon:"WEAPON_CARBINERIFLE",AllyHealth:300,
     AnimalsAmount:3,HealthAmount:250,VehicleModel:"zentorno",GiveWeapon:"WEAPON_CARBINERIFLE"};
   RANDOM_ACTIONS.forEach(a => { S.Random[a+"Enabled"] = !(a==="KillPlayer"||a==="Airstrike"); S.Random[a+"Weight"] = 10; });
-  S.Hud = {Enabled:true,Style:"Classic",StyleCycle:"Classic,Glass,Neon,Minimal,Esports,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
+  S.Hud = {Enabled:true,Style:"Broadcast",StylePalette:true,StyleCycle:"Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
     AccentColor:"#00e676",TextColor:"#ffffff",PanelColor:"#0a0e16",WinColor:"#00e676",LossColor:"#ff3b5c",LayoutMode:"Normal",
     ScoreEnabled:true,ScoreOrder:"Title,Score,Streak",TitleEnabled:true,Title:"حاول تقتلني",ShowScore:true,ShowTimer:true,ShowStreak:true,
     Top3Enabled:true,Top3Order:"Top3,Counters,Status",ShowTop3:true,TopCount:3,Top3Title:"أفضل الداعمين",ShowCoins:true,ShowCounters:true,ShowStatus:true,
     HealthEnabled:true,HealthLabel:"health",HealthColor:"#1ed760",ShowArmor:true,ShowHealthPoints:false,HideRadar:false,
     GuideEnabled:true,GuideMax:8,GuideMode:"Cards",GuideRotateCount:3,GuideRotateSeconds:5,GuideRandom:true,GuideShowGiftImage:true,GuideShowActionImage:true,GuideTitleEnabled:false,GuideTitle:"🎁 الهدايا",GuideGiftColor:"#2979ff",GuideActionColor:"#00e676",
-    OverheadEnabled:true,OverheadAvatar:true,OverheadName:true,OverheadHealth:true,OverheadHeight:1.2,AvatarShape:"Circle"};
+    OverheadEnabled:true,OverheadAvatar:true,OverheadName:true,OverheadHealth:true,OverheadHeight:1.2,AvatarShape:"Circle",OverheadStyle:"Classic",OverheadRing:true,OverheadLevel:true,
+    ScoreVariant:"Classic",Top3Variant:"List",HealthVariant:"Bar",NotifVariant:"Card",FeedAnimation:"Slide"};
   S.Notifications = {Enabled:true,Seconds:5,MaxVisible:5,ShowAvatar:true,ShowGiftIcon:true};
   S.KillFeed = {Enabled:true,Seconds:4,MaxVisible:4};
   S.Hype = {Enabled:true,Seconds:6,MaxVisible:3,ShowLevel:true,Color:"#ffc828",
@@ -373,6 +375,10 @@ function defaults(){
   S.Layout = layoutDefaults(false);
   S.LayoutVertical = layoutDefaults(true);
   S.KillEffects = {Enabled:true,Effect:"SoftSmoke",SmokeColor:"#33ccff",OnlyPlayerKills:false,SoundEnabled:false,Sound:""};
+  S.Aura = {Enabled:true,EnemyAura:"Ring",AllyAura:"Glow",EnemyColor:"#ff3b5c",AllyColor:"#00e676",KingCrown:true,KingColor:"#ffc828",Intensity:4,Range:3,RingSize:1.4,MaxDistance:60,FxScale:1,
+    FireFx:"core|ent_amb_torch_fire",SmokeFx:"core|exp_grd_bzgas_smoke",ElectricFx:"core|ent_amb_elec_crackle",SparklesFx:"core|ent_amb_sparking_wires"};
+  S.LiveTest = {Enabled:true,Key:"F9",ShowBadge:true,Names:"أحمد,سارة,Yassine,Nora,Karim,Lina,Omar,Hiba,Adam,Salma,Mehdi,Imane,Zakaria,Khadija,Anas,Rania",AvatarUrls:"",Comments:"GG,🔥,يلاه,اقتلوه,عاونوه,واو",
+    MinDelayMs:700,MaxDelayMs:2200,GiftWeight:45,LikeWeight:25,CommentWeight:10,FollowWeight:8,ShareWeight:6,JoinWeight:6,ComboChance:25,MaxCombo:15};
   S.Death = {CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Coffin:true,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
   return {
     v:1, ini:S, interactions:defaultInteractions(),
@@ -399,7 +405,7 @@ function newInteraction(over){
   const it = {Enabled:true,Name:"",Action:"SpawnEnemy",Trigger:"Gift",GiftName:"Rose",GiftId:"",LikesCount:100,CommentText:"",OncePerUser:false,TestKey:"None",
     Units:1,MultiplyByCombo:true,Cooldown:0,Effect:"SoftSmoke",Message:"قام {name} بإنزال عدو",EntryCam:false,ShowInGuide:true,
     Model:"s_m_y_clown_01",Health:150,Armor:0,Weapon:"WEAPON_BAT",Ammo:9999,Accuracy:25,CombatAbility:1,CombatMovement:2,ShootRate:100,Blip:true,SpawnDistance:20,
-    VehicleModel:"zentorno",WarpIntoVehicle:true,Duration:15,Amount:5,Weather:"Random",
+    VehicleModel:"zentorno",WarpIntoVehicle:true,Duration:15,Amount:5,Weather:"Random",Aura:"Default",AuraColor:"",
     giftImg:null, giftEmoji:"🌹", actImg:null, actEmoji:"🦹", open:false};
   return Object.assign(it, over||{});
 }
@@ -750,6 +756,7 @@ function advFields(i){
     h += iField(i,"Blip","📍 علامة فالخريطة","b");
     if (t === "crew") h += iField(i,"Weapon","🔫 سلاح الطاقم","weapon");
   }
+  if (person){ h += iField(i,"Aura","🌟 تأثير الشخصية (Aura)","s",AURAS); h += `<div><label>🎨 لون التأثير (خاوي = حسب النوع)</label><div style="display:flex;gap:4px"><input type="color" value="${esc(it.AuraColor||"#ffc828")}" data-auracolor="${i}"><input type="text" class="ltr" data-ii="${i}" data-ik="AuraColor" data-t="t" value="${esc(it.AuraColor)}" placeholder="#ff3b5c"></div></div>`; }
   if (t === "vehicle") h += iField(i,"WarpIntoVehicle","🪑 دخلو للسيارة","b");
   if (t === "weapon") h += iField(i,"Ammo","📦 الرصاص","i",{min:1});
   h += `</div>`;
@@ -809,6 +816,12 @@ function onActionChange(it, prev){
   if (it.Action === "CarRain") it.Amount = 2;
 }
 const interBox = $("#interList");
+interBox.addEventListener("input", e => {
+  const el = e.target; if (!el.dataset || el.dataset.auracolor == null) return;
+  const it = state.interactions[+el.dataset.auracolor]; it.AuraColor = el.value;
+  const t = el.parentElement.querySelector('[data-ik="AuraColor"]'); if (t) t.value = el.value;
+  changed();
+});
 interBox.addEventListener("input", e => {
   const el = e.target; if (!el.dataset || el.dataset.ii == null || el.tagName === "SELECT") return;
   const it = state.interactions[+el.dataset.ii], k = el.dataset.ik;
@@ -915,6 +928,11 @@ function renderAllForms(){
       ["LayoutKey","📱 16:9 ↔ 9:16","k"],["HypeTestKey","🔥 تجربة الحماس","k"],["PauseKey","⏸️ إيقاف مؤقت","k"],["EmergencyKey","🚨 الطوارئ (مسح كلشي)","k"]]},
     {sec:"General", title:"⚙️ التشغيل", fields:[["TestKeysEnabled","🎯 أزرار التجربة","b"],["AutoReload","🔄 AutoReload (قراءة INI ملي يتبدل)","b"],["AutoImport","📥 AutoImport من Downloads","b"],
       ["ShowLoadMessage","💬 رسالة «TikArena جاهز»","b"],["ShowStatusMessages","📝 رسائل الحالة","b"],["CleanupOnPowerOff","🧹 مسح كلشي ملي يتطفا","b"],["DebugLog","🐞 log.txt","b"]]},
+    {sec:"LiveTest", title:"🧪 Live Test (بث تجريبي)", hint:"ضغط على الزر فاللعبة: كيبداو يدخلو مشاهدين وهميين (أحمد، سارة...) وكيصيفطو هدايا ولايكات وفولو بحال بث حقيقي، بالصور ديالهم. ضغط مرة أخرى باش توقف. AvatarUrls (اختياري): روابط صور حقيقية باش تجرب التحميل.", fields:[
+      ["Enabled","مشعول","b"],["Key","⌨️ الزر","k"],["ShowBadge","🔴 شارة LIVE TEST فالهود","b"],["Names","👥 الأسماء (بفاصلة)","t",{wide:true}],["Comments","💬 التعليقات","t",{wide:true}],["AvatarUrls","🖼️ روابط صور (اختياري)","t",{ltr:true,wide:true}],
+      ["MinDelayMs","⏱️ أقل وقت بين الأحداث (ms)","i",{min:50}],["MaxDelayMs","⏱️ أكثر وقت (ms)","i",{min:50}],["GiftWeight","🎁 الهدايا","range",{min:0,max:100}],["LikeWeight","❤️ اللايكات","range",{min:0,max:100}],
+      ["CommentWeight","💬 التعليقات","range",{min:0,max:100}],["FollowWeight","➕ الفولو","range",{min:0,max:100}],["ShareWeight","🔁 البارتاج","range",{min:0,max:100}],["JoinWeight","🚪 الدخول","range",{min:0,max:100}],
+      ["ComboChance","🔥 نسبة الكومبو %","range",{min:0,max:100}],["MaxCombo","🔥 أقصى كومبو","i",{min:2,max:200}]]},
     {sec:"TikFinity", title:"🔌 TikFinity", fields:[["Enabled","الاتصال بـ TikFinity","b"],["Url","WebSocket","t",{ltr:true,wide:true}],["ReconnectSeconds","إعادة الاتصال (ث)","i",{min:1}],
       ["LearnMode","📚 وضع التعلم (gifts-log.txt)","b"],["TestUserName","👤 اسم المجرب","t"]]}
   ]);
@@ -934,6 +952,14 @@ function renderAllForms(){
       ["FontScale","حجم الكتابة","range",{min:0.5,max:2,step:0.05}],["Opacity","الشفافية","range",{min:0,max:255}],["TextOutline","الحواشي","b"],["TextShadow","الظل","b"],
       ["AccentColor","اللون الرئيسي","c"],["TextColor","لون الكتابة","c"],["PanelColor","لون الخلفية","c"],["WinColor","لون الفوز","c"],["LossColor","لون الخسارة","c"],
       ["AvatarShape","شكل الصور","s",{opts:[["Circle","⚪ دائرة"],["Square","⬜ مربع"]]}],["HideRadar","🗺️ إخفاء الرادار","b"]]},
+    {sec:"Hud", title:"🧩 الأنواع (Variants)", hint:"كل لوحة عندها أشكال مختلفة. StylePalette = كل ستايل احترافي كيجيب الألوان ديالو (مختلفة على الأخضر ديال الأصل).", fields:[["StylePalette","🎨 ألوان الستايل الخاصة","b"],
+      ["ScoreVariant","🏆 الفوز والخسارة","s",{opts:[["Classic","📦 كلاسيك"],["Bar","➖ شريط"],["BigTimer","⏱️ عداد كبير"]]}],
+      ["Top3Variant","👑 الداعمين","s",{opts:[["List","📋 لائحة"],["Podium","🏆 منصة"],["Compact","⚪ صور فسطر"]]}],
+      ["HealthVariant","❤️ الطاقة","s",{opts:[["Bar","▬ شريط"],["Segmented","▮▮▮ مقسم"],["Numbers","🔢 أرقام كبار"],["Slim","─ رقيق"]]}],
+      ["NotifVariant","🔔 الإشعارات و Kill Feed","s",{opts:[["Card","🃏 كارطة"],["Pill","💊 كبسولة"],["Banner","🎌 بانر"]]}],
+      ["FeedAnimation","🎬 الحركة","s",{opts:[["Slide","↔️ Slide"],["Fade","🌫️ Fade"],["Pop","💥 Pop"]]}],
+      ["OverheadStyle","🧍 فوق الراس","s",{opts:[["Classic","كلاسيك"],["Card","🃏 كارطة"],["Minimal","⚪ صورة فقط"],["Badge","🏅 صورة + ليفل"]]}],
+      ["OverheadRing","⭕ حلقة ملونة حول الصورة","b"],["OverheadLevel","🏅 الليفل فوق الصورة","b"]]},
     {sec:"Hud", title:"🏆 الفوز والخسارة", fields:[["ScoreEnabled","اللوحة","b"],["TitleEnabled","العنوان","b"],["Title","العنوان","t"],["ShowScore","الفوز والخسارة","b"],["ShowTimer","العداد","b"],["ShowStreak","السلسلة","b"]]},
     {sec:"Hud", title:"👑 لوحة الداعمين", fields:[["Top3Enabled","اللوحة","b"],["ShowTop3","الداعمين","b"],["TopCount","عدد الداعمين","range",{min:1,max:10}],["Top3Title","العنوان","t"],["ShowCoins","الكوينز","b"],["ShowCounters","العدادات","b"],["ShowStatus","حالة TikFinity","b"]]},
     {sec:"Hud", title:"❤️ شريط الطاقة", fields:[["HealthEnabled","الشريط","b"],["HealthLabel","الكلمة","t"],["HealthColor","اللون","c"],["ShowArmor","شريط الدرع","b"],["ShowHealthPoints","النقاط (722 / 1000)","b"]]},
@@ -967,6 +993,11 @@ function renderAllForms(){
   renderForm("#formFx", [
     {sec:"KillEffects", title:"💀 تأثير القتل", fields:[["Enabled","مشعول","b"],["Effect","التأثير","s",{opts:KILL_EFFECTS}],["SmokeColor","لون الدخان","c"],["OnlyPlayerKills","غير اللي قتلتهم أنا","b"],["SoundEnabled","🎵 صوت WAV ديالك","b"],["Sound","ملف القتل","wav",{slot:"kill"}]]},
     {sec:"Sounds", title:"🔊 أصوات اللعبة", fields:[["EnemySpawn","🦹 نزول عدو","sound"],["AllySpawn","👮 نزول مساعد","sound"],["Help","💚 المساعدة","sound"],["Kill","💀 القتل","sound"],["Hype","🔥 الحماس","sound"]]},
+    {sec:"Aura", title:"🌟 تأثيرات الشخصيات (Aura)", hint:"تأثير دائم حول الأعداء والمساعدين اللي نزلو (ضو، دائرة، عمود، تاج، نار...). الملك (الداعم رقم 1) كيجيه تاج ذهبي. كل تفاعل يقدر يختار التأثير ديالو فـ ⚙️ متقدم. أسماء الـ particles (asset|name) خاصها تجربة.", fields:[
+      ["Enabled","مشعول","b"],["EnemyAura","🦹 تأثير الأعداء","s",{opts:AURAS.slice(1)}],["EnemyColor","لون الأعداء","c"],["AllyAura","👮 تأثير المساعدين","s",{opts:AURAS.slice(1)}],["AllyColor","لون المساعدين","c"],
+      ["KingCrown","👑 تاج الملك","b"],["KingColor","لون التاج","c"],["Intensity","💡 قوة الضو","range",{min:0,max:20,step:0.5}],["Range","📏 مدى الضو","range",{min:0.5,max:10,step:0.5}],
+      ["RingSize","⭕ حجم الدائرة","range",{min:0.4,max:4,step:0.1}],["MaxDistance","👁️ أقصى مسافة","i",{min:5,max:300}],["FxScale","✨ حجم الـ particles","range",{min:0.2,max:3,step:0.1}],
+      ["FireFx","🔥 Fire (asset|name)","t",{ltr:true}],["SmokeFx","💨 Smoke","t",{ltr:true}],["ElectricFx","⚡ Electric","t",{ltr:true}],["SparklesFx","✨ Sparkles","t",{ltr:true}]]},
     {sec:"Death", title:"⚰️ الاحتفال ملي كتموت", hint:"الرقصة وحمل التابوت تقريبيين (خاصهم تجربة فاللعبة).", fields:[["CelebrationEnabled","مشعول","b"],["Seconds","المدة (ث)","f",{min:1,max:60}],["Dance","💃 الرقصة","b"],["DanceDict","Anim Dict","t",{ltr:true}],["DanceAnim","Anim","t",{ltr:true}],
       ["Coffin","⚰️ التابوت","b"],["CoffinModel","موديل التابوت","t",{ltr:true}],["SoundEnabled","🎵 موسيقى WAV (Coffin Dance)","b"],["Sound","ملف الموسيقى","wav",{slot:"death"}]]}
   ]);
@@ -991,78 +1022,145 @@ function renderRandom(){
 const FONT_CSS = {ChaletLondon:"Arial, Helvetica, sans-serif", ChaletComprimeCologne:"'Arial Narrow', Arial, sans-serif", Pricedown:"Impact, 'Arial Black', sans-serif", HouseScript:"'Brush Script MT', cursive", Monospace:"Consolas, monospace"};
 function rgba(hex, a){ const n = parseInt(String(hex).slice(1), 16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${Math.max(0,Math.min(1,a)).toFixed(3)})`; }
 function mixHex(a, b, t){ const x = parseInt(a.slice(1),16), y = parseInt(b.slice(1),16); const c = s => Math.round(((x>>s)&255) + (((y>>s)&255) - ((x>>s)&255)) * t); return "#" + [16,8,0].map(s => c(s).toString(16).padStart(2,"0")).join(""); }
-function bgCss(alpha){
-  const H = state.ini.Hud, op = H.Opacity / 255 * (alpha == null ? 1 : alpha), acc = H.AccentColor;
+// pro styles carry their own palette (accent, panel, text, win, loss) when Hud.StylePalette is on — same table as the engine
+const PALETTES = {Broadcast:["#e10600","#111418","#ffffff","#1fc16b","#e10600"],Cyber:["#00f0ff","#05060d","#e0fbff","#39ff14","#ff2a6d"],Royal:["#ffc828","#1a0f2e","#fff4d6","#ffd54a","#ff4d6d"],
+  Hologram:["#7df9ff","#041a24","#d9fbff","#7dffb3","#ff7d9b"],Gradient:["#ff4fd8","#1b1036","#ffffff","#4dffb5","#ff5c7a"],Stream:["#fe2c55","#000000","#ffffff","#25f4ee","#fe2c55"],Carbon:["#ff7a00","#121212","#f2f2f2","#7cff6b","#ff3b3b"]};
+// Hud view with the effective colors (palette applied)
+function HV(){
+  const H = state.ini.Hud, p = H.StylePalette && PALETTES[H.Style];
+  if (!p) return H;
+  return Object.assign({}, H, {AccentColor:p[0], PanelColor:p[1], TextColor:p[2], WinColor:p[3], LossColor:p[4]});
+}
+function bgCss(alpha, Hin){
+  const H = Hin || HV(), op = H.Opacity / 255 * (alpha == null ? 1 : alpha), acc = H.AccentColor, pan = H.PanelColor;
   switch (String(H.Style).toLowerCase()){
-    case "glass": return `background:${rgba(mixHex(H.PanelColor,"#ffffff",0.12), op*0.55)};border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px)`;
-    case "neon": return `background:${rgba(H.PanelColor, op)};border:1px solid ${acc};box-shadow:0 0 0 2px ${rgba(acc,.25)},0 0 12px ${rgba(acc,.5)}`;
-    case "minimal": return `background:${rgba(H.PanelColor, op*0.3)}`;
-    case "esports": return `background:${rgba(H.PanelColor, op)};border-left:4px solid ${acc};border-bottom:2px solid ${rgba(acc,.5)}`;
-    case "retro": return `background:${rgba(H.PanelColor, op)};border:2px solid ${rgba(H.TextColor,.67)}`;
-    default: return `background:${rgba(H.PanelColor, op)};border-top:2px solid ${acc}`;
+    case "glass": return `background:${rgba(mixHex(pan,"#ffffff",0.12), op*0.55)};border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px)`;
+    case "neon": return `background:${rgba(pan, op)};border:1px solid ${acc};box-shadow:0 0 0 2px ${rgba(acc,.25)},0 0 12px ${rgba(acc,.5)}`;
+    case "minimal": return `background:${rgba(pan, op*0.3)}`;
+    case "esports": return `background:${rgba(pan, op)};border-left:4px solid ${acc};border-bottom:2px solid ${rgba(acc,.5)}`;
+    case "retro": return `background:${rgba(pan, op)};border:2px solid ${rgba(H.TextColor,.67)}`;
+    case "broadcast": return `background:${rgba(pan, Math.min(1, op*1.1))};border-left:6px solid ${acc};border-bottom:3px solid ${acc};box-shadow:inset 0 1px 0 rgba(255,255,255,.35)`;
+    case "cyber": return `background:repeating-linear-gradient(0deg,${rgba(acc,.07)} 0 1px,transparent 1px 6px),${rgba(pan, op)};clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px);box-shadow:inset 0 0 0 1px ${rgba(acc,.55)}`;
+    case "royal": return `background:${rgba(pan, op)};border:2px solid ${acc};box-shadow:inset 0 0 0 3px ${rgba(pan,op)},inset 0 0 0 4px ${rgba(acc,.45)}`;
+    case "hologram": return `background:${rgba(mixHex(pan,acc,.18), op*0.45)};border:1px solid ${rgba(acc,.35)};box-shadow:0 0 12px ${rgba(acc,.35)},inset 0 0 18px ${rgba(acc,.18)}`;
+    case "gradient": return `background:linear-gradient(90deg,${rgba(mixHex(pan,acc,.45), op)},${rgba(pan, op)});box-shadow:inset 0 2px 0 ${acc}`;
+    case "stream": return `background:${rgba(pan, Math.max(op,.75))};box-shadow:-2px -1px 0 ${rgba(H.WinColor,.5)},2px 1px 0 ${rgba(acc,.5)}`;
+    case "carbon": return `background:repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 2px,transparent 2px 4px),${rgba(pan, op)};border-left:3px solid ${acc};border-bottom:2px solid ${acc}`;
+    default: return `background:${rgba(pan, op)};border-top:2px solid ${acc}`;
   }
 }
 function fpx(scale){ return (scale * 38 * state.ini.Hud.FontScale).toFixed(1) + "px"; }
-function txtCss(){ const H = state.ini.Hud; return `font-family:${FONT_CSS[H.Font]||FONT_CSS.ChaletLondon};color:${H.TextColor};${H.TextOutline?"-webkit-text-stroke:.3px #000;":""}${H.TextShadow?"text-shadow:1px 1px 1px #000;":""}`; }
-function header(text, w){
-  const H = state.ini.Hud;
-  if (String(H.Style).toLowerCase() === "esports") return `<div style="background:${H.AccentColor};color:${H.PanelColor};text-align:center;font-size:${fpx(.34)};height:22px;line-height:22px;font-weight:700">${esc(text)}</div>`;
-  return `<div style="color:${H.AccentColor};text-align:center;font-size:${fpx(.34)};height:22px;line-height:22px;font-weight:700">${esc(text)}</div>`;
+function txtCss(){ const H = HV(); return `font-family:${FONT_CSS[H.Font]||FONT_CSS.ChaletLondon};color:${H.TextColor};${H.TextOutline?"-webkit-text-stroke:.3px #000;":""}${H.TextShadow?"text-shadow:1px 1px 1px #000;":""}`; }
+function header(text){
+  const H = HV(), st = String(H.Style).toLowerCase(), base = `text-align:center;font-size:${fpx(.34)};height:22px;line-height:22px;font-weight:700`;
+  if (st === "esports" || st === "broadcast") return `<div style="background:${H.AccentColor};color:${st==="broadcast"?"#fff":H.PanelColor};${base}">${esc(text)}</div>`;
+  if (st === "cyber" || st === "hologram") return `<div style="color:${H.AccentColor};${base}">[ ${esc(text)} ]</div>`;
+  if (st === "royal") return `<div style="color:${H.AccentColor};${base};display:flex;align-items:center;gap:8px;padding:0 10px"><i style="flex:1;height:1px;background:${H.AccentColor}"></i>${esc(text)}<i style="flex:1;height:1px;background:${H.AccentColor}"></i></div>`;
+  if (st === "stream") return `<div style="${base}">${esc(text)}<div style="margin:-3px auto 0;width:44px;height:2px;background:linear-gradient(90deg,${H.WinColor} 50%,${H.AccentColor} 50%)"></div></div>`;
+  return `<div style="color:${H.AccentColor};${base}">${esc(text)}</div>`;
 }
 const SAMPLE_SUPS = [["Amine_77","🦁","#f59e0b",12500],["Sara.x","🌸","#ec4899",4300],["Yassine","🐺","#3b82f6",1250],["Nora","🦋","#8b5cf6",640],["Karim","🐉","#22c55e",300],["Lina","🌙","#06b6d4",120],["Omar","⚡","#eab308",99],["Hiba","🍓","#ef4444",50],["Adam","🎮","#10b981",20],["Salma","🌟","#f97316",5]];
-function avatarHTML(s, size){ const H = state.ini.Hud; return `<span style="display:inline-grid;place-items:center;width:${size}px;height:${size}px;border-radius:${H.AvatarShape==="Square"?"3px":"50%"};background:${s[2]};font-size:${size*0.6}px;flex:none">${s[1]}</span>`; }
+function avatarHTML(s, size, ring){ const H = state.ini.Hud; return `<span style="display:inline-grid;place-items:center;width:${size}px;height:${size}px;border-radius:${H.AvatarShape==="Square"?"3px":"50%"};background:${s[2]};font-size:${size*0.6}px;flex:none;${ring?`box-shadow:0 0 0 ${Math.max(2,size/14)}px ${ring},0 0 ${size/3}px ${ring}`:""}">${s[1]}</span>`; }
 function thumbSmall(img, emoji, size){ return img ? `<img src="${img}" style="width:${size}px;height:${size}px;object-fit:contain;flex:none">` : `<span style="font-size:${size*0.8}px;width:${size}px;text-align:center;flex:none;line-height:${size}px">${esc(emoji||"")}</span>`; }
+const coinsTxt = c => c >= 10000 ? (c/1000).toFixed(1) + "K" : String(c);
+const abs = (x, y, w, h, css, inner) => `<div style="position:absolute;left:${x}px;top:${y}px;${w!=null?`width:${w}px;`:""}${h!=null?`height:${h}px;`:""}${css||""}">${inner||""}</div>`;
 
 function pvScore(){
-  const H = state.ini.Hud, rows = H.ScoreOrder.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="title" && H.TitleEnabled && H.Title) || (r==="score" && (H.ShowScore || (H.ShowTimer && state.ini.Challenge.Enabled))) || (r==="streak" && H.ShowStreak));
+  const H = HV(), T = state.ini.Texts, v = H.ScoreVariant || "Classic";
+  const title = H.TitleEnabled && H.Title, timer = H.ShowTimer && state.ini.Challenge.Enabled;
+  if (v === "Bar"){
+    const w = 380, h = 38 + (title ? 22 : 0) + (H.ShowStreak ? 18 : 0); let y = 0, html = "";
+    if (title){ html += abs(0, 0, w, null, "", header(H.Title)); y += 22; }
+    if (H.ShowScore) html += abs(8, y+4, 110, 30, `background:${rgba(H.WinColor,.8)};display:flex;justify-content:space-between;align-items:center;padding:0 8px;color:#fff;font-size:${fpx(.34)}`, `<span>${esc(T.WinShort)}</span><b style="font-size:${fpx(.5)}">3</b>`)
+      + abs(w-118, y+4, 110, 30, `background:${rgba(H.LossColor,.8)};display:flex;justify-content:space-between;align-items:center;padding:0 8px;color:#fff;font-size:${fpx(.34)}`, `<b style="font-size:${fpx(.5)}">1</b><span>${esc(T.LossShort)}</span>`);
+    if (timer) html += abs(0, y+4, w, null, `text-align:center;font-size:${fpx(.52)};font-weight:700`, "09:41");
+    if (H.ShowStreak) html += abs(0, y+36, w, null, `text-align:center;font-size:${fpx(.28)};color:${H.WinColor}`, "3 " + esc(T.WinStreakText));
+    return {w, h, html:`<div class="hbg" style="${bgCss()}"></div>${html}`};
+  }
+  if (v === "BigTimer"){
+    const w = 250, h = 6 + (title ? 24 : 0) + (timer ? 60 : 0) + (H.ShowScore ? 24 : 0) + (H.ShowStreak ? 18 : 0) + 4; let y = 6, html = "";
+    if (title){ html += abs(0, y-4, w, null, "", header(H.Title)); y += 24; }
+    if (timer){ html += abs(0, y-6, w, null, `text-align:center;font-size:${fpx(1.05)};font-weight:700;line-height:1.2`, "09:41") + abs(14, y+50, w-28, 4, "background:rgba(0,0,0,.6)", `<div style="width:64%;height:100%;background:${H.AccentColor}"></div>`); y += 60; }
+    if (H.ShowScore){ html += abs(0, y, w, null, `text-align:center;font-size:${fpx(.34)}`, `<span style="color:${H.WinColor}">3 ${esc(T.WinShort)}</span> <span style="opacity:.6">—</span> <span style="color:${H.LossColor}">1 ${esc(T.LossShort)}</span>`); y += 24; }
+    if (H.ShowStreak) html += abs(0, y-2, w, null, `text-align:center;font-size:${fpx(.28)};color:${H.WinColor}`, "3 " + esc(T.WinStreakText));
+    return {w, h, html:`<div class="hbg" style="${bgCss()}"></div>${html}`};
+  }
+  const rows = H.ScoreOrder.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="title" && title) || (r==="score" && (H.ShowScore || timer)) || (r==="streak" && H.ShowStreak));
   if (!rows.length) return null;
-  const w = 290; let h = 10, html = "";
+  const w = 290; let h = 6, html = "";
   rows.forEach(r => {
-    if (r === "title"){ html += `<div style="position:absolute;top:${h}px;left:0;width:${w}px">${header(H.Title)}</div>`; h += 26; }
+    if (r === "title"){ html += abs(0, h, w, null, "", header(H.Title)); h += 26; }
     if (r === "score"){
-      if (H.ShowScore) html += `<div style="position:absolute;top:${h+3}px;left:8px;width:72px;height:44px;background:${rgba(H.WinColor,.24)};border-top:3px solid ${H.WinColor};text-align:center"><div style="font-size:${fpx(.55)};color:${H.WinColor};line-height:1.1">3</div><div style="font-size:${fpx(.28)}">${esc(state.ini.Texts.WinShort)}</div></div>
-        <div style="position:absolute;top:${h+3}px;left:${w-80}px;width:72px;height:44px;background:${rgba(H.LossColor,.24)};border-top:3px solid ${H.LossColor};text-align:center"><div style="font-size:${fpx(.55)};color:${H.LossColor};line-height:1.1">1</div><div style="font-size:${fpx(.28)}">${esc(state.ini.Texts.LossShort)}</div></div>`;
-      if (H.ShowTimer && state.ini.Challenge.Enabled) html += `<div style="position:absolute;top:${h+6}px;left:0;width:${w}px;text-align:center;font-size:${fpx(.62)};font-weight:700">09:41</div>`;
+      if (H.ShowScore) html += abs(10, h+3, 72, 44, `background:${rgba(H.WinColor,.24)};border-top:3px solid ${H.WinColor};text-align:center`, `<div style="font-size:${fpx(.55)};color:${H.WinColor};line-height:1.1">3</div><div style="font-size:${fpx(.28)}">${esc(T.WinShort)}</div>`)
+        + abs(w-82, h+3, 72, 44, `background:${rgba(H.LossColor,.24)};border-top:3px solid ${H.LossColor};text-align:center`, `<div style="font-size:${fpx(.55)};color:${H.LossColor};line-height:1.1">1</div><div style="font-size:${fpx(.28)}">${esc(T.LossShort)}</div>`);
+      if (timer) html += abs(0, h+6, w, null, `text-align:center;font-size:${fpx(.62)};font-weight:700`, "09:41");
       h += 50;
     }
-    if (r === "streak"){ html += `<div style="position:absolute;top:${h+2}px;left:0;width:${w}px;text-align:center;font-size:${fpx(.34)};color:${H.WinColor}">3 ${esc(state.ini.Texts.WinStreakText)}</div>`; h += 22; }
+    if (r === "streak"){ html += abs(0, h+2, w, null, `text-align:center;font-size:${fpx(.34)};color:${H.WinColor}`, "3 " + esc(T.WinStreakText)); h += 22; }
   });
   h += 4;
   return {w, h, html:`<div class="hbg" style="${bgCss()}"></div>${html}`};
 }
 function pvTop(){
-  const H = state.ini.Hud, rows = H.Top3Order.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="top3" && H.ShowTop3) || (r==="counters" && H.ShowCounters) || (r==="status" && H.ShowStatus && state.ini.TikFinity.Enabled));
+  const H = HV(), v = H.Top3Variant || "List", T = state.ini.Texts;
+  const rows = H.Top3Order.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="top3" && H.ShowTop3) || (r==="counters" && H.ShowCounters) || (r==="status" && H.ShowStatus && state.ini.TikFinity.Enabled));
   if (!rows.length) return null;
-  const w = 236, n = Math.max(1, Math.min(10, H.TopCount)); let h = 6, html = "";
-  const medal = ["#ffc828","#c8d2dc","#d78c50"];
+  const n = Math.max(1, Math.min(10, H.TopCount)), sups = SAMPLE_SUPS.slice(0, n), medal = ["#ffc828","#c8d2dc","#d78c50"];
+  const podium = v === "Podium", compact = v === "Compact";
+  const w = podium ? 256 : (compact ? Math.max(230, n * 44 + 16) : 236);
+  let h = 6, html = "";
   rows.forEach(r => {
-    if (r === "top3"){
-      html += `<div style="position:absolute;top:${h}px;left:0;width:${w}px">${header(H.Top3Title)}</div>`; h += 24;
-      SAMPLE_SUPS.slice(0, n).forEach((s, i) => {
+    if (r === "counters"){ html += abs(0, h+3, w, null, `text-align:center;font-size:${fpx(.28)}`, `${esc(T.EnemiesShort)} 4 · ${esc(T.AlliesShort)} 2 · ${esc(T.QueueShort)} 7`); h += 22; return; }
+    if (r === "status"){ html += abs(0, h+3, w, null, `text-align:center;font-size:${fpx(.28)}`, `<span style="display:inline-block;width:7px;height:7px;background:${H.WinColor};margin-right:5px"></span>TikFinity`); h += 22; return; }
+    html += abs(0, h, w, null, "", header(H.Top3Title)); h += 24;
+    if (podium){
+      const order = [1,0,2], ped = [30,44,22], colW = (w - 16) / 3;
+      order.forEach((i, c) => {
+        if (i >= sups.length) return;
+        const s = sups[i], cx = 8 + colW * c, av = i === 0 ? 44 : 34, base = h + 118;
+        html += abs(cx + 3, base - ped[c], colW - 6, ped[c], `background:${rgba(medal[i],.67)};text-align:center;color:#141414;font-weight:900;font-size:${fpx(.42)}`, i + 1);
+        html += abs(cx, base - ped[c] - av - 30, colW, null, `text-align:center;font-size:${fpx(.28)}`, `${avatarHTML(s, av, medal[i])}<div>${esc(s[0].slice(0,9))}</div>${H.ShowCoins?`<div style="color:${H.AccentColor}">${coinsTxt(s[3])}</div>`:""}`);
+      });
+      h += 118;
+      sups.slice(3).forEach((s, k) => { html += abs(8, h, w-16, 22, `display:flex;align-items:center;gap:6px;font-size:${fpx(.28)}`, `<b style="width:12px">${k+4}</b>${avatarHTML(s,20)}<span style="flex:1">${s[0]}</span>${H.ShowCoins?`<b style="color:${H.AccentColor}">${coinsTxt(s[3])}</b>`:""}`); h += 24; });
+    } else if (compact){
+      const x0 = (w - sups.length * 44) / 2;
+      sups.forEach((s, i) => { html += abs(x0 + i * 44, h, 44, 60, `text-align:center;font-size:${fpx(.25)}`, `<div style="position:relative;display:inline-block">${avatarHTML(s, 36, medal[i] || H.TextColor)}<b style="position:absolute;top:-4px;right:-8px;background:${medal[i]||H.TextColor};color:#000;font-size:10px;padding:0 3px">${i+1}</b></div>${H.ShowCoins?`<div style="color:${H.AccentColor}">${coinsTxt(s[3])}</div>`:""}`); });
+      h += 62;
+    } else {
+      sups.forEach((s, i) => {
         const mc = medal[i] || H.TextColor;
-        html += `<div style="position:absolute;top:${h+2}px;left:6px;width:${w-12}px;height:26px;background:${rgba(mc,.11)};display:flex;align-items:center;gap:6px;padding:0 6px;font-size:${fpx(.34)}"><b style="color:${mc};width:12px;text-align:center">${i+1}</b>${avatarHTML(s,22)}<span style="flex:1;overflow:hidden">${s[0]}</span>${H.ShowCoins?`<b style="color:${H.AccentColor}">${s[3]>=10000?(s[3]/1000).toFixed(1)+"K":s[3]}</b>`:""}</div>`;
+        html += abs(6, h+2, w-12, 26, `background:${rgba(mc,.11)};display:flex;align-items:center;gap:6px;padding:0 6px;font-size:${fpx(.34)}`, `<b style="color:${mc};width:12px;text-align:center">${i+1}</b>${avatarHTML(s,22)}<span style="flex:1;overflow:hidden">${s[0]}</span>${H.ShowCoins?`<b style="color:${H.AccentColor}">${coinsTxt(s[3])}</b>`:""}`);
         h += 30;
       });
     }
-    if (r === "counters"){ const T = state.ini.Texts; html += `<div style="position:absolute;top:${h+3}px;left:0;width:${w}px;text-align:center;font-size:${fpx(.28)}">${esc(T.EnemiesShort)} 4 · ${esc(T.AlliesShort)} 2 · ${esc(T.QueueShort)} 7</div>`; h += 22; }
-    if (r === "status"){ html += `<div style="position:absolute;top:${h+3}px;left:0;width:${w}px;text-align:center;font-size:${fpx(.28)}"><span style="display:inline-block;width:7px;height:7px;background:${H.WinColor};margin-right:5px"></span>TikFinity</div>`; h += 22; }
   });
   h += 4;
   return {w, h, html:`<div class="hbg" style="${bgCss()}"></div>${html}`};
 }
 function pvHealth(L){
-  const H = state.ini.Hud, w = Math.max(80, +L.HealthWidth || 260), h = 22 + 12 + (H.ShowArmor ? 8 : 0) + 8;
-  return {w, h, html:`<div class="hbg" style="${bgCss(0.85)}"></div>
-    <div style="position:absolute;top:3px;left:8px;font-size:${fpx(.34)}">${esc(H.HealthLabel)} 72.2%</div>
-    ${H.ShowHealthPoints?`<div style="position:absolute;top:3px;right:8px;font-size:${fpx(.34)}">722 / 1000</div>`:""}
-    <div style="position:absolute;top:22px;left:8px;width:${w-16}px;height:12px;background:rgba(0,0,0,.6)"><div style="width:72.2%;height:100%;background:${H.HealthColor}"></div></div>
-    ${H.ShowArmor?`<div style="position:absolute;top:37px;left:8px;width:${w-16}px;height:5px;background:rgba(0,0,0,.6)"><div style="width:60%;height:100%;background:#5aaaff"></div></div>`:""}`};
+  const H = HV(), v = H.HealthVariant || "Bar", w = Math.max(80, +L.HealthWidth || 260), hc = H.HealthColor;
+  const bar = (x, y, bw, bh, f, c) => abs(x, y, bw, bh, "background:rgba(0,0,0,.6)", `<div style="width:${f}%;height:100%;background:${c}"></div>`);
+  if (v === "Numbers"){
+    const h = 46 + (H.ShowArmor ? 5 : 0);
+    return {w, h, html:`<div class="hbg" style="${bgCss(0.85)}"></div>${abs(10,-2,null,null,`font-size:${fpx(.72)};font-weight:900;color:${hc}`,"722")}${abs(78,14,null,null,`font-size:${fpx(.34)};opacity:.8`,"/ 1000")}${abs(null,14,null,null,`right:10px;left:auto;font-size:${fpx(.28)}`,esc(H.HealthLabel)+" 72.2%").replace("left:nullpx;","")}${bar(10,38,w-20,4,72.2,hc)}${H.ShowArmor?bar(10,44,w-20,3,60,"#5aaaff"):""}`};
+  }
+  if (v === "Slim"){
+    return {w, h:30, html:`${abs(2,0,null,null,`font-size:${fpx(.28)}`,esc(H.HealthLabel))}${abs(0,0,w,null,`text-align:right;font-size:${fpx(.28)}`,H.ShowHealthPoints?"722 / 1000":"72.2%")}${bar(0,18,w,6,72.2,hc)}${abs(0,24,w*.722,2,`background:${rgba(hc,.35)}`)}${H.ShowArmor?abs(0,27,w*.6,2,"background:#5aaaff"):""}`};
+  }
+  const h = 22 + 12 + (H.ShowArmor ? 8 : 0) + 8;
+  let fill = bar(8, 22, w-16, 12, 72.2, hc);
+  if (v === "Segmented"){
+    const segs = 10, sw = (w - 16 - (segs - 1) * 3) / segs; fill = "";
+    for (let i = 0; i < segs; i++){ const f = Math.max(0, Math.min(1, 7.22 - i)); fill += bar(8 + i * (sw + 3), 22, sw, 12, f * 100, hc); }
+  }
+  return {w, h, html:`<div class="hbg" style="${bgCss(0.85)}"></div>${abs(8,3,null,null,`font-size:${fpx(.34)}`,esc(H.HealthLabel)+" 72.2%")}${H.ShowHealthPoints?abs(0,3,w-8,null,`text-align:right;font-size:${fpx(.34)}`,"722 / 1000"):""}${fill}${H.ShowArmor?bar(8,37,w-16,5,60,"#5aaaff"):""}`};
 }
 function triggerLabel(it){
   switch (it.Trigger){ case "Gift": return it.GiftName || ("#" + it.GiftId); case "Likes": return it.LikesCount + " Likes"; case "Comment": return it.CommentText ? `"${it.CommentText}"` : "Comment"; default: return it.Trigger; }
 }
 function pvGuide(){
-  const H = state.ini.Hud;
+  const H = HV();
   let items = state.interactions.filter(i => i.Enabled && i.ShowInGuide && i.Trigger !== "Key");
   items = items.slice(0, H.GuideMode === "Rotate" ? H.GuideRotateCount : H.GuideMax);
   if (!items.length) return null;
@@ -1070,30 +1168,34 @@ function pvGuide(){
   const titleH = H.GuideTitleEnabled && H.GuideTitle ? 26 : 0;
   const h = titleH + items.length * (rowH + (list ? 0 : 4)) + (list ? 10 : 2);
   let y = 0, html = list ? `<div class="hbg" style="${bgCss()}"></div>` : "";
-  if (titleH){ html += `<div style="position:absolute;top:0;left:0;width:${w}px;height:${titleH-2}px;${list?"":bgCss()}">${header(H.GuideTitle)}</div>`; y += titleH; }
+  if (titleH){ html += abs(0, 0, w, titleH - 2, list ? "" : bgCss(), header(H.GuideTitle)); y += titleH; }
   if (list) y += 5;
   items.forEach(it => {
     const act = it.Name || (ACT[it.Action]||{}).name || it.Action;
     if (list){
-      html += `<div style="position:absolute;top:${y}px;left:8px;height:${rowH}px;display:flex;align-items:center;gap:5px;font-size:${fpx(.34)}">${H.GuideShowGiftImage?thumbSmall(it.giftImg,it.giftEmoji,22):""}<span style="color:${H.GuideGiftColor}">${esc(triggerLabel(it))}</span><span style="opacity:.6">&gt;</span>${H.GuideShowActionImage?thumbSmall(it.actImg,it.actEmoji,22):""}<span>${esc(act)}</span></div>`;
+      html += abs(8, y, null, rowH, `display:flex;align-items:center;gap:5px;font-size:${fpx(.34)}`, `${H.GuideShowGiftImage?thumbSmall(it.giftImg,it.giftEmoji,22):""}<span style="color:${H.GuideGiftColor}">${esc(triggerLabel(it))}</span><span style="opacity:.6">&gt;</span>${H.GuideShowActionImage?thumbSmall(it.actImg,it.actEmoji,22):""}<span>${esc(act)}</span>`);
       y += rowH;
     } else {
       const gw = w * 0.42;
-      html += `<div style="position:absolute;top:${y}px;left:0;width:${gw}px;height:${rowH}px;background:${rgba(H.GuideGiftColor,H.Opacity/255*0.9)};display:flex;align-items:center;gap:4px;padding-left:6px;font-size:${fpx(.34)};color:#fff">${H.GuideShowGiftImage?thumbSmall(it.giftImg,it.giftEmoji,28):""}<span style="overflow:hidden;white-space:nowrap">${esc(triggerLabel(it))}</span></div>
-        <div style="position:absolute;top:${y}px;left:${gw}px;width:${w-gw}px;height:${rowH}px;background:${rgba(mixHex(H.PanelColor,H.GuideActionColor,.25),H.Opacity/255)};border-left:3px solid ${H.GuideActionColor};display:flex;align-items:center;gap:4px;padding-left:6px;font-size:${fpx(.34)}">${H.GuideShowActionImage?thumbSmall(it.actImg,it.actEmoji,28):""}<span style="overflow:hidden;white-space:nowrap">${esc(act)}</span></div>`;
+      html += abs(0, y, gw, rowH, `background:${rgba(H.GuideGiftColor,H.Opacity/255*0.9)};display:flex;align-items:center;gap:4px;padding-left:6px;font-size:${fpx(.34)};color:#fff`, `${H.GuideShowGiftImage?thumbSmall(it.giftImg,it.giftEmoji,28):""}<span style="overflow:hidden;white-space:nowrap">${esc(triggerLabel(it))}</span>`)
+        + abs(gw, y, w-gw, rowH, `background:${rgba(mixHex(H.PanelColor,H.GuideActionColor,.25),H.Opacity/255)};border-left:3px solid ${H.GuideActionColor};display:flex;align-items:center;gap:4px;padding-left:6px;font-size:${fpx(.34)}`, `${H.GuideShowActionImage?thumbSmall(it.actImg,it.actEmoji,28):""}<span style="overflow:hidden;white-space:nowrap">${esc(act)}</span>`);
       y += rowH + 4;
     }
   });
   return {w, h, html};
 }
 function pvFeed(rows, rowH, img, size, hype, panel, L){
-  const H = state.ini.Hud;
-  const w = Math.min(520, Math.max(150, Math.max(...rows.map(r => 12 + img + 6 + r.t.length * size * 17 + (r.icon ? img + 6 : 0) + (hype ? 44 : 0)))));
+  const H = HV(), v = hype ? "Card" : (H.NotifVariant || "Card"), banner = v === "Banner", pill = v === "Pill";
+  const w = Math.min(520, Math.max(banner ? 260 : 150, Math.max(...rows.map(r => 12 + img + 6 + r.t.length * size * 17 + (r.icon ? img + 6 : 0) + (hype ? 44 : 0) + (pill ? 10 : 0)))));
   const pos = L[panel + "Position"] || "";
-  const al = /Right$/.test(pos) ? "flex-end" : (/Left$/.test(pos) ? "flex-start" : "center");
-  let html = `<div style="display:flex;flex-direction:column;gap:4px;align-items:${al}">`;
+  const al = banner ? "stretch" : (/Right$/.test(pos) ? "flex-end" : (/Left$/.test(pos) ? "flex-start" : "center"));
+  let html = `<div style="display:flex;flex-direction:column;gap:${banner?3:4}px;align-items:${al}">`;
   rows.forEach(r => {
-    html += `<div style="position:relative;height:${rowH}px;display:flex;align-items:center;gap:6px;padding:0 6px;font-size:${fpx(size)};${bgCss()};${hype?`border:1px solid ${rgba(state.ini.Hype.Color,.86)};`:""}">${avatarHTML(r.s, img)}${hype&&state.ini.Hype.ShowLevel?`<b style="background:${state.ini.Hype.Color};color:#000;font-size:${fpx(.25)};padding:0 4px">Lv ${r.lv}</b>`:""}<span style="color:${hype?state.ini.Hype.Color:H.TextColor};white-space:nowrap">${esc(r.t)}</span>${r.icon?thumbSmall(r.icon.img,r.icon.emoji,img):""}</div>`;
+    let css = bgCss();
+    if (pill) css = `background:${rgba(H.PanelColor, Math.max(H.Opacity/255,.7))};border-radius:${rowH}px;border-left:${rowH/2}px solid ${H.AccentColor};padding-left:4px`;
+    if (banner) css += `;justify-content:center;box-shadow:inset 0 2px 0 ${H.AccentColor}`;
+    if (hype) css += `;border:1px solid ${rgba(state.ini.Hype.Color,.86)};border-left:3px solid ${state.ini.Hype.Color}`;
+    html += `<div style="position:relative;height:${rowH}px;display:flex;align-items:center;gap:6px;padding:0 6px;font-size:${fpx(size)};${css}">${avatarHTML(r.s, img)}${hype&&state.ini.Hype.ShowLevel?`<b style="background:${state.ini.Hype.Color};color:#000;font-size:${fpx(.25)};padding:0 4px">Lv ${r.lv}</b>`:""}<span style="color:${hype?state.ini.Hype.Color:H.TextColor};white-space:nowrap">${esc(r.t)}</span>${r.icon?thumbSmall(r.icon.img,r.icon.emoji,img):""}</div>`;
   });
   html += `</div>`;
   return {w, h:rows.length * (rowH + 4), html};
@@ -1105,12 +1207,29 @@ function anchor(L, p, w, h, frame){
   let y = /^Top/.test(pos) ? m : (/^Bottom/.test(pos) ? 720 - h - m - 40 : (720 - h) / 2);
   return [x + (+L[p + "OffsetX"] || 0), y + (+L[p + "OffsetY"] || 0)];
 }
+// overhead sample: real-picture avatar with ring + name + bar, and the aura under the character
+function pvOverhead(x, y, s, enemy, king){
+  const H = HV(), A = state.ini.Aura, st = H.OverheadStyle || "Classic";
+  const side = enemy ? H.LossColor : H.WinColor, ring = H.OverheadRing ? (king && A.KingCrown ? A.KingColor : side) : null;
+  const aura = A.Enabled ? (enemy ? A.EnemyAura : A.AllyAura) : "None", ac = enemy ? A.EnemyColor : A.AllyColor;
+  let under = "";
+  if (["Ring","Pulse","Beam","Rainbow"].includes(aura)) under = `<div style="position:absolute;left:-14px;bottom:-6px;width:78px;height:20px;border-radius:50%;border:3px solid ${aura==="Rainbow"?"#ff4fd8":ac};box-shadow:0 0 14px ${ac}"></div>`;
+  if (aura === "Beam") under += `<div style="position:absolute;left:4px;bottom:0;width:42px;height:150px;background:linear-gradient(0deg,${rgba(ac,.35)},transparent)"></div>`;
+  if (aura === "Glow" || ["Fire","Smoke","Electric","Sparkles"].includes(aura)) under = `<div style="position:absolute;left:-20px;top:40px;width:90px;height:70px;border-radius:50%;background:radial-gradient(${rgba(ac,.55)},transparent 70%)"></div>`;
+  const crown = king && A.KingCrown ? `<div style="position:absolute;left:14px;top:-26px;width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-top:18px solid ${A.KingColor};filter:drop-shadow(0 0 6px ${A.KingColor})"></div>` : "";
+  const sup = SAMPLE_SUPS[king ? 0 : 2], bar = `<div style="width:56px;height:5px;background:rgba(0,0,0,.6);margin:2px auto"><div style="width:70%;height:100%;background:${side}"></div></div>`;
+  let head;
+  if (st === "Card") head = `<div style="display:flex;align-items:center;gap:3px;justify-content:center">${avatarHTML(sup,34,ring)}<div style="background:${rgba(H.PanelColor,.8)};border-top:2px solid ${side};padding:1px 5px;text-align:left">${sup[0]}${bar}</div></div>`;
+  else if (st === "Minimal") head = avatarHTML(sup, 42, ring);
+  else head = `<div style="position:relative;display:inline-block">${avatarHTML(sup, st==="Badge"?38:32, ring)}${st==="Badge"&&H.OverheadLevel?`<b style="position:absolute;right:-6px;bottom:-2px;background:${state.ini.Hype.Color};color:#000;font-size:10px;padding:0 3px">25</b>`:""}</div><div style="color:${side}">${sup[0]}</div>${bar}`;
+  return `<div style="position:absolute;left:${x}px;top:${y}px;width:50px;transform:scale(${s});${txtCss()}text-align:center;font-size:${fpx(.3)}"><div style="position:relative;height:0">${crown}</div><div style="position:absolute;bottom:-58px;left:0;width:50px;height:0">${under}</div><div style="position:relative;width:120px;margin-left:-35px">${head}</div><div style="font-size:44px;line-height:1">${enemy?"🤡":"👮"}</div></div>`;
+}
 function renderPreview(){
   const stage = $("#stage"), vp = $("#vp");
   if (!stage.clientWidth) return;
   vp.style.transform = `scale(${stage.clientWidth / 1280})`;
   const vert = state.ui.preview === "Vertical";
-  const L = state.ini[vert ? "LayoutVertical" : "Layout"], H = state.ini.Hud;
+  const L = state.ini[vert ? "LayoutVertical" : "Layout"], H = HV();
   const frame = vert ? {x:437.5, w:405} : {x:0, w:1280};
   const sc = +L.Scale || 1;
   const ints = state.interactions.filter(i => i.Enabled);
@@ -1124,13 +1243,14 @@ function renderPreview(){
     Hype: state.ini.Hype.Enabled && pvFeed([{s:SAMPLE_SUPS[0], t:fill(state.ini.Hype.KingJoinText, SAMPLE_SUPS[0][0]), lv:48},{s:SAMPLE_SUPS[1], t:fill(state.ini.Hype.ComboText, SAMPLE_SUPS[1][0]), lv:25}], 38, 30, .38, true, "Hype", L)
   };
   let html = vert ? `<div class="vframe" style="left:${frame.x}px;width:${frame.w}px"></div>` : "";
+  if (H.OverheadEnabled){ html += pvOverhead(frame.x + frame.w/2 - 90, 330, 1, true, true) + pvOverhead(frame.x + frame.w/2 + 40, 345, .9, false, false); }
   Object.keys(panels).forEach(p => {
     const P = panels[p];
     if (!P || !L[p + "Show"]) return;
     const [x, y] = anchor(L, p, P.w * sc, P.h * sc, frame);
     html += `<div class="pp ${state.ui.selPanel===p?"sel":""}" data-panel="${p}" style="left:${x}px;top:${y}px;width:${P.w}px;height:${P.h}px;transform:scale(${sc});${txtCss()}">${P.html}</div>`;
   });
-  html += `<div style="position:absolute;left:${frame.x + frame.w/2 - 40}px;top:330px;${txtCss()}text-align:center;font-size:${fpx(.3)}">${avatarHTML(SAMPLE_SUPS[2],30)}<div style="color:${H.LossColor}">${SAMPLE_SUPS[2][0]}</div><div style="width:56px;height:5px;background:rgba(0,0,0,.6);margin:2px auto"><div style="width:70%;height:100%;background:${H.LossColor}"></div></div><div style="font-size:44px;line-height:1">🤡</div></div>`;
+  if (state.ini.LiveTest.Enabled && state.ini.LiveTest.ShowBadge) html += `<div style="position:absolute;left:${frame.x + frame.w - 110}px;top:4px;background:#fe2c55;color:#fff;font:700 12px Arial;padding:2px 8px">● LIVE TEST</div>`;
   vp.innerHTML = html;
 }
 $("#vp").addEventListener("click", e => {
@@ -1182,6 +1302,11 @@ $("#styleBtns").addEventListener("click", e => {
 $("#pvNormal").onclick = () => { state.ui.preview = "Normal"; renderHudSide(); renderPreview(); save(); };
 $("#pvVertical").onclick = () => { state.ui.preview = "Vertical"; renderHudSide(); renderPreview(); save(); };
 const PRESETS = {
+  "📺 Broadcast": s => { const L = s.ini.Layout = layoutDefaults(false); s.ini.Hud.Style = "Broadcast"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "Bar"; s.ini.Hud.Top3Variant = "List"; s.ini.Hud.HealthVariant = "Segmented"; s.ini.Hud.NotifVariant = "Banner"; s.ini.Hud.FeedAnimation = "Slide"; s.ini.Hud.OverheadStyle = "Card"; s.ui.preview = "Normal"; },
+  "🤖 Cyber": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Style = "Cyber"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "BigTimer"; s.ini.Hud.Top3Variant = "Compact"; s.ini.Hud.HealthVariant = "Numbers"; s.ini.Hud.NotifVariant = "Card"; s.ini.Hud.FeedAnimation = "Pop"; s.ini.Hud.OverheadStyle = "Badge"; s.ini.Aura.EnemyAura = "Pulse"; s.ini.Aura.AllyAura = "Beam"; s.ui.preview = "Normal"; },
+  "👑 Royal": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Style = "Royal"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "Classic"; s.ini.Hud.Top3Variant = "Podium"; s.ini.Hud.HealthVariant = "Bar"; s.ini.Hud.NotifVariant = "Pill"; s.ini.Hud.FeedAnimation = "Fade"; s.ini.Hud.OverheadStyle = "Badge"; s.ini.Aura.EnemyAura = "Ring"; s.ini.Aura.AllyAura = "Glow"; s.ui.preview = "Normal"; },
+  "🎵 TikTok Stream": s => { s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.LayoutMode = "Vertical"; s.ini.Hud.Style = "Stream"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "Bar"; s.ini.Hud.Top3Variant = "Compact"; s.ini.Hud.HealthVariant = "Slim"; s.ini.Hud.NotifVariant = "Pill"; s.ini.Hud.FeedAnimation = "Pop"; s.ini.Hud.OverheadStyle = "Minimal"; s.ini.LayoutVertical.Top3OffsetY = 70; s.ui.preview = "Vertical"; },
+  "🌈 Hologram": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Style = "Hologram"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "BigTimer"; s.ini.Hud.Top3Variant = "List"; s.ini.Hud.HealthVariant = "Segmented"; s.ini.Hud.NotifVariant = "Card"; s.ini.Hud.OverheadStyle = "Classic"; s.ini.Aura.EnemyAura = "Rainbow"; s.ui.preview = "Normal"; },
   "🏠 الأصل": s => { s.ini.Layout = layoutDefaults(false); s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.Style = "Classic"; s.ini.Hud.GuideMode = "Cards"; s.ini.Hud.LayoutMode = "Normal"; s.ui.preview = "Normal"; },
   "📱 TikTok": s => { s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.LayoutMode = "Vertical"; s.ini.Hud.Style = "Glass"; s.ui.preview = "Vertical"; },
   "🎮 Esports": s => { const L = s.ini.Layout = layoutDefaults(false); L.FeedPosition = "TopRight"; L.FeedOffsetY = 0; L.HypePosition = "MiddleRight"; L.HypeOffsetY = 0; L.NotifPosition = "BottomLeft"; s.ini.Hud.Style = "Esports"; s.ini.Hud.GuideMode = "Rotate"; s.ui.preview = "Normal"; },
@@ -1233,9 +1358,9 @@ NAV.forEach(([id]) => io.observe(document.getElementById(id)));
 <script>
 "use strict";
 // ------------------------------------------------------------- INI export
-const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death"];
+const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest"];
 const INTER_KEYS = ["Enabled","Name","Action","Trigger","GiftName","GiftId","LikesCount","CommentText","OncePerUser","TestKey","Units","MultiplyByCombo","Cooldown","Effect","Message","GiftImage","ActionImage","EntryCam","ShowInGuide",
-  "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","Amount","Weather"];
+  "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","Amount","Weather","Aura","AuraColor","GiftCoins"];
 function iniVal(v){
   if (typeof v === "boolean") return v ? "true" : "false";
   if (typeof v === "number") return String(Math.round(v * 1000) / 1000);
@@ -1257,7 +1382,7 @@ function buildIni(){
   out.push("[Interactions]", `Count=${state.interactions.length}`, "");
   state.interactions.forEach((it, i) => {
     const n = i + 1;
-    const o = Object.assign({}, it, {GiftImage: hasGiftImg(it) ? `images/i${n}_gift.png` : "", ActionImage: hasActImg(it) ? `images/i${n}_action.png` : ""});
+    const o = Object.assign({}, it, {GiftCoins: it.Trigger === "Gift" ? (giftCoins(it.GiftName) || 0) : 0, GiftImage: hasGiftImg(it) ? `images/i${n}_gift.png` : "", ActionImage: hasActImg(it) ? `images/i${n}_action.png` : ""});
     out.push(`[Interaction${n}]`);
     INTER_KEYS.forEach(k => out.push(`${k}=${iniVal(o[k])}`));
     out.push("");
@@ -1342,6 +1467,7 @@ function readme(){
 "3) حل TikFinity على نفس البيسي واتصل باللايف (WebSocket: " + state.ini.TikFinity.Url + ").",
 "",
 "4) فـ Story Mode: ضغط " + G.PowerKey + " (تشغيل) ومن بعد " + G.StartKey + " (بدا التحدي + الهود + الاتصال).",
+"   " + state.ini.LiveTest.Key + " = 🧪 Live Test (بث تجريبي بمشاهدين وهميين، بلا TikFinity)",
 "   " + G.HudStyleKey + " شكل الهود · " + G.HudFontKey + " الخط · " + G.LayoutKey + " 16:9/9:16 · " + G.PauseKey + " إيقاف مؤقت · " + G.EmergencyKey + " الطوارئ · " + G.HypeTestKey + " تجربة الحماس",
 "   أزرار التجربة: " + state.interactions.filter(i => i.TestKey && i.TestKey !== "None").map(i => i.TestKey + "=" + (i.Name || i.Action)).join(" · "),
 "",
@@ -1423,6 +1549,7 @@ function validate(){
   const out = [], G = state.ini.General;
   const gk = {};
   ["PowerKey","StartKey","HudStyleKey","HudFontKey","EmergencyKey","PauseKey","LayoutKey","HypeTestKey"].forEach(k => { const v = G[k]; if (v && v !== "None"){ (gk[v] = gk[v] || []).push(k); } });
+  if (state.ini.LiveTest.Enabled && state.ini.LiveTest.Key !== "None") (gk[state.ini.LiveTest.Key] = gk[state.ini.LiveTest.Key] || []).push("LiveTest");
   Object.keys(gk).forEach(v => { if (gk[v].length > 1) out.push(["err", `⌨️ الزر ${v} مستعمل جوج مرات: ${gk[v].join(" · ")}`]); });
   const tk = {};
   state.interactions.forEach((it, i) => {
