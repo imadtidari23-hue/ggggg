@@ -402,7 +402,8 @@ function layoutDefaults(v){
     L[p+"Position"] = pos[p]; L[p+"OffsetX"] = 0; L[p+"OffsetY"] = oy[p]||0; L[p+"Show"] = !(v && p==="Guide");
     if (p==="Health") L.HealthWidth = v ? 220 : 260;
   });
-  L.Scale = v ? 0.9 : 1;
+  L.Scale = v ? 0.8 : 1;
+  if (v) Object.assign(L, {AutoArrange:true, Gap:6, BottomMargin:60, MaxNotif:3, MaxFeed:2, MaxHype:2});
   return L;
 }
 function newInteraction(over){
@@ -1199,15 +1200,16 @@ function pvFeed(rows, rowH, img, size, hype, panel, L){
   const H = HV(), v = hype ? "Card" : (H.NotifVariant || "Card"), banner = v === "Banner", pill = v === "Pill";
   const w = Math.min(520, Math.max(banner ? 260 : 150, Math.max(...rows.map(r => 12 + img + 6 + r.t.length * size * 17 + (r.icon ? img + 6 : 0) + (hype ? 44 : 0) + (pill ? 10 : 0)))));
   const pos = L[panel + "Position"] || "";
-  const al = banner ? "stretch" : (/Right$/.test(pos) ? "flex-end" : (/Left$/.test(pos) ? "flex-start" : "center"));
+  if (state.ui.preview === "Vertical" && L.AutoArrange){ const mx = {Notif:L.MaxNotif,Feed:L.MaxFeed,Hype:L.MaxHype}[panel]; if (mx != null) rows = rows.slice(-Math.max(0, mx)); if (!rows.length) return null; }
+  const al = (state.ui.preview === "Vertical" && L.AutoArrange) ? "center" : banner ? "stretch" : (/Right$/.test(pos) ? "flex-end" : (/Left$/.test(pos) ? "flex-start" : "center"));
   let html = `<div style="display:flex;flex-direction:column;gap:${banner?3:4}px;align-items:${al}">`;
-  const des = !hype && designOn();
+  const des = designOn();
   rows.forEach((r, ri) => {
     let css = bgCss(), lead = "";
     if (des){ const dr = dRowCss(ri + 1, ri === rows.length - 1, rowH); css = dr.css; lead = dr.lead; }
     if (pill && !des) css = `background:${rgba(H.PanelColor, Math.max(H.Opacity/255,.7))};border-radius:${rowH}px;border-left:${rowH/2}px solid ${H.AccentColor};padding-left:4px`;
     if (banner && !des) css += `;justify-content:center;box-shadow:inset 0 2px 0 ${H.AccentColor}`;
-    if (hype) css += `;border:1px solid ${rgba(state.ini.Hype.Color,.86)};border-left:3px solid ${state.ini.Hype.Color}`;
+    if (hype) css += des ? `;border-left:3px solid ${state.ini.Hype.Color}` : `;border:1px solid ${rgba(state.ini.Hype.Color,.86)};border-left:3px solid ${state.ini.Hype.Color}`;
     html += `<div style="position:relative;height:${rowH}px;display:flex;align-items:center;gap:6px;padding:0 6px;font-size:${fpx(size)};${css}">${lead}${avatarHTML(r.s, img)}${hype&&state.ini.Hype.ShowLevel?`<b style="background:${state.ini.Hype.Color};color:#000;font-size:${fpx(.25)};padding:0 4px">Lv ${r.lv}</b>`:""}<span style="color:${hype?state.ini.Hype.Color:H.TextColor};white-space:nowrap">${esc(r.t)}</span>${r.icon?thumbSmall(r.icon.img,r.icon.emoji,img):""}</div>`;
   });
   html += `</div>`;
@@ -1408,6 +1410,66 @@ function dRowCss(i, newest, rowH){
   }
 }
 
+function pvDesignScore(){
+  const H = HV(), d = dz(), acc = dAcc(), T = state.ini.Texts;
+  const title = H.TitleEnabled && H.Title, timer = H.ShowTimer && state.ini.Challenge.Enabled, score = H.ShowScore, stk = H.ShowStreak;
+  if (!title && !timer && !score && !stk) return null;
+  const w = d === "minimal" ? 220 : (d === "broadcast" ? 320 : 290), th = title ? 20 : 0, body = d === "minimal" ? 44 : 40, sh = stk ? 18 : 0;
+  const h = th + body + sh + (d === "minimal" ? 0 : 6);
+  const W = H.WinColor, Lc = H.LossColor, s28 = fpx(.28), tm = (sz, col) => `font-size:${fpx(sz)};font-weight:700;color:${col||"#fff"}`;
+  let html = "", y = th;
+  const titleHtml = (css) => title ? abs(0, 0, w, 18, `text-align:center;font-size:${s28};${css}`, esc(H.Title)) : "";
+  switch (d){
+    case "arena":
+      html += abs(0,0,w,h,`background:rgba(14,16,24,${Math.max(190,H.Opacity)/255});border-radius:12px`) + titleHtml(`color:${acc}`);
+      if (score) html += abs(10,y+4,62,32,`background:${W};border-radius:10px;text-align:center;${tm(.5)}`,"3") + abs(w-72,y+4,62,32,`background:${Lc};border-radius:10px;text-align:center;${tm(.5)}`,"1");
+      if (timer) html += abs(0,y+4,w,30,`text-align:center;${tm(.56)}`,"09:41"); break;
+    case "broadcast":
+      if (title) html += abs(w/2-70,0,140,17,`background:${acc};color:#1c1812;text-align:center;font-size:${s28};font-weight:900;transform:skewX(-14deg);line-height:17px`, esc(H.Title));
+      html += abs(0,y+2,w,36,`background:rgba(12,14,20,.9);transform:skewX(-12deg);display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid ${acc}`,
+        `${score?`<b style="background:${W};height:36px;width:86px;display:flex;align-items:center;justify-content:space-between;padding:0 6px;${tm(.5)}"><small style="font-size:${s28}">${esc(T.WinShort)}</small>3</b>`:"<i></i>"}${timer?`<b style="${tm(.54)}">09:41</b>`:""}${score?`<b style="background:${Lc};height:36px;width:86px;display:flex;align-items:center;justify-content:space-between;padding:0 6px;${tm(.5)}">1<small style="font-size:${s28}">${esc(T.LossShort)}</small></b>`:"<i></i>"}`); break;
+    case "podium":
+      html += abs(0,0,w,h,`background:rgba(255,255,255,.31);border-radius:22px`) + titleHtml("color:#fff");
+      if (score) html += abs(10,y+5,64,30,`background:${W};border-radius:15px;text-align:center;${tm(.5)}`,"3") + abs(w-74,y+5,64,30,`background:${Lc};border-radius:15px;text-align:center;${tm(.5)}`,"1");
+      if (timer) html += abs(0,y+4,w,30,`text-align:center;${tm(.56)}`,"09:41"); break;
+    case "cards":
+      html += titleHtml(`color:${acc}`);
+      [[W,"3",score],["#fff","09:41",timer],[Lc,"1",score]].forEach(([c,t,on],i) => { if (on) html += abs(4+i*97,y+2,88,44,`background:linear-gradient(#fff,${c==="#fff"?"#c8ccd4":c});clip-path:polygon(0 0,100% 0,100% 82%,50% 100%,0 82%);text-align:center;${tm(.5,"#1c1812")}`, t); }); break;
+    case "esports":
+      if (title) html += abs(0,0,w,18,`text-align:center;color:${acc};font-size:${s28};font-style:italic;font-weight:900`,`// ${esc(H.Title)} //`);
+      html += abs(4,y+2,w-8,36,`background:rgba(10,12,20,.9);border-top:2px solid ${acc};transform:skewX(-12deg);display:flex;justify-content:space-between;align-items:center;padding:0 14px`,
+        `<b style="${tm(.4,W)}">${score?"W 3":""}</b><b style="${tm(.54)}">${timer?"09:41":""}</b><b style="${tm(.4,Lc)}">${score?"1 L":""}</b>`); break;
+    case "minimal":
+      html += titleHtml("color:rgba(255,255,255,.86)");
+      if (timer) html += abs(0,y-4,w,32,`text-align:center;${tm(.7)};text-shadow:0 2px 6px #000`,"09:41");
+      if (score) html += abs(0,y+28,w,16,`text-align:center;font-size:${fpx(.34)};font-weight:700`,`<span style="color:${W}">3</span> <span style="opacity:.7">—</span> <span style="color:${Lc}">1</span>`); break;
+    default:
+      html += abs(0,0,w,h,`background:rgba(14,16,24,${Math.max(170,H.Opacity)/255});border-radius:10px`) + (title ? abs(10,1,w,18,`color:${acc};font-size:${s28}`,"♛ " + esc(H.Title)) : "");
+      if (score) html += abs(12,y+6,28,28,`background:${W};border-radius:50%;text-align:center;line-height:28px;${tm(.42)}`,"3") + abs(w-40,y+6,28,28,`background:${Lc};border-radius:50%;text-align:center;line-height:28px;${tm(.42)}`,"1");
+      if (timer) html += abs(0,y+4,w,30,`text-align:center;${tm(.56)}`,"09:41");
+  }
+  if (stk) html += abs(0, h - sh - (d === "minimal" ? 0 : 3), w, 16, `text-align:center;font-size:${s28};color:${W}`, "3 " + esc(T.WinStreakText));
+  return {w, h, html};
+}
+function pvDesignHealth(L){
+  const H = HV(), d = dz(), acc = dAcc(), w = Math.max(80, +L.HealthWidth || 260), hc = H.HealthColor, armor = H.ShowArmor;
+  const h = d === "minimal" ? 30 : 44 + (armor ? 4 : 0), s28 = fpx(.28);
+  const lab = (x, col) => abs(x, 3, w, 16, `font-size:${s28};color:${col||"#fff"}`, esc(H.HealthLabel) + " 72.2%") + (H.ShowHealthPoints ? abs(0, 3, w - 10, 16, `text-align:right;font-size:${s28};color:${col||"#fff"}`, "722 / 1000") : "");
+  const bar = (x, y, bw, bh, r, bg) => abs(x, y, bw, bh, `background:${bg||"rgba(0,0,0,.6)"};border-radius:${r}px;overflow:hidden`, `<div style="width:72.2%;height:100%;background:${hc};border-radius:${r}px"></div>`);
+  const arm = (x, y, bw, bh, r) => armor ? abs(x, y, bw*0.6, bh, `background:#5aaaff;border-radius:${r}px`) : "";
+  let html = "";
+  switch (d){
+    case "arena": html = abs(0,0,w,h,`background:rgba(14,16,24,${Math.max(190,H.Opacity)/255});border-radius:12px`) + lab(12) + bar(10,22,w-20,12,6) + arm(10,37,w-20,5,3); break;
+    case "broadcast": html = abs(0,0,w,h,`background:rgba(12,14,20,.9);transform:skewX(-10deg);transform-origin:bottom`) + abs(0,0,38,h,`background:${acc};text-align:center;line-height:${h}px;font-weight:900;color:#1c1812;font-size:${fpx(.34)}`,"HP") + lab(46) + bar(46,22,w-52,12,0) + arm(46,37,w-52,4,0); break;
+    case "podium": html = abs(0,0,w,h,`background:rgba(255,255,255,.31);border-radius:14px`) + lab(14) + bar(10,22,w-20,13,7,"rgba(0,0,0,.35)") + arm(10,38,w-20,5,3); break;
+    case "cards": html = abs(0,0,w,h,`background:linear-gradient(#fff,#c8ccd4);border-left:4px solid ${hc}`) + lab(12,"#1c1812") + bar(10,22,w-20,12,0,"rgba(0,0,0,.45)") + arm(10,37,w-20,4,0); break;
+    case "esports": { html = abs(0,0,w,h,`background:rgba(10,12,20,.9);border-top:2px solid ${acc};transform:skewX(-12deg)`) + lab(14); const sw = (w-20-22)/12; for (let i = 0; i < 12; i++) html += abs(10+i*(sw+2),22,sw,12,`background:${i < 8.66 ? hc : "rgba(0,0,0,.6)"}`); html += arm(10,37,w-20,4,0); break; }
+    case "minimal": html = abs(0,0,w,16,`font-size:${s28};color:rgba(255,255,255,.9)`, esc(H.HealthLabel) + " 72.2%") + bar(0,18,w,7,4,"rgba(255,255,255,.43)") + arm(0,27,w,3,2); break;
+    default: html = abs(0,0,w,h,`background:rgba(14,16,24,${Math.max(170,H.Opacity)/255});border-radius:10px`) + lab(10) + bar(10,22,w-20,12,0) + arm(10,37,w-20,4,0);
+  }
+  return {w, h, html};
+}
+
 function renderPreview(){
   const stage = $("#stage"), vp = $("#vp");
   if (!stage.clientWidth) return;
@@ -1418,9 +1480,9 @@ function renderPreview(){
   const sc = +L.Scale || 1;
   const ints = state.interactions.filter(i => i.Enabled);
   const panels = {
-    Score: H.ScoreEnabled && pvScore(),
+    Score: H.ScoreEnabled && (designOn() ? pvDesignScore() : pvScore()),
     Top3: H.Top3Enabled && (designOn() ? pvDesignTop() : pvTop()),
-    Health: H.HealthEnabled && pvHealth(L),
+    Health: H.HealthEnabled && (designOn() ? pvDesignHealth(L) : pvHealth(L)),
     Guide: H.GuideEnabled && pvGuide(),
     Notif: state.ini.Notifications.Enabled && pvFeed(ints.slice(0, Math.min(3, state.ini.Notifications.MaxVisible)).map((it, n) => ({s:SAMPLE_SUPS[n], t:fill(it.Message || it.Name, SAMPLE_SUPS[n][0]), icon:state.ini.Notifications.ShowGiftIcon ? {img:it.giftImg, emoji:it.giftEmoji} : null})), 30, 24, .34, false, "Notif", L),
     Feed: state.ini.KillFeed.Enabled && pvFeed([0,2].map(n => ({s:SAMPLE_SUPS[n], t:fill(state.ini.Texts.KillFeedText, SAMPLE_SUPS[n][0])})), 26, 20, .34, false, "Feed", L),
@@ -1428,11 +1490,22 @@ function renderPreview(){
   };
   let html = vert ? `<div class="vframe" style="left:${frame.x}px;width:${frame.w}px"></div>` : "";
   if (H.OverheadEnabled){ html += pvOverhead(frame.x + frame.w/2 - 90, 330, 1, true, true) + pvOverhead(frame.x + frame.w/2 + 40, 345, .9, false, false); }
-  Object.keys(panels).forEach(p => {
+  const put = (p, P, x, y, s) => { html += `<div class="pp ${state.ui.selPanel===p?"sel":""}" data-panel="${p}" style="left:${x}px;top:${y}px;width:${P.w}px;height:${P.h}px;transform:scale(${s});${txtCss()}">${P.html}</div>`; };
+  const fit = P => vert ? Math.min(sc, (frame.w - 20) / P.w) : sc;
+  if (vert && L.AutoArrange){
+    let top = 8, bottom = 720 - (+L.BottomMargin || 0), gap = +L.Gap || 0;
+    const on = p => panels[p] && L[p + "Show"];
+    const need = ["Score","Top3","Hype","Health","Notif","Feed"].filter(on).reduce((t, p) => t + panels[p].h * fit(panels[p]) + gap, 0);
+    const room = bottom - top - 150, k = need > room ? Math.max(0.55, room / need) : 1;
+    ["Score","Top3","Hype"].forEach(p => { if (!on(p)) return; const P = panels[p], s = fit(P) * k; put(p, P, frame.x + (frame.w - P.w*s)/2, top, s); top += P.h*s + gap*k; });
+    ["Health","Notif","Feed"].forEach(p => { if (!on(p)) return; const P = panels[p], s = fit(P) * k; bottom -= P.h*s; put(p, P, frame.x + (frame.w - P.w*s)/2, bottom, s); bottom -= gap*k; });
+    const G = panels.Guide; if (G && L.GuideShow){ const s = fit(G); const [x, y] = anchor(L, "Guide", G.w*s, G.h*s, frame); put("Guide", G, x, y, s); }
+  } else Object.keys(panels).forEach(p => {
     const P = panels[p];
     if (!P || !L[p + "Show"]) return;
-    const [x, y] = anchor(L, p, P.w * sc, P.h * sc, frame);
-    html += `<div class="pp ${state.ui.selPanel===p?"sel":""}" data-panel="${p}" style="left:${x}px;top:${y}px;width:${P.w}px;height:${P.h}px;transform:scale(${sc});${txtCss()}">${P.html}</div>`;
+    const s = fit(P);
+    const [x, y] = anchor(L, p, P.w * s, P.h * s, frame);
+    put(p, P, x, y, s);
   });
   if (state.ini.LiveTest.Enabled && state.ini.LiveTest.ShowBadge) html += `<div style="position:absolute;left:${frame.x + frame.w - 110}px;top:4px;background:#fe2c55;color:#fff;font:700 12px Arial;padding:2px 8px">● LIVE TEST</div>`;
   vp.innerHTML = html;
@@ -1446,7 +1519,7 @@ window.addEventListener("resize", () => renderPreview());
 
 function renderHudSide(){
   const vert = state.ui.preview === "Vertical", sec = vert ? "LayoutVertical" : "Layout", L = state.ini[sec], H = state.ini.Hud;
-  let h = `<div class="panelcfg"><h4>${vert?"📱 TikTok 9:16":"🖥️ عادي 16:9"} <span class="hint">كل وضع عندو البلايص ديالو</span></h4><div class="grid" style="grid-template-columns:1fr 1fr">${fieldHTML(sec,["Scale","📏 الحجم (Scale)","range",{min:0.4,max:2,step:0.05}],L)}${fieldHTML(sec,["HealthWidth","↔️ عرض شريط الطاقة","i",{min:80,max:900}],L)}</div></div>`;
+  let h = `<div class="panelcfg"><h4>${vert?"📱 TikTok 9:16":"🖥️ عادي 16:9"} <span class="hint">كل وضع عندو البلايص ديالو</span></h4><div class="grid" style="grid-template-columns:1fr 1fr">${fieldHTML(sec,["Scale","📏 الحجم (Scale)","range",{min:0.4,max:2,step:0.05}],L)}${fieldHTML(sec,["HealthWidth","↔️ عرض شريط الطاقة","i",{min:80,max:900}],L)}</div>${vert?`<p class="hint">📱 ترتيب أوتوماتيكي: فوق = الفوز والخسارة، الداعمين، الحماس · تحت = الطاقة، الإشعارات، Kill Feed. كلشي كيصغر باش يدخل فالإطار (405px).</p><div class="grid" style="grid-template-columns:1fr 1fr">${fieldHTML(sec,["AutoArrange","🧲 ترتيب أوتوماتيكي","b"],L)}${fieldHTML(sec,["Gap","↕ المسافة بين اللوحات","i",{min:0,max:60}],L)}${fieldHTML(sec,["BottomMargin","⬇ البعد من التحت","i",{min:0,max:300}],L)}${fieldHTML(sec,["MaxNotif","🔔 أقصى إشعارات","i",{min:0,max:20}],L)}${fieldHTML(sec,["MaxFeed","☠️ أقصى Kill Feed","i",{min:0,max:20}],L)}${fieldHTML(sec,["MaxHype","🔥 أقصى حماس","i",{min:0,max:10}],L)}</div>`:""}</div>`;
   PANELS.forEach(([p, name]) => {
     h += `<div class="panelcfg ${state.ui.selPanel===p?"sel":""}" id="pc_${p}"><h4><span>${name}</span>${fieldHTML(sec,[p+"Show","يبان","b"],L).replace('class="fld"','style="min-width:90px"')}</h4>
       <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><div class="pos9" data-pos="${sec}|${p}">${POSITIONS.map(x => `<b class="${L[p+"Position"]===x?"on":""}" data-v="${x}" title="${x}"></b>`).join("")}</div>

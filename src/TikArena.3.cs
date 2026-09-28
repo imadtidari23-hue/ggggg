@@ -488,7 +488,7 @@ namespace TikArena
                 l.P[n] = p;
             }
             l.HealthWidth = ini.F(sec, "HealthWidth", vertical ? 220 : 260);
-            l.Scale = U.Clamp(ini.F(sec, "Scale", vertical ? 0.9f : 1f), 0.3f, 3f);
+            l.Scale = U.Clamp(ini.F(sec, "Scale", vertical ? 0.8f : 1f), 0.3f, 3f);
             return l;
         }
     }
@@ -692,6 +692,9 @@ namespace TikArena
         public Dictionary<string, string> T = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         // [Layout] / [LayoutVertical]
         public LayoutCfg Normal, Vertical;
+        public bool VAutoArrange;
+        public float VGap, VBottomMargin;
+        public int VMaxNotif, VMaxFeed, VMaxHype;
         // [KillEffects]
         public bool KillFxEnabled, KillOnlyPlayer, KillSoundEnabled;
         public string KillEffect, KillSound;
@@ -976,6 +979,12 @@ namespace TikArena
 
             c.Normal = LayoutCfg.Read(ini, "Layout", false);
             c.Vertical = LayoutCfg.Read(ini, "LayoutVertical", true);
+            c.VAutoArrange = ini.B("LayoutVertical", "AutoArrange", true);
+            c.VGap = U.Clamp(ini.F("LayoutVertical", "Gap", 6), 0, 60);
+            c.VBottomMargin = U.Clamp(ini.F("LayoutVertical", "BottomMargin", 60), 0, 300);
+            c.VMaxNotif = U.Clamp(ini.I("LayoutVertical", "MaxNotif", 3), 0, 20);
+            c.VMaxFeed = U.Clamp(ini.I("LayoutVertical", "MaxFeed", 2), 0, 20);
+            c.VMaxHype = U.Clamp(ini.I("LayoutVertical", "MaxHype", 2), 0, 10);
 
             c.KillFxEnabled = ini.B("KillEffects", "Enabled", true);
             c.KillEffect = ini.S("KillEffects", "Effect", "SoftSmoke");
@@ -4810,6 +4819,290 @@ namespace TikArena
             }
         }
 
+        // ---------------------------------------------------------------- score panel (win · timer · loss) in the current design
+        SizeF DesignScore(bool draw)
+        {
+            string dz = Dz;
+            bool title = cfg.TitleEnabled && cfg.Title.Length > 0;
+            bool timer = cfg.ShowTimer && cfg.ChallengeEnabled;
+            bool score = cfg.ShowScore;
+            bool stk = cfg.ShowStreak && Math.Abs(streak) >= 2;
+            if (!title && !timer && !score && !stk) return SizeF.Empty;
+            float w = dz == "minimal" ? 220 : (dz == "broadcast" ? 320 : 290);
+            float th = title ? 20 : 0, body = dz == "minimal" ? 44 : 40, sh = stk ? 18 : 0;
+            float h = th + body + sh + (dz == "minimal" ? 0 : 6);
+            if (!draw) return new SizeF(w, h);
+
+            Color acc = DAcc, win = cWin, loss = cLoss;
+            string ws = wins.ToString(U.IC), ls = losses.ToString(U.IC);
+            float y = 0;
+            switch (dz)
+            {
+                case "arena":
+                    Gfx.RRect(0, 0, w, h, 12, Color.FromArgb(Math.Max(190, cfg.Opacity), 14, 16, 24));
+                    if (title) { Gfx.Text(cfg.Title, w / 2, 2, SMALL, acc, Alignment.Center); y = th; }
+                    if (score)
+                    {
+                        Gfx.RRect(10, y + 4, 62, 32, 10, U.WithAlpha(win, 230));
+                        Gfx.Text(ws, 41, y + 5, 0.5f, Color.White, Alignment.Center);
+                        Gfx.RRect(w - 72, y + 4, 62, 32, 10, U.WithAlpha(loss, 230));
+                        Gfx.Text(ls, w - 41, y + 5, 0.5f, Color.White, Alignment.Center);
+                    }
+                    if (timer) Gfx.Text(TimerText(), w / 2, y + 4, 0.56f, TimerColor(), Alignment.Center);
+                    break;
+                case "broadcast":
+                    {
+                        if (title)
+                        {
+                            float tw = Gfx.TextW(cfg.Title, SMALL) + 26;
+                            Gfx.Shape("slant_l", w / 2 - tw / 2 - 8, 0, 8, 17, acc);
+                            Gfx.Rect(w / 2 - tw / 2, 0, tw, 17, acc);
+                            Gfx.Shape("slant_r", w / 2 + tw / 2, 0, 8, 17, acc);
+                            Gfx.Text(cfg.Title, w / 2, 0, SMALL, Ink, Alignment.Center);
+                            y = th;
+                        }
+                        Gfx.Rect(8, y + 2, w - 16, 36, Dark);
+                        Gfx.Shape("slant_l", 0, y + 2, 8, 36, score ? win : Dark);
+                        Gfx.Shape("slant_r", w - 8, y + 2, 8, 36, score ? loss : Dark);
+                        if (score)
+                        {
+                            Gfx.Rect(8, y + 2, 78, 36, win);
+                            Gfx.Text(cfg.Tx("WinShort", "W"), 14, y + 10, SMALL, Color.White, Alignment.Left);
+                            Gfx.Text(ws, 80, y + 4, 0.52f, Color.White, Alignment.Right);
+                            Gfx.Rect(w - 86, y + 2, 78, 36, loss);
+                            Gfx.Text(ls, w - 80, y + 4, 0.52f, Color.White, Alignment.Left);
+                            Gfx.Text(cfg.Tx("LossShort", "L"), w - 14, y + 10, SMALL, Color.White, Alignment.Right);
+                        }
+                        Gfx.Rect(86, y + 36, w - 172, 2, acc);
+                        if (timer) Gfx.Text(TimerText(), w / 2, y + 5, 0.54f, TimerColor(), Alignment.Center);
+                        break;
+                    }
+                case "podium":
+                    Gfx.RRect(0, 0, w, h, Math.Min(22, h / 2), Color.FromArgb(80, 255, 255, 255));
+                    if (title) { Gfx.Text(cfg.Title, w / 2, 3, SMALL, Color.White, Alignment.Center); y = th; }
+                    if (score)
+                    {
+                        Gfx.RRect(10, y + 5, 64, 30, 15, U.WithAlpha(win, 235));
+                        Gfx.Text(ws, 42, y + 5, 0.5f, Color.White, Alignment.Center);
+                        Gfx.RRect(w - 74, y + 5, 64, 30, 15, U.WithAlpha(loss, 235));
+                        Gfx.Text(ls, w - 42, y + 5, 0.5f, Color.White, Alignment.Center);
+                    }
+                    if (timer) Gfx.Text(TimerText(), w / 2, y + 4, 0.56f, TimerColor(), Alignment.Center);
+                    break;
+                case "cards":
+                    {
+                        if (title) { Gfx.Text(cfg.Title, w / 2, 1, SMALL, acc, Alignment.Center); y = th; }
+                        float cw = 88;
+                        Color[] cols = { win, Color.White, loss };
+                        for (int i = 0; i < 3; i++)
+                        {
+                            if ((i != 1 && !score) || (i == 1 && !timer)) continue;
+                            float x = 4 + i * (cw + 9);
+                            for (int k = 0; k < 4; k++) Gfx.Rect(x, y + 2 + k * 9, cw, 9.6f, U.Mix(Color.White, cols[i], 0.25f + k * 0.2f));
+                            Gfx.Shape("tri_down", x, y + 37.5f, cw, 8, i == 1 ? Color.FromArgb(255, 200, 204, 210) : cols[i]);
+                        }
+                        if (score)
+                        {
+                            Gfx.Text(ws, 4 + cw / 2, y + 4, 0.52f, Ink, Alignment.Center);
+                            Gfx.Text(ls, 4 + 2 * (cw + 9) + cw / 2, y + 4, 0.52f, Ink, Alignment.Center);
+                        }
+                        if (timer) Gfx.Text(TimerText(), 4 + (cw + 9) + cw / 2, y + 5, 0.5f, Ink, Alignment.Center);
+                        break;
+                    }
+                case "esports":
+                    if (title) { Gfx.PartsCentered(new List<string> { "//", cfg.Title, "//" }, w / 2, 0, SMALL, acc); y = th; }
+                    Gfx.Rect(10, y + 2, w - 20, 36, Color.FromArgb(230, 10, 12, 20));
+                    Gfx.Shape("slant_l", 2, y + 2, 8, 36, Color.FromArgb(230, 10, 12, 20));
+                    Gfx.Shape("slant_r", w - 10, y + 2, 8, 36, Color.FromArgb(230, 10, 12, 20));
+                    Gfx.Rect(10, y + 2, w - 20, 2, acc);
+                    if (score)
+                    {
+                        Gfx.Text("W " + ws, 20, y + 8, TXT * 1.15f, win, Alignment.Left);
+                        Gfx.Text(ls + " L", w - 20, y + 8, TXT * 1.15f, loss, Alignment.Right);
+                    }
+                    if (timer) Gfx.Text(TimerText(), w / 2, y + 5, 0.54f, TimerColor(), Alignment.Center);
+                    break;
+                case "minimal":
+                    if (title) { Gfx.Text(cfg.Title, w / 2, 0, SMALL, Color.FromArgb(220, 255, 255, 255), Alignment.Center); y = th; }
+                    if (timer) Gfx.Text(TimerText(), w / 2, y - 2, 0.7f, TimerColor(), Alignment.Center);
+                    if (score)
+                    {
+                        Gfx.Text(ws, w / 2 - 14, y + 28, TXT, win, Alignment.Right);
+                        Gfx.Rect(w / 2 - 6, y + 34, 12, 2, Color.FromArgb(180, 255, 255, 255));
+                        Gfx.Text(ls, w / 2 + 14, y + 28, TXT, loss, Alignment.Left);
+                    }
+                    break;
+                default: // classic
+                    Gfx.RRect(0, 0, w, h, 10, Color.FromArgb(Math.Max(170, cfg.Opacity), 14, 16, 24));
+                    if (title) { Gfx.Shape("crown", 10, 4, 14, 10, acc); Gfx.Text(cfg.Title, 30, 1, SMALL, acc, Alignment.Left); y = th; }
+                    if (score)
+                    {
+                        Gfx.Shape("circle", 12, y + 6, 28, 28, win);
+                        Gfx.TextPic(ws, 26, y + 8, 0.42f, Color.White, Alignment.Center);
+                        Gfx.Shape("circle", w - 40, y + 6, 28, 28, loss);
+                        Gfx.TextPic(ls, w - 26, y + 8, 0.42f, Color.White, Alignment.Center);
+                    }
+                    if (timer) Gfx.Text(TimerText(), w / 2, y + 4, 0.56f, TimerColor(), Alignment.Center);
+                    break;
+            }
+            if (stk) Gfx.PartsCentered(StreakParts(), w / 2, h - sh - (dz == "minimal" ? 0 : 3), SMALL, streak > 0 ? win : loss);
+            return new SizeF(w, h);
+        }
+
+        // ---------------------------------------------------------------- health bar in the current design
+        SizeF DesignHealth(bool draw)
+        {
+            string dz = Dz;
+            float w = Math.Max(80, L.HealthWidth);
+            bool armor = cfg.ShowArmor;
+            float h = dz == "minimal" ? 30 : 44 + (armor ? 4 : 0);
+            if (!draw) return new SizeF(w, h);
+            Ped pl = Game.Player.Character;
+            float frac = 0, af = 0;
+            int hpNow = 0, hpMax = 0;
+            if (pl.Exists())
+            {
+                hpMax = Math.Max(1, Function.Call<int>(Hash.GET_ENTITY_MAX_HEALTH, pl) - 100);
+                hpNow = Math.Max(0, Function.Call<int>(Hash.GET_ENTITY_HEALTH, pl) - 100);
+                frac = U.Clamp(hpNow / (float)hpMax, 0, 1);
+                af = U.Clamp(pl.Armor / 100f, 0, 1);
+            }
+            Color hc = frac < 0.25f ? cLoss : cfg.HealthColor;
+            if (frac < 0.25f && (U.Now / 300) % 2 == 0) hc = U.Mix(hc, Color.White, 0.35f);
+            Color acc = DAcc, back = Color.FromArgb(150, 0, 0, 0), armorC = Color.FromArgb(255, 90, 170, 255);
+            string pct = (frac * 100).ToString("0.0", U.IC) + "%";
+            List<string> label = new List<string> { cfg.HealthLabel, pct };
+            string pts = hpNow + " / " + hpMax;
+            float bx = 10, bw = w - 20, by = 22;
+            switch (dz)
+            {
+                case "arena":
+                    Gfx.RRect(0, 0, w, h, 12, Color.FromArgb(Math.Max(190, cfg.Opacity), 14, 16, 24));
+                    Gfx.Parts(label, 12, 3, SMALL, Color.White);
+                    if (cfg.ShowHealthPoints) Gfx.Text(pts, w - 12, 3, SMALL, Color.FromArgb(200, 255, 255, 255), Alignment.Right);
+                    Gfx.RRect(bx, by, bw, 12, 6, back);
+                    if (frac > 0) Gfx.RRect(bx, by, Math.Max(12, bw * frac), 12, 6, hc);
+                    if (armor) Gfx.RRect(bx, by + 15, Math.Max(6, bw * af), 5, 2.5f, armorC);
+                    break;
+                case "broadcast":
+                    Gfx.Rect(0, 0, w, h, Dark);
+                    Gfx.Shape("slant_r", w, 0, 9, h, Dark);
+                    Gfx.Rect(0, 0, 38, h, acc);
+                    Gfx.Text("HP", 19, h / 2 - 10, TXT, Ink, Alignment.Center);
+                    Gfx.Parts(label, 46, 3, SMALL, Color.White);
+                    if (cfg.ShowHealthPoints) Gfx.Text(pts, w - 6, 3, SMALL, Color.FromArgb(200, 255, 255, 255), Alignment.Right);
+                    Gfx.Bar(46, by, w - 52, 12, frac, hc, back);
+                    if (armor) Gfx.Bar(46, by + 15, w - 52, 4, af, armorC, back);
+                    break;
+                case "podium":
+                    Gfx.RRect(0, 0, w, h, 14, Color.FromArgb(80, 255, 255, 255));
+                    Gfx.Parts(label, 14, 3, SMALL, Color.White);
+                    if (cfg.ShowHealthPoints) Gfx.Text(pts, w - 14, 3, SMALL, Color.White, Alignment.Right);
+                    Gfx.RRect(bx, by, bw, 13, 6.5f, Color.FromArgb(90, 0, 0, 0));
+                    if (frac > 0) Gfx.RRect(bx, by, Math.Max(13, bw * frac), 13, 6.5f, hc);
+                    if (armor) Gfx.RRect(bx, by + 16, Math.Max(6, bw * af), 5, 2.5f, armorC);
+                    break;
+                case "cards":
+                    for (int k = 0; k < 4; k++) Gfx.Rect(0, k * h / 4, w, h / 4 + 0.6f, U.Mix(Color.White, Color.FromArgb(255, 200, 204, 212), k / 3f));
+                    Gfx.Rect(0, 0, 4, h, hc);
+                    Gfx.Parts(label, 12, 3, SMALL, Ink);
+                    if (cfg.ShowHealthPoints) Gfx.Text(pts, w - 10, 3, SMALL, Ink, Alignment.Right);
+                    Gfx.Bar(bx, by, bw, 12, frac, hc, Color.FromArgb(120, 0, 0, 0));
+                    if (armor) Gfx.Bar(bx, by + 15, bw, 4, af, armorC, Color.FromArgb(120, 0, 0, 0));
+                    break;
+                case "esports":
+                    {
+                        Gfx.Rect(8, 0, w - 16, h, Color.FromArgb(230, 10, 12, 20));
+                        Gfx.Shape("slant_l", 0, 0, 8, h, Color.FromArgb(230, 10, 12, 20));
+                        Gfx.Shape("slant_r", w - 8, 0, 8, h, Color.FromArgb(230, 10, 12, 20));
+                        Gfx.Rect(8, 0, w - 16, 2, acc);
+                        Gfx.Parts(label, 14, 3, SMALL, Color.White);
+                        if (cfg.ShowHealthPoints) Gfx.Text(pts, w - 14, 3, SMALL, acc, Alignment.Right);
+                        const int segs = 12;
+                        float sw = (bw - (segs - 1) * 2) / segs;
+                        for (int i = 0; i < segs; i++)
+                        {
+                            float f = U.Clamp(frac * segs - i, 0, 1);
+                            Gfx.Rect(bx + i * (sw + 2), by, sw, 12, back);
+                            if (f > 0) Gfx.Rect(bx + i * (sw + 2), by, sw * f, 12, hc);
+                        }
+                        if (armor) Gfx.Bar(bx, by + 15, bw, 4, af, armorC, back);
+                        break;
+                    }
+                case "minimal":
+                    Gfx.Parts(label, 2, 0, SMALL, Color.FromArgb(230, 255, 255, 255));
+                    if (cfg.ShowHealthPoints) Gfx.Text(pts, w - 2, 0, SMALL, Color.FromArgb(230, 255, 255, 255), Alignment.Right);
+                    Gfx.RRect(0, 18, w, 7, 3.5f, Color.FromArgb(110, 255, 255, 255));
+                    if (frac > 0) Gfx.RRect(0, 18, Math.Max(7, w * frac), 7, 3.5f, hc);
+                    if (armor && af > 0) Gfx.RRect(0, 27, Math.Max(3, w * af), 3, 1.5f, armorC);
+                    break;
+                default:
+                    Gfx.RRect(0, 0, w, h, 10, Color.FromArgb(Math.Max(170, cfg.Opacity), 14, 16, 24));
+                    Gfx.Parts(label, 10, 3, SMALL, Color.White);
+                    if (cfg.ShowHealthPoints) Gfx.Text(pts, w - 10, 3, SMALL, Color.White, Alignment.Right);
+                    Gfx.Bar(bx, by, bw, 12, frac, hc, back);
+                    if (armor) Gfx.Bar(bx, by + 15, bw, 4, af, armorC, back);
+                    break;
+            }
+            return new SizeF(w, h);
+        }
+
+        // ---------------------------------------------------------------- 9:16 (TikTok) automatic arrangement
+        //  everything is stacked in the visible 405px column: top = score, supporters, hype;
+        //  bottom = health, notifications, kill feed. Panels too wide are scaled down to fit.
+        float FitScale(float width, float s)
+        {
+            float room = frameW - 20;
+            return width * s > room ? room / width : s;
+        }
+
+        float stackScale = 1;
+
+        float StackMeasure(string name, bool enabled, PanelFn fn)
+        {
+            PanelPos p;
+            if (!enabled || !L.P.TryGetValue(name, out p) || !p.Show) return 0;
+            Gfx.Origin(0, 0, L.Scale);
+            SizeF sz = fn(false);
+            if (sz.Width <= 0 || sz.Height <= 0) return 0;
+            return sz.Height * FitScale(sz.Width, L.Scale) + cfg.VGap;
+        }
+
+        void StackTop(string name, bool enabled, PanelFn fn, ref float y)
+        {
+            PanelPos p;
+            if (!enabled || !L.P.TryGetValue(name, out p) || !p.Show) return;
+            Gfx.Origin(0, 0, L.Scale);
+            SizeF sz = fn(false);
+            if (sz.Width <= 0 || sz.Height <= 0) return;
+            float s = FitScale(sz.Width, L.Scale) * stackScale;
+            Gfx.Origin(frameX + (frameW - sz.Width * s) / 2, y, s);
+            fn(true);
+            y += sz.Height * s + cfg.VGap * stackScale;
+        }
+
+        void StackBottom(string name, bool enabled, PanelFn fn, ref float y)
+        {
+            PanelPos p;
+            if (!enabled || !L.P.TryGetValue(name, out p) || !p.Show) return;
+            Gfx.Origin(0, 0, L.Scale);
+            SizeF sz = fn(false);
+            if (sz.Width <= 0 || sz.Height <= 0) return;
+            float s = FitScale(sz.Width, L.Scale) * stackScale;
+            y -= sz.Height * s;
+            Gfx.Origin(frameX + (frameW - sz.Width * s) / 2, y, s);
+            fn(true);
+            y -= cfg.VGap * stackScale;
+        }
+
+        bool VAuto { get { return vertical && cfg.VAutoArrange; } }
+
+        static List<FeedItem> Tail(List<FeedItem> l, int n)
+        {
+            if (l.Count <= n) return l;
+            return l.GetRange(l.Count - n, n);
+        }
+
         // ================================================================ HUD
         const float TXT = 0.34f, SMALL = 0.28f, BIG = 0.62f;
         float frameX, frameY, frameW = 1280, frameH = 720;
@@ -5008,6 +5301,7 @@ namespace TikArena
 
         string HAlign(string panel)
         {
+            if (VAuto) return "center";
             PanelPos p;
             if (!L.P.TryGetValue(panel, out p)) return "left";
             string pos = (p.Pos ?? "").ToLowerInvariant();
@@ -5027,6 +5321,7 @@ namespace TikArena
             Gfx.Origin(0, 0, s);
             SizeF sz = fn(false);
             if (sz.Width <= 0 || sz.Height <= 0) return;
+            if (vertical) s = FitScale(sz.Width, s);
             PointF a = Anchor(p, sz.Width * s, sz.Height * s);
             Gfx.Origin(a.X, a.Y, s);
             fn(true);
@@ -5057,13 +5352,34 @@ namespace TikArena
 
             PruneFeeds();
             Overheads();
-            Place("Score", cfg.ScoreEnabled, fScore);
-            Place("Top3", cfg.Top3Enabled, fTop);
-            Place("Health", cfg.HealthEnabled, fHealth);
-            Place("Guide", cfg.GuideEnabled, fGuide);
-            Place("Notif", cfg.NotifEnabled && notifs.Count > 0, fNotif);
-            Place("Feed", cfg.FeedEnabled && feed.Count > 0, fFeed);
-            Place("Hype", cfg.HypeEnabled && hypes.Count > 0, fHype);
+            if (VAuto)
+            {
+                float top = frameY + 8, bottom = frameY + frameH - cfg.VBottomMargin;
+                // everything must fit between the top and the bottom margin: shrink all together if not
+                stackScale = 1;
+                float need = StackMeasure("Score", cfg.ScoreEnabled, fScore) + StackMeasure("Top3", cfg.Top3Enabled, fTop)
+                           + StackMeasure("Hype", cfg.HypeEnabled && hypes.Count > 0, fHype) + StackMeasure("Health", cfg.HealthEnabled, fHealth)
+                           + StackMeasure("Notif", cfg.NotifEnabled && notifs.Count > 0, fNotif) + StackMeasure("Feed", cfg.FeedEnabled && feed.Count > 0, fFeed);
+                float room = bottom - top - 150;   // keep the middle free for the game
+                if (need > room && need > 0) stackScale = Math.Max(0.55f, room / need);
+                StackTop("Score", cfg.ScoreEnabled, fScore, ref top);
+                StackTop("Top3", cfg.Top3Enabled, fTop, ref top);
+                StackTop("Hype", cfg.HypeEnabled && hypes.Count > 0, fHype, ref top);
+                StackBottom("Health", cfg.HealthEnabled, fHealth, ref bottom);
+                StackBottom("Notif", cfg.NotifEnabled && notifs.Count > 0, fNotif, ref bottom);
+                StackBottom("Feed", cfg.FeedEnabled && feed.Count > 0, fFeed, ref bottom);
+                Place("Guide", cfg.GuideEnabled, fGuide);
+            }
+            else
+            {
+                Place("Score", cfg.ScoreEnabled, fScore);
+                Place("Top3", cfg.Top3Enabled, fTop);
+                Place("Health", cfg.HealthEnabled, fHealth);
+                Place("Guide", cfg.GuideEnabled, fGuide);
+                Place("Notif", cfg.NotifEnabled && notifs.Count > 0, fNotif);
+                Place("Feed", cfg.FeedEnabled && feed.Count > 0, fFeed);
+                Place("Hype", cfg.HypeEnabled && hypes.Count > 0, fHype);
+            }
             EndScreen();
             LiveBadge();
             DrawToast(false);
@@ -5128,6 +5444,7 @@ namespace TikArena
 
         SizeF ScorePanel(bool draw)
         {
+            if (DesignOn) return DesignScore(draw);
             string v = cfg.ScoreVariant ?? "Classic";
             bool title = cfg.TitleEnabled && cfg.Title.Length > 0;
             bool timer = cfg.ShowTimer && cfg.ChallengeEnabled;
@@ -5358,6 +5675,7 @@ namespace TikArena
         // ---------------------------------------------------------------- health
         SizeF HealthPanel(bool draw)
         {
+            if (DesignOn) return DesignHealth(draw);
             string v = cfg.HealthVariant ?? "Bar";
             float w = Math.Max(80, L.HealthWidth);
             bool armor = cfg.ShowArmor;
@@ -5530,9 +5848,29 @@ namespace TikArena
                 else
                 {
                     float gw = w * 0.42f;
-                    Gfx.Rect(0, y, gw, rowH, U.WithAlpha(cfg.GuideGiftColor, (int)(cfg.Opacity * 0.9f)));
-                    Gfx.Rect(gw, y, w - gw, rowH, U.WithAlpha(U.Mix(cPan, cfg.GuideActionColor, 0.25f), cfg.Opacity));
-                    Gfx.Rect(gw, y, 3, rowH, cfg.GuideActionColor);
+                    Color gcol = U.WithAlpha(cfg.GuideGiftColor, (int)(cfg.Opacity * 0.9f));
+                    Color acol = U.WithAlpha(U.Mix(cPan, cfg.GuideActionColor, 0.25f), cfg.Opacity);
+                    string gz = DesignOn ? Dz : "";
+                    if (gz == "minimal")
+                    {
+                        Gfx.RRect(0, y, w, rowH, rowH / 2, Color.FromArgb(80, 255, 255, 255));
+                        Gfx.RRect(0, y, gw, rowH, rowH / 2, U.WithAlpha(cfg.GuideGiftColor, 170));
+                    }
+                    else if (gz == "arena" || gz == "podium" || gz == "cards" || gz == "classic")
+                    {
+                        float r = gz == "podium" ? 12 : 8;
+                        Gfx.RRect(0, y, w, rowH, r, gz == "podium" ? Color.FromArgb(80, 255, 255, 255) : acol);
+                        Gfx.RRect(0, y, gw, rowH, r, gcol);
+                        Gfx.Rect(gw - r, y, r, rowH, gcol);
+                        Gfx.Rect(gw, y, 3, rowH, cfg.GuideActionColor);
+                    }
+                    else
+                    {
+                        Gfx.Rect(0, y, gw, rowH, gcol);
+                        Gfx.Rect(gw, y, w - gw, rowH, acol);
+                        Gfx.Rect(gw, y, 3, rowH, cfg.GuideActionColor);
+                        if (gz == "broadcast" || gz == "esports") Gfx.Shape("slant_r", w, y, 8, rowH, acol);
+                    }
                     if (St == "cyber" || St == "hologram") Brackets(0, y, w, rowH, 6, 1, U.WithAlpha(cAcc, 200));
                     if (St == "royal") Gfx.Border(0, y, w, rowH, 1, U.WithAlpha(cAcc, 200));
                     float x = 6;
@@ -5559,7 +5897,7 @@ namespace TikArena
 
         SizeF FeedList(bool draw, List<FeedItem> items, string panel, float rowH, float img, float size, bool hype)
         {
-            bool des = !hype && DesignOn;
+            bool des = DesignOn;
             string variant = hype || des ? "Card" : (cfg.NotifVariant ?? "Card");
             bool banner = Is(variant, "Banner"), pill = Is(variant, "Pill");
             float dpad = des ? DesignRowPad(rowH) + (Dz == "minimal" ? 8 : 0) : 0;
@@ -5607,8 +5945,8 @@ namespace TikArena
                 else PanelBg(x, ry, rw, rowH, a);
                 if (hype)
                 {
-                    Gfx.Border(x, ry, rw, rowH, 1, U.WithAlpha(cfg.HypeColor, (int)(220 * a)));
-                    Gfx.Rect(x, ry, 3, rowH, U.WithAlpha(cfg.HypeColor, (int)(255 * a)));
+                    if (!des) Gfx.Border(x, ry, rw, rowH, 1, U.WithAlpha(cfg.HypeColor, (int)(220 * a)));
+                    Gfx.Rect(x + cpad, ry + (des ? 4 : 0), 3, rowH - (des ? 8 : 0), U.WithAlpha(cfg.HypeColor, (int)(255 * a)));
                 }
                 float cx = x + 6 + cpad;
                 if (banner) cx = x + (rw - RowWidth(f, img, size, hype)) / 2 + 6;
@@ -5629,9 +5967,9 @@ namespace TikArena
             return new SizeF(w, h);
         }
 
-        SizeF NotifPanel(bool draw) { return FeedList(draw, notifs, "Notif", 30, 24, TXT, false); }
-        SizeF FeedPanel(bool draw) { return FeedList(draw, feed, "Feed", 26, 20, TXT, false); }
-        SizeF HypePanel(bool draw) { return FeedList(draw, hypes, "Hype", 38, 30, 0.38f, true); }
+        SizeF NotifPanel(bool draw) { return FeedList(draw, VAuto ? Tail(notifs, cfg.VMaxNotif) : notifs, "Notif", 30, 24, TXT, false); }
+        SizeF FeedPanel(bool draw) { return FeedList(draw, VAuto ? Tail(feed, cfg.VMaxFeed) : feed, "Feed", 26, 20, TXT, false); }
+        SizeF HypePanel(bool draw) { return FeedList(draw, VAuto ? Tail(hypes, cfg.VMaxHype) : hypes, "Hype", 38, 30, 0.38f, true); }
 
         // ---------------------------------------------------------------- overhead (real profile picture above the character)
         void Overheads()
