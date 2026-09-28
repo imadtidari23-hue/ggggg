@@ -776,7 +776,7 @@ namespace TikArena
             c.EmergencyKey = ini.K("General", "EmergencyKey", "Delete");
             c.StopEffectsKey = ini.K("General", "StopEffectsKey", "End");
             c.FxMaxSeconds = Math.Max(0f, ini.F("Effects", "MaxSeconds", 300));
-            c.FxStack = ini.S("Effects", "Stack", "Extend");
+            c.FxStack = ini.S("Effects", "Stack", "Reset");
             c.FxBars = ini.B("Effects", "ShowBars", true);
             c.FxBarsMax = U.Clamp(ini.I("Effects", "MaxBars", 4), 1, 8);
             // where the timer cards of the effects are drawn: Player (above the head) | Top | Left | Right | Bottom (under the health bar)
@@ -918,7 +918,9 @@ namespace TikArena
             c.OverheadAvatar = ini.B("Hud", "OverheadAvatar", true);
             c.OverheadName = ini.B("Hud", "OverheadName", true);
             c.OverheadHealth = ini.B("Hud", "OverheadHealth", true);
-            c.OverheadHeight = ini.F("Hud", "OverheadHeight", 1.2f);
+            // extra height above the head (meters); old configs used 1.2 from the body center
+            c.OverheadHeight = ini.F("Hud", "OverheadHeight", 0f);
+            if (c.OverheadHeight >= 0.8f) c.OverheadHeight = 0f;
             c.AvatarShape = ini.S("Hud", "AvatarShape", "Circle");
             c.ScoreVariant = ini.S("Hud", "ScoreVariant", "Classic");
             c.Top3Variant = ini.S("Hud", "Top3Variant", "List");
@@ -2459,6 +2461,7 @@ namespace TikArena
             Interval = 0;
             Tick += OnTick;
             KeyDown += OnKeyDown;
+            KeyUp += OnKeyUp;
             Aborted += OnAborted;
         }
 
@@ -2621,12 +2624,27 @@ namespace TikArena
             try { DrawHud(); } catch (Exception ex) { U.Error("Hud", ex); }
         }
 
+        // Windows repeats KeyDown while a key is held: one press = one action
+        //  (a repeat keeps coming every ~30 ms; if a KeyUp was lost, a new press after 0.6 s still counts)
+        readonly Dictionary<Keys, long> keysDown = new Dictionary<Keys, long>();
+
+        void OnKeyUp(object sender, KeyEventArgs e) { keysDown.Remove(e.KeyCode); }
+
+        bool IsRepeat(Keys k)
+        {
+            long last;
+            bool rep = keysDown.TryGetValue(k, out last) && U.Now - last < 600;
+            keysDown[k] = U.Now;
+            return rep;
+        }
+
         void OnKeyDown(object sender, KeyEventArgs e)
         {
             try
             {
                 Keys k = e.KeyCode;
                 if (k == Keys.None) return;
+                if (IsRepeat(k)) return;
                 if (k == cfg.PowerKey) { TogglePower(); return; }
                 if (!powered) return;
                 if (k == cfg.LiveTestKey && cfg.LiveTestEnabled) { ToggleLiveTest(); return; }
@@ -6453,7 +6471,7 @@ namespace TikArena
             long now = U.Now;
             List<KeyValuePair<string, long>> list = RunningFx();
             if (list.Count == 0) return;
-            Vector3 head = (pl.IsInVehicle() ? pl.CurrentVehicle.Position + new Vector3(0, 0, 1.4f) : pl.Position + new Vector3(0, 0, 1.15f));
+            Vector3 head = HeadTop(pl, 0f) - new Vector3(0, 0, 0.35f);
             PointF sp = Screen.WorldToScreen(head + new Vector3(0, 0, 0.35f));
             if (sp.X == 0 && sp.Y == 0) return;
             int count = Math.Min(list.Count, cfg.FxBarsMax);
@@ -6492,7 +6510,7 @@ namespace TikArena
             popups.RemoveAll(delegate(Popup x) { return now >= x.End; });
             Ped pl = Game.Player.Character;
             if (!pl.Exists()) return;
-            Vector3 head = (pl.IsInVehicle() ? pl.CurrentVehicle.Position + new Vector3(0, 0, 1.4f) : pl.Position + new Vector3(0, 0, 1.15f));
+            Vector3 head = HeadTop(pl, 0f) - new Vector3(0, 0, 0.35f);
             Gfx.Origin(0, 0, 1);
             int n = fxBarsShown;
             for (int i = popups.Count - 1; i >= 0; i--, n++)
@@ -7824,20 +7842,35 @@ namespace TikArena
         SizeF HypePanel(bool draw) { return FeedList(draw, VAuto ? Tail(hypes, cfg.VMaxHype) : hypes, "Hype", 38, 30, 0.38f, true); }
 
         // ---------------------------------------------------------------- overhead (real profile picture above the character)
+        // point just above the head (follows the head when he falls / ragdolls); vehicles: above the roof
+        Vector3 HeadTop(Ped p, float extra)
+        {
+            if (p.IsInVehicle()) return p.CurrentVehicle.Position + new Vector3(0, 0, 1.25f + extra);
+            Vector3 h = Function.Call<Vector3>(Hash.GET_PED_BONE_COORDS, p, 31086, 0f, 0f, 0f);
+            if (h == Vector3.Zero || h.DistanceTo(p.Position) > 3f) h = p.Position + new Vector3(0, 0, 0.7f);
+            return h + new Vector3(0, 0, 0.18f + extra);
+        }
+
+        // the camera that is really rendering (story cams, TikTok zoom cam, or the game camera)
+        Vector3 ViewPos()
+        {
+            if (cam != null && cam.Exists() && camMode.Length > 0) return cam.Position;
+            if (zoomRendering && zcam != null && zcam.Exists()) return zcam.Position;
+            return GameplayCamera.Position;
+        }
+
         void Overheads()
         {
             if (!cfg.OverheadEnabled) return;
             Ped pl = Game.Player.Character;
             if (!pl.Exists()) return;
-            Vector3 camPos = GameplayCamera.Position;
-            if (cam != null && cam.Exists() && camMode.Length > 0) camPos = cam.Position;
+            Vector3 camPos = ViewPos();
             string ostyle = (cfg.OverheadStyle ?? "Classic").ToLowerInvariant();
             Gfx.Origin(0, 0, 1);
             foreach (Tracked t in tracked)
             {
                 if (!t.Leader || t.DeadAt != 0 || t.Ped == null || !t.Ped.Exists()) continue;
-                Entity e = t.Veh != null && t.Veh.Exists() && t.Ped.IsInVehicle() ? (Entity)t.Veh : t.Ped;
-                Vector3 wp = e.Position + new Vector3(0, 0, cfg.OverheadHeight + (e is Vehicle ? 0.6f : 0f));
+                Vector3 wp = HeadTop(t.Ped, cfg.OverheadHeight);
                 float dist = wp.DistanceTo(camPos);
                 if (dist > 90f) continue;
                 PointF sp = Screen.WorldToScreen(wp);

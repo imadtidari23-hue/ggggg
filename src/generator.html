@@ -385,7 +385,7 @@ function defaults(){
     HealthEnabled:true,HealthLabel:"health",HealthColor:"#1ed760",ShowArmor:true,ShowHealthPoints:false,HideRadar:false,
     GuideEnabled:true,GuideMax:8,GuideMode:"Cards",GuideRotateCount:3,GuideRotateSeconds:5,GuideRandom:true,GuideShowGiftImage:true,GuideShowActionImage:true,GuideTitleEnabled:false,GuideTitle:"🎁 الهدايا",GuideGiftColor:"#2979ff",GuideActionColor:"#00e676",
     GuideLayout:"Vertical",GuideColumns:3,GuideIconShape:"Auto",GuideIconSize:30,GuideColors:"Hud",GuideShowNames:true,GuideShowCoins:false,GuideArrow:true,
-    OverheadEnabled:true,OverheadAvatar:true,OverheadName:true,OverheadHealth:true,OverheadHeight:1.2,AvatarShape:"Circle",OverheadStyle:"Classic",OverheadRing:true,OverheadLevel:true,
+    OverheadEnabled:true,OverheadAvatar:true,OverheadName:true,OverheadHealth:true,OverheadHeight:0,AvatarShape:"Circle",OverheadStyle:"Classic",OverheadRing:true,OverheadLevel:true,
     ScoreVariant:"Classic",Top3Variant:"List",HealthVariant:"Bar",NotifVariant:"Card",FeedAnimation:"Slide",
     Design:"Arena",DesignColor:"GOLD",DesignCoinsWord:"كوينز",DesignKey:"F10",DesignColorKey:"F5",
     TextMode:"Auto",UnicodeFont:"Segoe UI",UnicodeBold:true,UnicodeSize:1,StripEmoji:true,FancyToAscii:true,MaxTextTextures:1500};
@@ -415,14 +415,14 @@ function defaults(){
   S.LiveTest = {Enabled:true,Key:"F9",ShowBadge:true,Names:"أحمد,سارة,Yassine,Nora,Karim,Lina,Omar,Hiba,Adam,Salma,Mehdi,Imane,Zakaria,Khadija,Anas,Rania",AvatarUrls:"",Comments:"GG,🔥,يلاه,اقتلوه,عاونوه,واو",
     MinDelayMs:700,MaxDelayMs:2200,GiftWeight:45,LikeWeight:25,CommentWeight:10,FollowWeight:8,ShareWeight:6,JoinWeight:6,ComboChance:25,MaxCombo:15};
   S.Spotlight = {Enabled:true,Seconds:3,MinCoins:1000,Sound:"CHALLENGE_UNLOCKED|HUD_AWARDS",OffsetY:0};
-  S.Effects = {MaxSeconds:300,Stack:"Extend",ShowBars:true,BarsPosition:"Bottom",MaxBars:4,BlackoutNight:true,QuakeStrength:2.5,QuakeRagdollPlayer:true};
+  S.Effects = {MaxSeconds:300,Stack:"Reset",ShowBars:true,BarsPosition:"Bottom",MaxBars:4,BlackoutNight:true,QuakeStrength:2.5,QuakeRagdollPlayer:true};
   S.PlayerFx = {Enabled:true,Popup:true,PopupSeconds:2.5,Burst:true,BuffAura:true,SpeedColor:"#29b6ff",GodColor:"#ffc828",JumpColor:"#39ff14",FreezeColor:"#bff4ff",WeaponColor:"#ff9f1c",HealColor:"#00e676",SpeedTrail:"core|ent_amb_elec_crackle"};
   S.Death = {CustomDeath:true,RespawnSeconds:6,RespawnMode:"Here",CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Overlay:"Clear",ExtraDancers:3,KillerBanner:true,Coffin:false,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
   return {
     v:1, ini:S, interactions:defaultInteractions(),
     sounds:{kill:null, death:null},             // {name, data(dataURL)}
     obs:{Columns:2, Size:84, ShowNames:true, Background:"transparent"},
-    ui:{sound:true, preview:"Normal", selPanel:"Score", claude:null},
+    ui:{sound:true, preview:"Normal", selPanel:"Score", claude:null, mig15:false},
     customGifts:[], giftDb:{}
   };
 }
@@ -489,6 +489,9 @@ function normalize(obj){
   s.ini.Hype.VipJoinText = String(s.ini.Hype.VipJoinText || "").replace(/\s*\(?\s*(Lv|ليفل|level)\s*\{level\}\s*\)?/gi, "");
   if (s.ini.Hud.DesignCoinsWord === "كوينز") s.ini.Hud.DesignCoinsWord = "";
   delete s.ini.DamageFx.Blood; delete s.ini.DamageFx.HitFx;
+  // update 15 (once): an effect lasts only its own time (Reset), the name sits right above the head
+  if (!s.ui.mig15){ if (s.ini.Effects.Stack === "Extend") s.ini.Effects.Stack = "Reset"; s.ui.mig15 = true; }
+  if (+s.ini.Hud.OverheadHeight >= 0.8) s.ini.Hud.OverheadHeight = 0;
   s.interactions.forEach(i => { if ((i.Action === "MafiaCar" || i.Action === "MotoHitman") && +i.SpawnDistance > 35) i.SpawnDistance = i.Action === "MafiaCar" ? 28 : 26; });
   return s;
 }
@@ -1135,7 +1138,7 @@ function renderAllForms(){
       ["GuideMode","🃏 النوع","s",{opts:[["Cards","🃏 كروت"],["List","📋 لائحة مدمجة"],["Rotate","🔄 كيتبدلو"]]}],["GuideMax","أقصى عدد","i",{min:1,max:30}],
       ["GuideRotateCount","Rotate: شحال فمرة","i",{min:1}],["GuideRotateSeconds","Rotate: كل (ث)","f",{min:1}],["GuideRandom","Rotate: عشوائي","b"],
       ["GuideTitleEnabled","العنوان","b"],["GuideTitle","العنوان","t"]]},
-    {sec:"Hud", title:"🧍 فوق راس الشخصيات", fields:[["OverheadEnabled","مشعول","b"],["OverheadAvatar","الصورة","b"],["OverheadName","الاسم","b"],["OverheadHealth","شريط الدم","b"],["OverheadHeight","العلو","f",{min:0,step:0.1}]]},
+    {sec:"Hud", title:"🧍 فوق راس الشخصيات", fields:[["OverheadEnabled","مشعول","b"],["OverheadAvatar","الصورة","b"],["OverheadName","الاسم","b"],["OverheadHealth","شريط الدم","b"],["OverheadHeight","↕ علو إضافي فوق الراس (متر)","range",{min:0,max:1,step:0.05}]]},
     {sec:"Notifications", title:"🔔 الإشعارات", fields:[["Enabled","مشعولة","b"],["Seconds","المدة (ث)","f",{min:1}],["MaxVisible","أقصى عدد","i",{min:1,max:20}],["ShowAvatar","صورة البروفايل","b"],["ShowGiftIcon","صورة الهدية","b"]]},
     {sec:"Spotlight", title:"⭐ الإشعار الكبير (Spotlight)", hint:"كارطة كبيرة فوسط الشاشة لمدة 3 ثواني: صورة الأكشن، العنوان ديال التفاعل، الجملة، والصورة ديال الداعم. كتبان للتفاعلات اللي مشعول فيهم «⭐ إشعار كبير» (سيارة المافيا والموطور افتراضياً)، ولا أوتوماتيكياً لأي هدية ≥ الكوينز (0 = بلا).", fields:[
       ["Enabled","مشعول","b"],["Seconds","⏱️ المدة (ث)","f",{min:1,max:15}],["MinCoins","💎 أوتوماتيكي للهدايا ≥ (كوينز، 0 = بلا)","i",{min:0}],["Sound","🔊 الصوت","sound"],["OffsetY","↕ Y","i"]]},
