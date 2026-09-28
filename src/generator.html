@@ -1,0 +1,1460 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DarkRing Studio · TikArena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap">
+<style>
+:root{
+  --bg:#070a10; --bg2:#0b1018; --card:#0d131d; --card2:#111927; --line:rgba(0,230,118,.14); --line2:rgba(255,255,255,.07);
+  --acc:#00e676; --blue:#2979ff; --violet:#8b5cf6; --red:#ff3b5c; --gold:#ffc828;
+  --txt:#e8eef7; --mut:#8a97ab; --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:Cairo,Tahoma,sans-serif;font-size:14px}
+body{background:radial-gradient(1200px 600px at 85% -10%,rgba(0,230,118,.10),transparent 60%),radial-gradient(900px 500px at 0% 10%,rgba(139,92,246,.10),transparent 60%),var(--bg);min-height:100vh}
+a{color:var(--acc)}
+button,input,select,textarea{font-family:inherit;font-size:13px;color:var(--txt)}
+input[type=text],input[type=number],select,textarea{background:#080d15;border:1px solid var(--line2);border-radius:9px;padding:7px 9px;width:100%;outline:none;transition:border .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(0,230,118,.15)}
+input[type=color]{width:42px;height:32px;border:1px solid var(--line2);border-radius:8px;background:#080d15;padding:2px;cursor:pointer}
+input[type=range]{width:100%;accent-color:var(--acc)}
+select option,select optgroup{background:#0b1018}
+label{color:var(--mut);font-size:12px;display:block;margin-bottom:4px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:linear-gradient(180deg,#132033,#0c1420);border-radius:10px;padding:7px 12px;cursor:pointer;transition:transform .08s,box-shadow .2s,border-color .2s;white-space:nowrap}
+.btn:hover{border-color:var(--acc);box-shadow:0 0 14px rgba(0,230,118,.25)}
+.btn:active{transform:translateY(1px)}
+.btn.pri{background:linear-gradient(135deg,#00e676,#00b35c);color:#04140b;font-weight:700;border-color:transparent;box-shadow:0 0 18px rgba(0,230,118,.35)}
+.btn.blue{background:linear-gradient(135deg,#2979ff,#1c54c4);border-color:transparent;font-weight:700}
+.btn.vio{background:linear-gradient(135deg,#8b5cf6,#6334d8);border-color:transparent;font-weight:700}
+.btn.red{background:linear-gradient(135deg,#ff3b5c,#c4213e);border-color:transparent;font-weight:700}
+.btn.sm{padding:4px 8px;font-size:12px;border-radius:8px}
+.btn.icon{padding:5px 8px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;padding:10px 20px;background:rgba(7,10,16,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.logo{width:42px;height:42px;border-radius:50%;background:conic-gradient(from 90deg,var(--acc),var(--blue),var(--violet),var(--acc));display:grid;place-items:center;box-shadow:0 0 22px rgba(0,230,118,.45)}
+.logo i{width:30px;height:30px;border-radius:50%;background:var(--bg);display:block;box-shadow:inset 0 0 10px rgba(0,230,118,.5)}
+.brand b{font-size:18px;font-weight:900;letter-spacing:.3px}
+.brand small{display:block;color:var(--mut);font-size:12px;margin-top:-3px}
+.top .sp{flex:1}
+nav.pills{position:sticky;top:63px;z-index:25;display:flex;gap:6px;overflow-x:auto;padding:8px 20px;background:rgba(7,10,16,.8);backdrop-filter:blur(8px);border-bottom:1px solid var(--line2);scrollbar-width:thin}
+nav.pills a{flex:none;text-decoration:none;color:var(--txt);border:1px solid var(--line2);background:var(--card);padding:5px 12px;border-radius:999px;font-size:13px;transition:.15s}
+nav.pills a:hover,nav.pills a.on{border-color:var(--acc);color:var(--acc);box-shadow:0 0 10px rgba(0,230,118,.2)}
+main{max-width:1320px;margin:0 auto;padding:18px 20px 80px}
+section.card{background:linear-gradient(180deg,var(--card),#0a0f17);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:22px;box-shadow:0 10px 40px rgba(0,0,0,.35);scroll-margin-top:120px}
+section.card>h2{margin:0 0 14px;display:flex;align-items:center;gap:10px;font-size:19px;font-weight:900}
+.num{display:inline-grid;place-items:center;min-width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,rgba(0,230,118,.25),rgba(41,121,255,.2));border:1px solid var(--line);color:var(--acc);font-size:14px;font-weight:900}
+h3{font-size:14px;margin:16px 0 10px;color:var(--acc);display:flex;align-items:center;gap:8px}
+h3:after{content:"";flex:1;height:1px;background:var(--line2)}
+.hint{color:var(--mut);font-size:12px;line-height:1.7}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.fld{background:var(--bg2);border:1px solid var(--line2);border-radius:11px;padding:9px 10px;min-width:0}
+.fld.wide{grid-column:span 2}
+.fld .row{display:flex;gap:6px;align-items:center}
+.tog{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer}
+.tog span{color:var(--txt);font-size:13px}
+.sw{position:relative;width:40px;height:22px;flex:none}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw i{position:absolute;inset:0;border-radius:99px;background:#1b2433;border:1px solid var(--line2);transition:.2s}
+.sw i:after{content:"";position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#6b7a90;transition:.2s}
+.sw input:checked+i{background:rgba(0,230,118,.3);border-color:var(--acc)}
+.sw input:checked+i:after{right:20px;background:var(--acc);box-shadow:0 0 8px var(--acc)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line2);background:#0a1019;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;user-select:none}
+.chip.on{border-color:var(--acc);color:var(--acc);background:rgba(0,230,118,.08)}
+/* interactions */
+.conc{background:rgba(41,121,255,.06);border:1px dashed rgba(41,121,255,.35);border-radius:12px;padding:10px;margin-bottom:14px}
+.inter{position:relative;display:grid;grid-template-columns:1.05fr 1.25fr 1.2fr 1.2fr auto;gap:10px;background:linear-gradient(180deg,var(--card2),#0b111b);border:1px solid var(--line2);border-radius:14px;padding:12px 12px 12px 12px;margin-bottom:12px;transition:border .2s,opacity .2s}
+.inter:hover{border-color:var(--line)}
+.inter.off{opacity:.55}
+.inter .idx{position:absolute;top:-10px;right:14px;background:var(--acc);color:#04140b;font-weight:900;font-size:12px;border-radius:8px;padding:1px 9px;box-shadow:0 0 12px rgba(0,230,118,.4)}
+.col{display:flex;flex-direction:column;gap:7px;min-width:0}
+.col.tools{flex-direction:column;align-items:stretch;justify-content:flex-start}
+.imgpick{display:flex;align-items:center;gap:7px}
+.thumb{width:46px;height:46px;flex:none;border-radius:11px;background:#080d15;border:1px solid var(--line2);display:grid;place-items:center;font-size:28px;overflow:hidden;cursor:pointer;position:relative}
+.thumb img{width:100%;height:100%;object-fit:contain}
+.thumb.gift{border-color:rgba(41,121,255,.55);box-shadow:inset 0 0 12px rgba(41,121,255,.25)}
+.thumb.act{border-color:rgba(0,230,118,.55);box-shadow:inset 0 0 12px rgba(0,230,118,.2)}
+.units{display:flex;align-items:center;gap:4px}
+.units input{text-align:center;font-weight:900;font-size:16px}
+.units .btn{padding:4px 10px;font-size:16px;font-weight:900}
+.adv{grid-column:1/-1;display:none;border-top:1px dashed var(--line2);padding-top:10px}
+.inter.open .adv{display:block}
+.coins{font-size:11px;color:var(--gold)}
+/* HUD designer */
+.hudwrap{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:16px;align-items:start}
+.previewBox{position:sticky;top:120px}
+.stage{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:linear-gradient(160deg,#35506b 0%,#1b2a3a 45%,#3d3223 70%,#20170f 100%)}
+.stage .scene{position:absolute;inset:0;background:radial-gradient(500px 200px at 50% 110%,rgba(0,0,0,.6),transparent),repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 2px,transparent 2px 60px)}
+.vp{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;direction:ltr}
+.vframe{position:absolute;top:0;height:720px;border-left:2px dashed rgba(255,255,255,.35);border-right:2px dashed rgba(255,255,255,.35);box-shadow:0 0 0 2000px rgba(0,0,0,.45);pointer-events:none}
+.pp{position:absolute;cursor:pointer;transform-origin:0 0;color:#fff}
+.pp:hover{outline:2px dashed var(--gold);outline-offset:3px}
+.pp.sel{outline:2px solid var(--gold);outline-offset:3px}
+.hbg{position:absolute;inset:0}
+.ptext{position:relative;white-space:nowrap}
+.pos9{display:grid;grid-template-columns:repeat(3,26px);gap:3px}
+.pos9 b{width:26px;height:20px;border-radius:5px;background:#0a1019;border:1px solid var(--line2);cursor:pointer}
+.pos9 b.on{background:var(--acc);box-shadow:0 0 8px var(--acc)}
+.panelcfg{background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:10px;margin-bottom:10px}
+.panelcfg.sel{border-color:var(--gold);box-shadow:0 0 14px rgba(255,200,40,.2)}
+.panelcfg h4{margin:0 0 8px;font-size:13px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.styles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stylebtn{border:1px solid var(--line2);border-radius:10px;padding:6px;cursor:pointer;background:#0a1019;text-align:center;font-size:12px}
+.stylebtn .sw8{height:34px;border-radius:7px;margin-bottom:4px}
+.stylebtn.on{border-color:var(--acc);box-shadow:0 0 10px rgba(0,230,118,.25)}
+.orderlist{display:flex;flex-direction:column;gap:4px}
+.orderlist div{display:flex;align-items:center;gap:6px;background:#0a1019;border:1px solid var(--line2);border-radius:8px;padding:3px 8px;font-size:12px}
+.orderlist div span{flex:1}
+/* export */
+.exports{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.exports .btn{justify-content:center;padding:12px;font-size:14px}
+.valid{list-style:none;padding:0;margin:0 0 12px;display:flex;flex-direction:column;gap:6px}
+.valid li{padding:7px 10px;border-radius:9px;background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.3);font-size:13px}
+.valid li.ok{background:rgba(0,230,118,.07);border-color:rgba(0,230,118,.3)}
+.valid li.warn{background:rgba(255,200,40,.07);border-color:rgba(255,200,40,.35)}
+.obsprev{display:grid;gap:8px;background:#000;border-radius:12px;padding:10px;direction:ltr}
+.prompt{background:#080d15;border:1px solid var(--line2);border-radius:10px;padding:10px;font-family:ui-monospace,Consolas,monospace;font-size:12px;direction:ltr;text-align:left;white-space:pre-wrap;max-height:260px;overflow:auto}
+/* modal */
+.modal{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}
+.mbox{width:min(920px,100%);max-height:88vh;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 20px 80px rgba(0,0,0,.6)}
+.mhead{display:flex;gap:10px;align-items:center;padding:14px;border-bottom:1px solid var(--line2)}
+.mhead b{font-size:16px;flex:none}
+.mbody{overflow:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.citem{border:1px solid var(--line2);background:#0a1019;border-radius:11px;padding:8px;cursor:pointer;display:flex;gap:8px;align-items:center;transition:.15s}
+.citem:hover{border-color:var(--acc);box-shadow:0 0 10px rgba(0,230,118,.2)}
+.citem .e{font-size:24px;flex:none}
+.citem small{display:block;color:var(--mut);font-size:11px;direction:ltr;text-align:right;overflow:hidden;text-overflow:ellipsis}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(120px);z-index:200;background:#0d131d;border:1px solid var(--acc);border-radius:12px;padding:10px 18px;box-shadow:0 0 24px rgba(0,230,118,.3);transition:transform .25s}
+.toast.on{transform:translateX(-50%) translateY(0)}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:6px;background:rgba(139,92,246,.2);color:#c4b5fd;border:1px solid rgba(139,92,246,.35)}
+.ltr{direction:ltr;text-align:left}
+@media (max-width:1100px){.inter{grid-template-columns:1fr 1fr}.col.tools{flex-direction:row;flex-wrap:wrap;grid-column:1/-1}.hudwrap{grid-template-columns:1fr}.previewBox{position:relative;top:0}}
+@media (max-width:640px){.inter{grid-template-columns:1fr}.fld.wide{grid-column:auto}main{padding:12px}.top{padding:8px 12px}nav.pills{top:59px;padding:8px 12px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo"><i></i></div>
+  <div class="brand"><b>DarkRing Studio</b><small>TikArena · GTA V × TikTok LIVE</small></div>
+  <div class="sp"></div>
+  <button class="btn sm" id="btnSound" title="أصوات الواجهة">🔊</button>
+  <button class="btn sm" id="btnLoadJson">📂 تحميل JSON</button>
+  <button class="btn sm" id="btnSaveJson">💾 حفظ JSON</button>
+  <button class="btn pri" id="btnFull">🚀 الحزمة الكاملة</button>
+  <input type="file" id="fileJson" accept=".json,application/json" hidden>
+</header>
+<nav class="pills" id="nav"></nav>
+<main id="main">
+  <section class="card" id="sec-inter">
+    <h2><span class="num">01</span>🎁 التفاعلات</h2>
+    <p class="hint">كل تفاعل = سبب (هدية، لايكات، فولو...) + أكسيون فاللعبة. الصور كتبان فالهود وفالإشعارات. <b>🎯 التقاط</b>: ضغط على الزر ومن بعد ضغط على أي حرف فالكلافيي باش يولي هو زر التجربة.</p>
+    <h3>⚡ العدد فنفس اللحظة</h3>
+    <div class="conc" id="concBox"></div>
+    <div id="interList"></div>
+    <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn pri" id="btnAddInter">➕ تفاعل جديد</button>
+      <button class="btn" id="btnGiftsCatalog">📖 كتالوج الهدايا</button>
+      <button class="btn" id="btnAllPrompts">✨ كل البرومبتات</button>
+    </div>
+  </section>
+  <section class="card" id="sec-keys"><h2><span class="num">02</span>⌨️ الأزرار والتشغيل</h2><div id="formKeys"></div></section>
+  <section class="card" id="sec-challenge"><h2><span class="num">03</span>🏆 التحدي والطابور</h2><div id="formChallenge"></div></section>
+  <section class="card" id="sec-chars"><h2><span class="num">04</span>🧍 الشخصيات</h2><div id="formChars"></div></section>
+  <section class="card" id="sec-random"><h2><span class="num">05</span>🎲 العشوائي</h2><div id="formRandom"></div></section>
+  <section class="card" id="sec-hud"><h2><span class="num">06</span>🖥️ الهود</h2>
+    <div class="hudwrap">
+      <div class="previewBox">
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn sm" id="pvNormal">🖥️ 16:9</button>
+          <button class="btn sm" id="pvVertical">📱 9:16 TikTok</button>
+          <span class="sp" style="flex:1"></span>
+          <span class="hint">الضغط على لوحة كيديك للإعدادات ديالها</span>
+        </div>
+        <div class="stage" id="stage"><div class="scene"></div><div class="vp" id="vp"></div></div>
+        <h3>🎨 الشكل</h3>
+        <div class="styles" id="styleBtns"></div>
+        <h3>🧩 تخطيطات جاهزة</h3>
+        <div class="chips" id="presets"></div>
+      </div>
+      <div id="hudSide"></div>
+    </div>
+    <div id="formHud"></div>
+  </section>
+  <section class="card" id="sec-hype"><h2><span class="num">07</span>🔥 الحماس</h2><div id="formHype"></div></section>
+  <section class="card" id="sec-cam"><h2><span class="num">08</span>🎥 الكاميرا</h2><div id="formCam"></div></section>
+  <section class="card" id="sec-gfx"><h2><span class="num">09</span>🌦️ الجرافيك</h2><div id="formGfx"></div></section>
+  <section class="card" id="sec-fx"><h2><span class="num">10</span>💥 التأثيرات والأصوات</h2><div id="formFx"></div></section>
+  <section class="card" id="sec-export"><h2><span class="num">11</span>📦 التصدير</h2>
+    <h3>✅ التحقق</h3>
+    <ul class="valid" id="validList"></ul>
+    <h3>⬇️ الملفات</h3>
+    <div class="exports">
+      <button class="btn" data-exp="cs">📜 TikArena.3.cs</button>
+      <button class="btn" data-exp="dll">🧩 TikArena.dll</button>
+      <button class="btn" data-exp="ini">⚙️ TikArena.ini</button>
+      <button class="btn" data-exp="assets">🖼️ الصور والأصوات (ZIP)</button>
+      <button class="btn blue" data-exp="obs">📺 OBS-overlay.html</button>
+      <button class="btn vio" data-exp="json">💾 TikArena-settings.json</button>
+      <button class="btn pri" data-exp="full">🚀 الحزمة الكاملة (ZIP)</button>
+    </div>
+    <div class="fld" style="margin-top:12px">
+      <label class="tog"><span>وضع claude.ai (INI كينزل .ini.txt، و.cs و.dll فـ ZIP)</span><span class="sw"><input type="checkbox" id="claudeMode"><i></i></span></label>
+    </div>
+    <h3>📺 شاشة OBS</h3>
+    <div class="grid" id="obsForm"></div>
+    <div class="obsprev" id="obsPrev" style="margin-top:10px"></div>
+    <h3>📘 التثبيت</h3>
+    <div class="hint" id="installText"></div>
+  </section>
+</main>
+
+<div class="modal" id="modal"><div class="mbox">
+  <div class="mhead"><b id="mTitle">الكتالوج</b><input type="text" id="mSearch" placeholder="🔍 بحث..."><button class="btn sm" id="mAdd" style="display:none">➕ هدية مخصصة</button><button class="btn sm" id="mClose">✖</button></div>
+  <div class="mbody" id="mBody"></div>
+</div></div>
+<div class="modal" id="promptModal"><div class="mbox">
+  <div class="mhead"><b id="pTitle">✨ برومبت</b><span style="flex:1"></span><button class="btn sm" id="pCopy">📋 نسخ</button><button class="btn sm" id="pClose">✖</button></div>
+  <div style="padding:14px;overflow:auto" id="pBody"></div>
+</div></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="fileImg" accept="image/*" hidden>
+<input type="file" id="fileWav" accept=".wav,audio/wav" hidden>
+<script>
+"use strict";
+// =====================================================================
+//  TikArena · DarkRing Studio — generator
+//  Every setting here maps 1:1 to a key in TikArena.ini (same section, same key)
+//  and is read by src/TikArena.3.cs.
+// =====================================================================
+const ENGINE_SRC = "%%ENGINE%%";
+const ENGINE_DLL = "%%ENGINE_DLL%%";
+const STORE_KEY = "tikarena_state_v1";
+const OLD_KEY = "gta_tiktok_final_stream_rules";
+
+// ------------------------------------------------------------- actions (39)
+// t: chars | crew | clone | hp | heal | timed | carrain | vehicle | weapon | weather | instant | random
+const ACTIONS = [
+  ["SpawnEnemy","🦹","إنزال عدو","drop","chars"],
+  ["SpawnAlly","👮","إنزال مساعد","drop","chars"],
+  ["MafiaCar","🚘","سيارة المافيا (4 مسلحين)","drop","crew"],
+  ["MotoHitman","🏍️","قاتل بالموطور","drop","crew"],
+  ["Animals","🐺","هجوم الحيوانات","drop","chars"],
+  ["Clone","👥","استنساخ اللاعب (مساعد)","drop","clone"],
+  ["AddHealth","💖","شحن نقاط الدم (+HP)","help","hp"],
+  ["Heal","❤️‍🩹","علاج كامل (دم + درع)","help","heal"],
+  ["GodMode","🛡️","درع لا يُقهر (God Mode)","help","timed"],
+  ["GiveVehicle","🚗","إعطاء سيارة والركوب فيها","help","vehicle"],
+  ["GiveWeapon","🔫","إعطاء سلاح","help","weapon"],
+  ["GiveAllWeapons","💣","ترسانة أسلحة كاملة","help","instant"],
+  ["SuperSpeed","⚡","سرعة فلاش فالجري","help","timed"],
+  ["SuperJump","🦘","قفزة خارقة","help","timed"],
+  ["BoostVehicle","🚀","نيترو صاروخي للأمام","help","instant"],
+  ["ClearArea","🧹","تفريغ المنطقة من المشاة","help","instant"],
+  ["KillPlayer","💀","قتل مفاجئ (خسارة)","attack","instant"],
+  ["Airstrike","🎯","مطر صواريخ وانفجارات","attack","timed"],
+  ["Fire","🔥","إشعال النار فيك","attack","instant"],
+  ["Freeze","❄️","تجميد اللاعب فبلاصتو","attack","timed"],
+  ["RemoveWeapons","❌","تجريد من الأسلحة","attack","instant"],
+  ["RemoveVehicle","🚫","حذف السيارة","attack","instant"],
+  ["EjectVehicle","🤸","طرد من السيارة","attack","instant"],
+  ["ExplodeVehicle","💥","تفجير سيارة اللاعب","attack","instant"],
+  ["BurstTires","🛞","تفجير العجلات","attack","instant"],
+  ["Launch","🎈","الطيران للسما","attack","instant"],
+  ["Skyfall","🪂","رمي فالسحاب مع مظلة","attack","instant"],
+  ["Ragdoll","🥴","تطييحة (Ragdoll)","attack","instant"],
+  ["Drunk","🍺","السكرة وترنح الشاشة","attack","timed"],
+  ["Earthquake","🌋","زلزال","chaos","timed"],
+  ["CarRain","🌧️","شتا ديال الطوموبيلات","chaos","carrain"],
+  ["ExplodeNearby","🧨","تفجير الطوموبيلات القريبة","chaos","instant"],
+  ["Storm","⛈️","عاصفة رعدية وبرق","chaos","timed"],
+  ["Blackout","🌑","قطع الضو فالمدينة","chaos","timed"],
+  ["SlowMotion","⏳","إبطاء الوقت (ماتريكس)","world","timed"],
+  ["LowGravity","🌕","جاذبية القمر","world","timed"],
+  ["Teleport","🌀","تيليبورت عشوائي","world","instant"],
+  ["Weather","🌦️","تغيير الطقس","world","weather"],
+  ["Random","🎲","حدث عشوائي","random","random"]
+].map(a => ({key:a[0], emoji:a[1], name:a[2], group:a[3], type:a[4]}));
+const ACT = Object.fromEntries(ACTIONS.map(a => [a.key, a]));
+const GROUPS = {drop:"🪂 إنزال", help:"💚 مساعدة", attack:"😈 هجوم", chaos:"🌪️ فوضى", world:"🌍 عالم", random:"🎲 عشوائي"};
+const RANDOM_ACTIONS = ["Earthquake","CarRain","ExplodeNearby","KillPlayer","SpawnEnemy","SpawnAlly","GiveVehicle","RemoveVehicle","GiveAllWeapons","RemoveWeapons","Fire","Launch","Ragdoll","Drunk","SlowMotion","LowGravity","SuperJump","Blackout","Animals","Teleport","Weather","Heal","MafiaCar","MotoHitman","AddHealth","Freeze","GodMode","SuperSpeed","Skyfall","ClearArea","EjectVehicle","ExplodeVehicle","BurstTires","BoostVehicle","Airstrike","Storm"];
+const EFFECTS = [["None","بلا تأثير"],["SoftSmoke","دخان ناعم ملون"],["Smoke","دخان كثيف"],["Flare","ضو (Flare)"],["Lightning","برق"],["Explosion","انفجار بلا ضرر"],["SkyDrop","طيحان من السما / باراشوت"],["Flash","فلاش"]];
+const KILL_EFFECTS = EFFECTS.filter(e => e[0] !== "SkyDrop");
+const TRIGGERS = [["Gift","🎁 هدية"],["Likes","❤️ لايكات"],["Share","🔁 بارتاج"],["Follow","➕ فولو"],["Comment","💬 تعليق"],["Subscribe","⭐ اشتراك"],["Key","⌨️ زر فقط"]];
+const WEATHERS = ["Random","CLEAR","EXTRASUNNY","CLOUDS","OVERCAST","RAIN","CLEARING","THUNDER","SMOG","FOGGY","XMAS","SNOWLIGHT","BLIZZARD","HALLOWEEN"];
+const STYLES = ["Classic","Glass","Neon","Minimal","Esports","Retro"];
+const FONTS = ["ChaletLondon","ChaletComprimeCologne","Pricedown","HouseScript","Monospace"];
+const POSITIONS = ["TopLeft","TopCenter","TopRight","MiddleLeft","MiddleCenter","MiddleRight","BottomLeft","BottomCenter","BottomRight"];
+const KEYS = ["None","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12","NumPad0","NumPad1","NumPad2","NumPad3","NumPad4","NumPad5","NumPad6","NumPad7","NumPad8","NumPad9","Add","Subtract","Multiply","Divide","Decimal","Insert","Delete","Home","End","PageUp","PageDown","Pause","Scroll","Up","Down","Left","Right","Space","Tab","Back",
+  ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),"D0","D1","D2","D3","D4","D5","D6","D7","D8","D9","Oemtilde","OemMinus","Oemplus","OemOpenBrackets","Oem6","Oem5","Oem1","Oem7","Oemcomma","OemPeriod","OemQuestion"];
+const GAME_SOUNDS = [["","🔇 بلا صوت"],["CHECKPOINT_MISSED|HUD_MINI_GAME_SOUNDSET","❗ Checkpoint missed"],["CHALLENGE_UNLOCKED|HUD_AWARDS","🏅 Challenge unlocked"],["PICK_UP|HUD_FRONTEND_DEFAULT_SOUNDSET","📦 Pick up"],["CHECKPOINT_PERFECT|HUD_MINI_GAME_SOUNDSET","✅ Checkpoint perfect"],["MEDAL_UP|HUD_MINI_GAME_SOUNDSET","🥇 Medal up"],["RACE_PLACED|HUD_AWARDS","🏁 Race placed"],["LOSER|HUD_AWARDS","💀 Loser"],["Beep_Red|DLC_HEIST_HACKING_SNAKE_SOUNDS","🔴 Beep red"],["Hack_Success|DLC_HEIST_BIOLAB_PREP_HACKING_SOUNDS","💻 Hack success"],["TIMER_STOP|HUD_MINI_GAME_SOUNDSET","⏱️ Timer stop"],["5_SEC_WARNING|HUD_MINI_GAME_SOUNDSET","⚠️ 5 sec warning"],["SELECT|HUD_FRONTEND_DEFAULT_SOUNDSET","🔘 Select"],["Bomb_Disarmed|GTAO_Speed_Convoy_Soundset","💣 Bomb disarmed"],["ScreenFlash|WastedSounds","📸 Screen flash"],["Mission_Pass_Notify|DLC_HEISTS_GENERAL_FRONTEND_SOUNDS","🎉 Mission pass"]];
+
+// ------------------------------------------------------------- catalogs
+// gifts: [name, emoji, approx coins]
+const GIFTS = [
+ ["Rose","🌹",1],["TikTok","🎵",1],["GG","🎮",1],["Ice Cream Cone","🍦",1],["Heart Me","💗",1],["Thumbs Up","👍",1],["Heart","❤️",1],["Cake Slice","🍰",1],["Glow Stick","🪄",1],["Love you","🥰",1],
+ ["Finger Heart","🫰",5],["Rosa","🌷",10],["Friendship Necklace","📿",10],["Tiny Diny","🦕",10],["Perfume","🧴",20],["Love Bang","💥",25],["Doughnut","🍩",30],["Sign Language Love","🤟",49],["Butterfly","🦋",88],["Paper Crane","🕊️",99],
+ ["Hat and Mustache","🎩",99],["Cap","🧢",99],["Hand Hearts","🫶",100],["Confetti","🎊",100],["Hand Heart","💞",100],["Sunglasses","🕶️",199],["Corgi","🐕",299],["Boxing Gloves","🥊",299],["Rock 'n' Roll","🎸",299],["Coral","🪸",499],
+ ["Money Gun","💸",500],["Swan","🦢",699],["Train","🚂",899],["Galaxy","🌌",1000],["Fireworks","🎆",1088],["Gift Box","🎁",1999],["Whale Diving","🐋",2150],["Motorcycle","🏍️",2988],["Meteor Shower","☄️",3000],["Unicorn Fantasy","🦄",5000],
+ ["Private Jet","✈️",4888],["Sports Car","🏎️",7000],["Yacht","🛥️",9888],["Interstellar","🪐",10000],["Sunset Speedway","🌅",10000],["Rosa Nebula","🌸",15000],["Rocket","🚀",20000],["Castle Fantasy","🏰",20000],["Leon the Kitten","🐱",4888],["Lion","🦁",29999],
+ ["TikTok Universe","🌠",44999],["Thunder Falcon","🦅",39999],["Fire Phoenix","🐦‍🔥",41999],["Pegasus","🐎",42999],["Mirror","🪞",30],["Journal","📓",100],["Star","⭐",99],["Crown","👑",4999]
+];
+// skins: [model, emoji, arabic]
+const SKINS = [
+ ["s_m_y_clown_01","🤡","مهرج"],["s_m_y_swat_01","👮","سوات"],["s_m_y_cop_01","👮‍♂️","بوليسي"],["s_f_y_cop_01","👮‍♀️","بوليسية"],["s_m_y_sheriff_01","🤠","شريف"],["s_m_y_hwaycop_01","🏍️","بوليس الطريق"],["s_m_y_ranger_01","🌲","حارس الغابة"],["s_m_y_marine_01","🪖","جندي بحرية"],["s_m_y_marine_03","🎖️","جندي بحرية 2"],["s_m_m_marine_01","⚓","ضابط بحرية"],
+ ["s_m_y_blackops_01","🕶️","عمليات سوداء"],["s_m_y_blackops_02","🥷","عمليات سوداء 2"],["s_m_m_ciasec_01","🕴️","مخابرات"],["s_m_m_fiboffice_01","💼","FIB"],["s_m_y_armymech_01","🔧","ميكانيكي الجيش"],["s_m_m_security_01","🛡️","حارس أمن"],["s_m_m_highsec_01","🎩","حراسة VIP"],["s_m_m_bouncer_01","🚪","بوّاب"],["s_m_y_devinsec_01","👔","حارس خاص"],["s_m_y_fireman_01","🧑‍🚒","رجل إطفاء"],
+ ["s_m_m_paramedic_01","🚑","مسعف"],["s_m_m_doctor_01","🩺","طبيب"],["s_m_y_prisoner_01","⛓️","سجين"],["s_m_y_prismuscl_01","💪","سجين معضل"],["s_m_y_robber_01","💰","شفار"],["s_m_y_dealer_01","💊","بياع"],["s_m_y_chef_01","👨‍🍳","طباخ"],["s_m_y_construct_01","👷","بناي"],["s_m_y_dockwork_01","📦","خدام الميناء"],["s_m_y_mime_01","🎭","ميم"],
+ ["s_m_m_movalien_01","👽","كائن فضائي"],["s_m_m_movspace_01","👨‍🚀","رائد فضاء"],["s_m_y_baywatch_01","🏖️","منقذ"],["s_m_y_pilot_01","🧑‍✈️","طيار"],["s_m_m_janitor","🧹","منظف"],["s_m_y_waiter_01","🍽️","سرباي"],["s_m_m_gardener_01","🌱","جنان"],["s_m_y_ammucity_01","🔫","بياع السلاح"],["s_m_m_strperf_01","🎪","فنان الشارع"],["s_m_y_xmech_02","🛠️","ميكانيكي"],
+ ["u_m_y_zombie_01","🧟","زومبي"],["u_m_y_juggernaut_01","🦾","جاغرنوت"],["u_m_y_pogo_01","🐒","بوغو القرد"],["u_m_m_jesus_01","🧔","الراهب"],["u_m_y_imporage","😡","إمبوتنت ريج"],["u_m_y_rsranger_01","🚀","سبيس رينجر"],["u_m_y_babyd","🍼","بيبي"],["u_m_m_streetart_01","🎨","رسام"],["u_m_y_mani","🕺","ماني"],["u_m_m_prolsec_01","❄️","حارس الثلج"],
+ ["ig_orleans","🦍","بيغ فوت"],["ig_lamardavis","😎","لامار"],["ig_stretch","🏀","ستريتش"],["ig_wade","🧢","وايد"],["ig_lestercrest","🧓","ليستر"],["ig_brad","🧑","براد"],["ig_ballasog","🟣","بالاس OG"],["ig_claypain","👨‍🎤","كلاي"],["player_zero","🧔‍♂️","مايكل"],["player_one","🧑🏾","فرانكلين"],
+ ["player_two","😈","تريفور"],["g_m_y_ballasout_01","💜","بالاس"],["g_m_y_famca_01","💚","فاميليز"],["g_m_y_lost_01","🏍️","ذا لوست"],["g_m_y_mexgoon_01","🌶️","فارغوس"],["g_m_y_salvagoon_01","🔵","سالفا"],["g_m_m_chicold_01","🥶","مافيا شيكاغو"],["g_m_y_korean_01","🐉","عصابة كورية"],["g_m_m_armboss_01","🇦🇲","زعيم أرميني"],["g_m_y_armgoon_02","🥊","أرميني"],
+ ["g_m_m_chigoon_01","🧥","مافيا صينية"],["a_m_y_musclbeac_01","🏋️","معضل البحر"],["a_m_y_hipster_01","🧔","هيبستر"],["a_f_y_fitness_01","🧘‍♀️","رياضية"],["a_m_m_hillbilly_01","🤠","بدوي"],["a_m_o_tramp_01","🥾","متشرد"],["a_m_y_skater_01","🛹","سكيتر"],["a_m_y_surfer_01","🏄","سيرفر"],["a_m_m_tourist_01","📸","سائح"],["a_m_y_acult_01","🔱","الطائفة"],
+ ["a_c_mtlion","🐆","كوغار"],["a_c_chimp","🐒","شمبانزي"],["a_c_rottweiler","🐕","روتفايلر"],["a_c_shepherd","🐕‍🦺","كلب الراعي"],["a_c_husky","🐺","هاسكي"],["a_c_boar","🐗","حلوف"],["a_c_coyote","🦊","كويوت"],["a_c_chop","🐶","تشوب"],["a_c_panther","🐈‍⬛","فهد أسود"]
+];
+// weapons: [name, emoji, arabic]
+const WEAPONS = [
+ ["WEAPON_UNARMED","✊","بلا سلاح"],["WEAPON_KNIFE","🔪","موس"],["WEAPON_DAGGER","🗡️","خنجر"],["WEAPON_BAT","🏏","هراوة"],["WEAPON_BOTTLE","🍾","قرعة"],["WEAPON_CROWBAR","🪛","عتلة"],["WEAPON_FLASHLIGHT","🔦","بيل"],["WEAPON_GOLFCLUB","🏌️","عصا الغولف"],["WEAPON_HAMMER","🔨","مطرقة"],["WEAPON_HATCHET","🪓","شاقور"],
+ ["WEAPON_KNUCKLE","👊","بونيا حديد"],["WEAPON_MACHETE","⚔️","ساطور"],["WEAPON_SWITCHBLADE","🔪","موس مطوي"],["WEAPON_NIGHTSTICK","🦯","زرواطة"],["WEAPON_WRENCH","🔧","مفتاح"],["WEAPON_BATTLEAXE","🪓","فأس حرب"],["WEAPON_POOLCUE","🎱","عصا البلياردو"],["WEAPON_PISTOL","🔫","مسدس"],["WEAPON_COMBATPISTOL","🔫","مسدس قتالي"],["WEAPON_APPISTOL","🔫","مسدس أوتوماتيكي"],
+ ["WEAPON_STUNGUN","⚡","صاعق"],["WEAPON_PISTOL50","🔫","ديزرت إيغل"],["WEAPON_SNSPISTOL","🔫","مسدس صغير"],["WEAPON_HEAVYPISTOL","🔫","مسدس ثقيل"],["WEAPON_VINTAGEPISTOL","🔫","مسدس قديم"],["WEAPON_FLAREGUN","🎆","مسدس الإشارة"],["WEAPON_MARKSMANPISTOL","🎯","مسدس القناص"],["WEAPON_REVOLVER","🤠","ريفولفر"],["WEAPON_RAYPISTOL","👽","مسدس الأشعة"],["WEAPON_MICROSMG","🔫","ميكرو SMG"],
+ ["WEAPON_SMG","🔫","SMG"],["WEAPON_ASSAULTSMG","🔫","SMG هجومي"],["WEAPON_COMBATPDW","🔫","PDW"],["WEAPON_MACHINEPISTOL","🔫","مسدس رشاش"],["WEAPON_MINISMG","🔫","ميني SMG"],["WEAPON_PUMPSHOTGUN","💥","شوتغن"],["WEAPON_SAWNOFFSHOTGUN","💥","شوتغن مقطوع"],["WEAPON_ASSAULTSHOTGUN","💥","شوتغن هجومي"],["WEAPON_BULLPUPSHOTGUN","💥","شوتغن بولباب"],["WEAPON_MUSKET","🎩","موسكيت"],
+ ["WEAPON_HEAVYSHOTGUN","💥","شوتغن ثقيل"],["WEAPON_DBSHOTGUN","💥","شوتغن جوج"],["WEAPON_AUTOSHOTGUN","💥","شوتغن أوتو"],["WEAPON_ASSAULTRIFLE","🔫","كلاشنكوف"],["WEAPON_CARBINERIFLE","🔫","كاربين M4"],["WEAPON_ADVANCEDRIFLE","🔫","بندقية متطورة"],["WEAPON_SPECIALCARBINE","🔫","كاربين خاص"],["WEAPON_BULLPUPRIFLE","🔫","بولباب"],["WEAPON_COMPACTRIFLE","🔫","بندقية صغيرة"],["WEAPON_MG","🔫","رشاش MG"],
+ ["WEAPON_COMBATMG","🔫","رشاش قتالي"],["WEAPON_GUSENBERG","🎻","غوزنبرغ"],["WEAPON_SNIPERRIFLE","🎯","قناصة"],["WEAPON_HEAVYSNIPER","🎯","قناصة ثقيلة"],["WEAPON_MARKSMANRIFLE","🎯","بندقية الرامي"],["WEAPON_RPG","🚀","RPG"],["WEAPON_GRENADELAUNCHER","💣","قاذف قنابل"],["WEAPON_MINIGUN","🌀","ميني غان"],["WEAPON_FIREWORK","🎆","قاذف الشهب"],["WEAPON_RAILGUN","⚡","ريل غان"],
+ ["WEAPON_HOMINGLAUNCHER","🎯","صاروخ موجه"],["WEAPON_GRENADE","💣","قنبلة يدوية"],["WEAPON_MOLOTOV","🍾","مولوتوف"],["WEAPON_STICKYBOMB","🧨","قنبلة لاصقة"],["WEAPON_PROXMINE","⭕","لغم"],["WEAPON_SNOWBALL","☃️","كورة الثلج"]
+];
+// vehicles: [model, emoji, arabic]
+const VEHICLES = [
+ ["zentorno","🏎️","زينتورنو"],["adder","🏎️","أدر"],["t20","🏎️","T20"],["osiris","🏎️","أوزيريس"],["turismor","🏎️","توريزمو R"],["entityxf","🏎️","إنتيتي XF"],["infernus","🏎️","إنفيرنوس"],["cheetah","🐆","شيتا"],["vacca","🏎️","فاكا"],["bullet","🏎️","بوليت"],
+ ["voltic","⚡","فولتيك"],["banshee","🚗","بانشي"],["comet2","🚗","كوميت"],["carbonizzare","🚗","كاربونيزاري"],["elegy2","🚗","إليجي"],["sultan","🚗","سلطان"],["kuruma","🚙","كوروما"],["kuruma2","🛡️","كوروما مدرعة"],["jester","🃏","جيستر"],["massacro","🚗","ماساكرو"],
+ ["feltzer2","🚗","فيلتزر"],["coquette","🚗","كوكيت"],["ninef","🚗","ناين إف"],["rapidgt","🚗","رابيد GT"],["schafter2","🚘","شافتر (المافيا)"],["tailgater","🚘","تايلغيتر"],["oracle","🚘","أوراكل"],["felon","🚘","فيلون"],["buffalo","🚘","بافالو"],["dominator","💪","دومينيتور"],
+ ["gauntlet","💪","غونتليت"],["dukes","💪","ديوكس"],["sabregt","💪","سابر GT"],["blade","💪","بليد"],["vigero","💪","فيغيرو"],["phoenix","🔥","فينيكس"],["sandking","🛻","ساند كينغ"],["rebel","🛻","ريبل"],["bifta","🏜️","بيفتا"],["dune","🏜️","دون"],
+ ["insurgent","🛡️","إنسيرجنت"],["technical","🔫","تكنيكال"],["dubsta","🚙","دوبستا"],["baller","🚙","بالر"],["granger","🚙","غرانجر"],["mesa3","🚙","ميسا"],["crusader","🪖","كروزيدر"],["barracks","🪖","شاحنة الجيش"],["rhino","🪖","دبابة"],["bati","🏍️","باتي"],
+ ["akuma","🏍️","أكوما"],["hakuchou","🏍️","هاكوتشو"],["sanchez","🏍️","سانشيز"],["pcj","🏍️","PCJ"],["faggio","🛵","فاجيو"],["bmx","🚲","BMX"],["police","🚓","بوليس"],["policet","🚐","فان البوليس"],["riot","🚨","شاحنة الشغب"],["fbi","🚔","FBI"],
+ ["ambulance","🚑","أمبولانس"],["firetruk","🚒","الإطفاء"],["bus","🚌","طوبيس"],["taxi","🚕","طاكسي"],["stretch","🚙","ليموزين"],["mule","🚚","كاميو"],["phantom","🚛","فانتوم"],["dump","🏗️","شاحنة عملاقة"],["buzzard","🚁","هليكوبتر"]
+];
+
+// ------------------------------------------------------------- defaults (INI mirror)
+function defaults(){
+  const S = {};
+  S.General = {PowerKey:"K",StartKey:"F3",HudStyleKey:"F11",HudFontKey:"F8",EmergencyKey:"Delete",PauseKey:"Pause",LayoutKey:"F7",HypeTestKey:"F6",
+    AutoReload:true,AutoImport:true,ShowLoadMessage:true,CleanupOnPowerOff:true,ShowStatusMessages:true,TestKeysEnabled:true,DebugLog:false};
+  S.TikFinity = {Enabled:true,Url:"ws://localhost:21213/",ReconnectSeconds:5,LearnMode:true,TestUserName:"Test"};
+  S.Challenge = {Enabled:true,DurationMinutes:10,AutoRestart:true,EndScreenEnabled:true,EndScreenSeconds:6,MvpEnabled:true};
+  S.Queue = {MaxEnemies:15,MaxAllies:10,MaxPerEvent:0,DelayMs:400,CorpseCleanupSeconds:2,VehicleCleanupSeconds:60,ClearQueueOnRoundEnd:false};
+  S.World = {PoliceIgnore:true,GangsIgnore:true};
+  S.Player = {ApplyOnRoundStart:true,Health:1000,Armor:100,Invincible:false};
+  S.Random = {Duration:15,Effect:"SoftSmoke",EnemyModel:"s_m_y_clown_01",EnemyWeapon:"WEAPON_BAT",EnemyHealth:150,AllyModel:"s_m_y_swat_01",AllyWeapon:"WEAPON_CARBINERIFLE",AllyHealth:300,
+    AnimalsAmount:3,HealthAmount:250,VehicleModel:"zentorno",GiveWeapon:"WEAPON_CARBINERIFLE"};
+  RANDOM_ACTIONS.forEach(a => { S.Random[a+"Enabled"] = !(a==="KillPlayer"||a==="Airstrike"); S.Random[a+"Weight"] = 10; });
+  S.Hud = {Enabled:true,Style:"Classic",StyleCycle:"Classic,Glass,Neon,Minimal,Esports,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
+    AccentColor:"#00e676",TextColor:"#ffffff",PanelColor:"#0a0e16",WinColor:"#00e676",LossColor:"#ff3b5c",LayoutMode:"Normal",
+    ScoreEnabled:true,ScoreOrder:"Title,Score,Streak",TitleEnabled:true,Title:"حاول تقتلني",ShowScore:true,ShowTimer:true,ShowStreak:true,
+    Top3Enabled:true,Top3Order:"Top3,Counters,Status",ShowTop3:true,TopCount:3,Top3Title:"أفضل الداعمين",ShowCoins:true,ShowCounters:true,ShowStatus:true,
+    HealthEnabled:true,HealthLabel:"health",HealthColor:"#1ed760",ShowArmor:true,ShowHealthPoints:false,HideRadar:false,
+    GuideEnabled:true,GuideMax:8,GuideMode:"Cards",GuideRotateCount:3,GuideRotateSeconds:5,GuideRandom:true,GuideShowGiftImage:true,GuideShowActionImage:true,GuideTitleEnabled:false,GuideTitle:"🎁 الهدايا",GuideGiftColor:"#2979ff",GuideActionColor:"#00e676",
+    OverheadEnabled:true,OverheadAvatar:true,OverheadName:true,OverheadHealth:true,OverheadHeight:1.2,AvatarShape:"Circle"};
+  S.Notifications = {Enabled:true,Seconds:5,MaxVisible:5,ShowAvatar:true,ShowGiftIcon:true};
+  S.KillFeed = {Enabled:true,Seconds:4,MaxVisible:4};
+  S.Hype = {Enabled:true,Seconds:6,MaxVisible:3,ShowLevel:true,Color:"#ffc828",
+    KingJoinEnabled:true,KingJoinText:"👑 احذر! لقد دخل الملك {name}",
+    VipJoinEnabled:true,VipJoinMinLevel:20,VipJoinMinCoins:100,VipJoinText:"⚠️ احذر! لقد دخل {name} (Lv {level})",
+    ComebackEnabled:true,ComebackMinCoins:100,ComebackMinutes:5,ComebackText:"👀 أين أنت يا {name}؟ اللايف كيتسناك",
+    RivalryEnabled:true,RivalrySeconds:60,RivalryText:"⚔️ {name} كيتحدى {rival}!",
+    NewKingEnabled:true,NewKingMinCoins:50,NewKingText:"👑 {name} ولى هو الملك ديال اللايف!",
+    ComboEnabled:true,ComboMin:10,ComboText:"🔥 كومبو x{count} من {name}!"};
+  S.Sounds = {EnemySpawn:"CHECKPOINT_MISSED|HUD_MINI_GAME_SOUNDSET",AllySpawn:"CHALLENGE_UNLOCKED|HUD_AWARDS",Help:"PICK_UP|HUD_FRONTEND_DEFAULT_SOUNDSET",Kill:"CHECKPOINT_PERFECT|HUD_MINI_GAME_SOUNDSET",Hype:"MEDAL_UP|HUD_MINI_GAME_SOUNDSET"};
+  S.Camera = {InvincibleDuringCam:true,EntryEnabled:true,EntryMinCoins:1000,EntrySeconds:3,KillerEnabled:true,KillerSeconds:3,SlowMoMode:"LastInWave",SlowMoScale:0.3,SlowMoSeconds:1.5,WinEnabled:true,WinSeconds:4};
+  S.Graphics = {LockTime:false,Hour:21,Minute:0,LockWeather:false,Weather:"Clear",TimecycleEnabled:false,Timecycle:"rply_saturation",TimecycleStrength:0.6,DensityEnabled:false,PedDensity:1,VehicleDensity:1};
+  S.Texts = {WinText:"فوز",LossText:"خسارة",WinShort:"فوز",LossShort:"خسارة",MvpText:"MVP",MvpWinReason:"ساعدك باش تربح",MvpLossReason:"هو السبب ف الخسارة",KillFeedText:"{name} قُتل",
+    WinStreakText:"انتصارات متتالية",LossStreakText:"خسارات متتالية",EnemiesShort:"أعداء",AlliesShort:"مساعدين",QueueShort:"الطابور",PausedText:"إيقاف مؤقت",ResumedText:"استئناف",
+    StartedText:"بدأ التحدي",EmergencyText:"تم مسح كل شيء",LoadedText:"جاهز. ضغط",ReloadedText:"تحدثات الإعدادات",ImportedText:"تجابو الإعدادات الجداد من Downloads"};
+  S.Layout = layoutDefaults(false);
+  S.LayoutVertical = layoutDefaults(true);
+  S.KillEffects = {Enabled:true,Effect:"SoftSmoke",SmokeColor:"#33ccff",OnlyPlayerKills:false,SoundEnabled:false,Sound:""};
+  S.Death = {CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Coffin:true,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
+  return {
+    v:1, ini:S, interactions:defaultInteractions(),
+    sounds:{kill:null, death:null},             // {name, data(dataURL)}
+    obs:{Columns:2, Size:84, ShowNames:true, Background:"transparent"},
+    ui:{sound:true, preview:"Normal", selPanel:"Score", claude:null},
+    customGifts:[]
+  };
+}
+const PANELS = [["Score","🏆 الفوز والخسارة"],["Top3","👑 لوحة الداعمين"],["Health","❤️ شريط الطاقة"],["Guide","🎁 دليل الهدايا"],["Notif","🔔 الإشعارات"],["Feed","☠️ Kill Feed"],["Hype","🔥 رسائل الحماس"]];
+function layoutDefaults(v){
+  const pos = v ? {Score:"TopCenter",Top3:"TopCenter",Health:"BottomCenter",Guide:"MiddleLeft",Notif:"BottomCenter",Feed:"MiddleCenter",Hype:"TopCenter"}
+                : {Score:"TopCenter",Top3:"TopLeft",Health:"BottomCenter",Guide:"MiddleLeft",Notif:"BottomRight",Feed:"MiddleRight",Hype:"TopRight"};
+  const oy = v ? {Top3:100,Notif:-70,Feed:130,Hype:262} : {Hype:70};
+  const L = {};
+  PANELS.forEach(([p]) => {
+    L[p+"Position"] = pos[p]; L[p+"OffsetX"] = 0; L[p+"OffsetY"] = oy[p]||0; L[p+"Show"] = !(v && p==="Guide");
+    if (p==="Health") L.HealthWidth = v ? 220 : 260;
+  });
+  L.Scale = v ? 0.9 : 1;
+  return L;
+}
+function newInteraction(over){
+  const it = {Enabled:true,Name:"",Action:"SpawnEnemy",Trigger:"Gift",GiftName:"Rose",GiftId:"",LikesCount:100,CommentText:"",OncePerUser:false,TestKey:"None",
+    Units:1,MultiplyByCombo:true,Cooldown:0,Effect:"SoftSmoke",Message:"قام {name} بإنزال عدو",EntryCam:false,ShowInGuide:true,
+    Model:"s_m_y_clown_01",Health:150,Armor:0,Weapon:"WEAPON_BAT",Ammo:9999,Accuracy:25,CombatAbility:1,CombatMovement:2,ShootRate:100,Blip:true,SpawnDistance:20,
+    VehicleModel:"zentorno",WarpIntoVehicle:true,Duration:15,Amount:5,Weather:"Random",
+    giftImg:null, giftEmoji:"🌹", actImg:null, actEmoji:"🦹", open:false};
+  return Object.assign(it, over||{});
+}
+function defaultInteractions(){
+  return [
+    newInteraction({Name:"مهرج بالهراوة",Action:"SpawnEnemy",GiftName:"Rose",TestKey:"NumPad1",Effect:"Lightning",Message:"قام {name} بإنزال عدو",giftEmoji:"🌹",actEmoji:"🤡"}),
+    newInteraction({Name:"سوات مساعد",Action:"SpawnAlly",GiftName:"Finger Heart",TestKey:"NumPad2",Model:"s_m_y_swat_01",Weapon:"WEAPON_CARBINERIFLE",Health:300,Armor:100,Accuracy:50,CombatAbility:2,Effect:"SoftSmoke",Message:"قام {name} بإنزال مساعد",giftEmoji:"🫰",actEmoji:"👮"}),
+    newInteraction({Name:"+250 دم",Action:"AddHealth",Trigger:"Likes",LikesCount:100,TestKey:"NumPad3",Amount:250,Message:"{name} زاد 250 نقطة دم",giftEmoji:"❤️",actEmoji:"💖"}),
+    newInteraction({Name:"علاج كامل",Action:"Heal",Trigger:"Follow",OncePerUser:true,TestKey:"NumPad4",Message:"{name} عالجك",giftEmoji:"➕",actEmoji:"❤️‍🩹"}),
+    newInteraction({Name:"سيارة المافيا",Action:"MafiaCar",GiftName:"Perfume",TestKey:"NumPad5",Model:"g_m_m_chicold_01",Weapon:"WEAPON_MICROSMG",VehicleModel:"schafter2",SpawnDistance:80,Effect:"None",Message:"{name} صيفط المافيا",giftEmoji:"🧴",actEmoji:"🚘"}),
+    newInteraction({Name:"كوغار",Action:"Animals",GiftName:"Doughnut",TestKey:"NumPad6",Units:3,Model:"a_c_mtlion",Weapon:"None",Health:200,Effect:"Smoke",Message:"{name} طلق {count} ديال الحيوانات",giftEmoji:"🍩",actEmoji:"🐺"}),
+    newInteraction({Name:"زلزال",Action:"Earthquake",GiftName:"Hand Hearts",TestKey:"NumPad7",Duration:15,Message:"{name} دار زلزال!",giftEmoji:"🫶",actEmoji:"🌋"}),
+    newInteraction({Name:"زينتورنو",Action:"GiveVehicle",GiftName:"Confetti",TestKey:"NumPad8",VehicleModel:"zentorno",Effect:"SoftSmoke",Message:"قام {name} بإعطاء سيارة",giftEmoji:"🎊",actEmoji:"🚗"}),
+    newInteraction({Name:"حدث عشوائي",Action:"Random",Trigger:"Share",TestKey:"NumPad9",Message:"{name} دار حدث عشوائي",giftEmoji:"🔁",actEmoji:"🎲"}),
+    newInteraction({Name:"قتل مفاجئ",Action:"KillPlayer",GiftName:"Lion",TestKey:"None",Message:"💀 {name} قتلك!",giftEmoji:"🦁",actEmoji:"💀"})
+  ];
+}
+</script>
+<script>
+"use strict";
+// ------------------------------------------------------------- state
+let state = loadState();
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function merge(def, src){
+  if (!src || typeof src !== "object") return def;
+  for (const k of Object.keys(def)){
+    if (!(k in src)) continue;
+    const d = def[k], s = src[k];
+    if (d && typeof d === "object" && !Array.isArray(d) && s && typeof s === "object" && !Array.isArray(s)) def[k] = merge(d, s);
+    else if (d === null || typeof d === typeof s || Array.isArray(d) === Array.isArray(s)) def[k] = s;
+  }
+  return def;
+}
+function normalize(obj){
+  const s = merge(defaults(), obj);
+  s.interactions = (Array.isArray(obj && obj.interactions) ? obj.interactions : s.interactions).map(i => newInteraction(i));
+  if (!Array.isArray(s.customGifts)) s.customGifts = [];
+  return s;
+}
+function loadState(){
+  try { const raw = localStorage.getItem(STORE_KEY); if (raw) return normalize(JSON.parse(raw)); } catch(e){}
+  const s = defaults();
+  try { const old = localStorage.getItem(OLD_KEY); if (old) importOldRules(s, JSON.parse(old)); } catch(e){}
+  return s;
+}
+// best effort import of the old page rules (gta_tiktok_final_stream_rules)
+function importOldRules(s, rules){
+  if (!Array.isArray(rules) || !rules.length) return;
+  const list = [];
+  rules.forEach(r => {
+    if (!r || typeof r !== "object") return;
+    const act = r.action || r.Action || r.effect || "SpawnEnemy";
+    const key = ACT[act] ? act : (ACTIONS.find(a => a.key.toLowerCase() === String(act).toLowerCase()) || {key:"SpawnEnemy"}).key;
+    list.push(newInteraction({
+      Name: r.name || r.title || "", Action: key,
+      Trigger: r.trigger || r.type || "Gift",
+      GiftName: r.giftName || r.gift || "", GiftId: String(r.giftId || ""),
+      Units: +(r.count || r.amount || r.units || 1) || 1,
+      TestKey: r.key || r.testKey || "None",
+      giftEmoji: r.giftIcon || r.emoji || "🎁", actEmoji: (ACT[key]||{}).emoji || "⭐"
+    }));
+  });
+  if (list.length) s.interactions = list;
+}
+let saveTimer = 0;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+    catch(e){
+      try { const copy = JSON.parse(JSON.stringify(state)); copy.sounds = {kill:null,death:null}; localStorage.setItem(STORE_KEY, JSON.stringify(copy)); toast("⚠️ المتصفح عامر: الأصوات ما تحفظاتش، حفظ JSON"); }
+      catch(e2){ toast("⚠️ ما قدرتش نحفظ فالمتصفح، استعمل 💾 حفظ JSON"); }
+    }
+    refreshLive();
+  }, 250);
+}
+function changed(){ save(); }
+
+// ------------------------------------------------------------- ui sound / toast
+let actx = null;
+function beep(f, d){
+  if (!state.ui.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "triangle"; o.frequency.value = f || 660;
+    g.gain.setValueAtTime(0.06, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + (d || 0.08));
+    o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + (d || 0.08));
+  } catch(e){}
+}
+document.addEventListener("click", e => { if (e.target.closest(".btn,.chip,.stylebtn,.citem,.pos9 b")) beep(760, 0.05); }, true);
+let toastT = 0;
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2600); }
+
+// ------------------------------------------------------------- generic form fields
+// field: [key, label, type, opts]  types: b i f t c s k list range model weapon vehicle sound wav
+function fieldHTML(sec, f, obj){
+  const [k, label, type, o] = f;
+  const v = obj[k];
+  const id = "f_" + sec + "_" + k;
+  const data = `data-sec="${sec}" data-k="${k}" data-t="${type}"`;
+  const wide = o && o.wide ? " wide" : "";
+  if (type === "b") return `<div class="fld${wide}"><label class="tog"><span>${label}</span><span class="sw"><input type="checkbox" id="${id}" ${data} ${v?"checked":""}><i></i></span></label></div>`;
+  let inner = "";
+  if (type === "i" || type === "f") inner = `<input type="number" id="${id}" ${data} value="${esc(v)}" ${o&&o.min!=null?`min="${o.min}"`:""} ${o&&o.max!=null?`max="${o.max}"`:""} step="${type==="f"?(o&&o.step||0.1):1}">`;
+  else if (type === "t") inner = `<input type="text" id="${id}" ${data} value="${esc(v)}" ${o&&o.ltr?'class="ltr"':""}>`;
+  else if (type === "c") inner = `<div class="row"><input type="color" id="${id}" ${data} value="${esc(v)}"><input type="text" class="ltr" data-mirror="${id}" value="${esc(v)}"></div>`;
+  else if (type === "s" || type === "k" || type === "sound"){
+    const opts = type === "k" ? KEYS.map(x => [x, x]) : (type === "sound" ? GAME_SOUNDS : o.opts.map(x => Array.isArray(x) ? x : [x, x]));
+    let has = opts.some(x => x[0] === v);
+    inner = `<div class="row"><select id="${id}" ${data}>${has?"":`<option value="${esc(v)}">${esc(v)}</option>`}${opts.map(x => `<option value="${esc(x[0])}" ${x[0]===v?"selected":""}>${esc(x[1])}</option>`).join("")}</select>${type==="k"?`<button class="btn sm icon" data-capture="${id}" title="التقاط">🎯</button>`:""}</div>`;
+  }
+  else if (type === "list"){
+    const cur = String(v).split(",").map(x => x.trim()).filter(Boolean);
+    inner = `<div class="chips" ${data}>${o.opts.map(x => `<span class="chip ${cur.includes(x)?"on":""}" data-val="${x}">${x}</span>`).join("")}</div>`;
+  }
+  else if (type === "range") inner = `<div class="row"><input type="range" id="${id}" ${data} min="${o.min}" max="${o.max}" step="${o.step||1}" value="${esc(v)}"><b style="min-width:38px;text-align:center" data-out="${id}">${esc(v)}</b></div>`;
+  else if (type === "model" || type === "weapon" || type === "vehicle")
+    inner = `<div class="row"><input type="text" class="ltr" id="${id}" ${data} value="${esc(v)}"><button class="btn sm icon" data-cat="${type}" data-for="${id}">📖</button></div><div class="hint" data-label-for="${id}">${catLabel(type, v)}</div>`;
+  else if (type === "wav"){
+    const snd = state.sounds[o.slot];
+    inner = `<div class="row"><button class="btn sm" data-wav="${o.slot}">🎵 طلع WAV</button><span class="hint">${snd?esc(snd.name):"ما كاين حتى ملف"}</span>${snd?`<button class="btn sm icon" data-wavplay="${o.slot}">▶️</button><button class="btn sm icon" data-wavdel="${o.slot}">🗑️</button>`:""}</div>`;
+  }
+  return `<div class="fld${wide}"><label for="${id}">${label}</label>${inner}${o&&o.hint?`<div class="hint">${o.hint}</div>`:""}</div>`;
+}
+function catList(type){ return type === "model" ? SKINS : (type === "weapon" ? WEAPONS : VEHICLES); }
+function catLabel(type, v){
+  const it = catList(type).find(x => x[0].toLowerCase() === String(v).toLowerCase());
+  return it ? it[1] + " " + it[2] : (v && v !== "None" ? "✏️ مخصص" : "");
+}
+function renderForm(target, groups){
+  const el = typeof target === "string" ? $(target) : target;
+  el.innerHTML = groups.map(g => `${g.title?`<h3>${g.title}</h3>`:""}${g.hint?`<p class="hint">${g.hint}</p>`:""}<div class="grid">${g.fields.map(f => fieldHTML(g.sec, f, state.ini[g.sec])).join("")}</div>`).join("");
+}
+function readInput(el){
+  const t = el.dataset.t;
+  if (t === "b") return el.checked;
+  if (t === "i") { const n = parseInt(el.value, 10); return isNaN(n) ? 0 : n; }
+  if (t === "f" || t === "range") { const n = parseFloat(el.value); return isNaN(n) ? 0 : n; }
+  return el.value;
+}
+document.addEventListener("input", e => {
+  const el = e.target;
+  if (el.dataset && el.dataset.mirror){ const c = document.getElementById(el.dataset.mirror); if (/^#[0-9a-f]{6}$/i.test(el.value)){ c.value = el.value; c.dispatchEvent(new Event("input", {bubbles:true})); } return; }
+  if (!el.dataset || !el.dataset.sec) return;
+  state.ini[el.dataset.sec][el.dataset.k] = readInput(el);
+  if (el.dataset.t === "c"){ const m = document.querySelector(`[data-mirror="${el.id}"]`); if (m) m.value = el.value; }
+  if (el.dataset.t === "range"){ const o = document.querySelector(`[data-out="${el.id}"]`); if (o) o.textContent = el.value; }
+  if (["model","weapon","vehicle"].includes(el.dataset.t)){ const l = document.querySelector(`[data-label-for="${el.id}"]`); if (l) l.textContent = catLabel(el.dataset.t, el.value); }
+  changed();
+});
+document.addEventListener("change", e => { if (e.target.dataset && e.target.dataset.sec && e.target.tagName === "SELECT") { state.ini[e.target.dataset.sec][e.target.dataset.k] = e.target.value; changed(); } });
+document.addEventListener("click", e => {
+  const chip = e.target.closest(".chips[data-sec] .chip");
+  if (chip){
+    const box = chip.parentElement; chip.classList.toggle("on");
+    state.ini[box.dataset.sec][box.dataset.k] = Array.from(box.querySelectorAll(".chip.on")).map(c => c.dataset.val).join(",");
+    changed(); return;
+  }
+  const cap = e.target.closest("[data-capture]");
+  if (cap){ captureKey(document.getElementById(cap.dataset.capture)); return; }
+  const cat = e.target.closest("[data-cat]");
+  if (cat){ const input = document.getElementById(cat.dataset.for); openCatalog(cat.dataset.cat, v => { input.value = v; input.dispatchEvent(new Event("input", {bubbles:true})); }); return; }
+  const wv = e.target.closest("[data-wav]");
+  if (wv){ pickWav(wv.dataset.wav); return; }
+  const wp = e.target.closest("[data-wavplay]");
+  if (wp){ const s = state.sounds[wp.dataset.wavplay]; if (s) new Audio(s.data).play(); return; }
+  const wd = e.target.closest("[data-wavdel]");
+  if (wd){ state.sounds[wd.dataset.wavdel] = null; changed(); renderAllForms(); return; }
+});
+
+// key capture: KeyboardEvent.code -> .NET Keys name
+function codeToKey(e){
+  const c = e.code || "";
+  if (/^Key[A-Z]$/.test(c)) return c.slice(3);
+  if (/^Digit\d$/.test(c)) return "D" + c.slice(5);
+  if (/^Numpad\d$/.test(c)) return "NumPad" + c.slice(6);
+  if (/^F\d{1,2}$/.test(c)) return c;
+  const map = {NumpadAdd:"Add",NumpadSubtract:"Subtract",NumpadMultiply:"Multiply",NumpadDivide:"Divide",NumpadDecimal:"Decimal",Delete:"Delete",Insert:"Insert",Home:"Home",End:"End",PageUp:"PageUp",PageDown:"PageDown",Pause:"Pause",ScrollLock:"Scroll",
+    ArrowUp:"Up",ArrowDown:"Down",ArrowLeft:"Left",ArrowRight:"Right",Space:"Space",Tab:"Tab",Backspace:"Back",Backquote:"Oemtilde",Minus:"OemMinus",Equal:"Oemplus",BracketLeft:"OemOpenBrackets",BracketRight:"Oem6",Backslash:"Oem5",Semicolon:"Oem1",Quote:"Oem7",Comma:"Oemcomma",Period:"OemPeriod",Slash:"OemQuestion"};
+  return map[c] || null;
+}
+function captureKey(select){
+  toast("⌨️ ضغط على الزر اللي بغيتي... (Esc = إلغاء)");
+  select.style.boxShadow = "0 0 0 3px #ffc828";
+  const h = ev => {
+    ev.preventDefault(); ev.stopPropagation();
+    window.removeEventListener("keydown", h, true);
+    select.style.boxShadow = "";
+    if (ev.key === "Escape") return toast("تلغى");
+    const k = codeToKey(ev);
+    if (!k) return toast("⚠️ هاد الزر ما مدعومش");
+    if (![...select.options].some(o => o.value === k)) select.add(new Option(k, k));
+    select.value = k;
+    select.dispatchEvent(new Event("change", {bubbles:true}));
+    select.dispatchEvent(new Event("input", {bubbles:true}));
+    toast("✅ " + k);
+  };
+  window.addEventListener("keydown", h, true);
+}
+
+// ------------------------------------------------------------- images (PNG 128)
+function emojiToPng(emoji, size){
+  size = size || 128;
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const g = c.getContext("2d");
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.font = Math.floor(size * 0.8) + 'px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+  g.fillText(emoji || "⭐", size / 2, size / 2 + size * 0.05);
+  return c.toDataURL("image/png");
+}
+function fileToPng(file, cb){
+  const r = new FileReader();
+  r.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas"); c.width = c.height = 128;
+      const g = c.getContext("2d");
+      const s = Math.min(128 / img.width, 128 / img.height);
+      const w = img.width * s, h = img.height * s;
+      g.drawImage(img, (128 - w) / 2, (128 - h) / 2, w, h);
+      cb(c.toDataURL("image/png"));
+    };
+    img.onerror = () => toast("⚠️ الصورة ما تقراتش");
+    img.src = r.result;
+  };
+  r.readAsDataURL(file);
+}
+function pickImage(cb){
+  const inp = $("#fileImg");
+  inp.onchange = () => { if (inp.files[0]) fileToPng(inp.files[0], cb); inp.value = ""; };
+  inp.click();
+}
+function pickWav(slot){
+  const inp = $("#fileWav");
+  inp.onchange = () => {
+    const f = inp.files[0]; inp.value = "";
+    if (!f) return;
+    if (!/\.wav$/i.test(f.name)) return toast("⚠️ خاص ملف WAV (SoundPlayer ما كيقراش MP3)");
+    const r = new FileReader();
+    r.onload = () => { state.sounds[slot] = {name:f.name, data:r.result}; const sec = slot === "kill" ? "KillEffects" : "Death"; state.ini[sec].Sound = slot + ".wav"; state.ini[sec].SoundEnabled = true; changed(); renderAllForms(); toast("✅ " + f.name); };
+    r.readAsDataURL(f);
+  };
+  inp.click();
+}
+function thumbHTML(img, emoji){ return img ? `<img src="${img}" alt="">` : esc(emoji || "⭐"); }
+
+// ------------------------------------------------------------- catalog modal
+let catCb = null, catType = "";
+function allGifts(){ return GIFTS.concat(state.customGifts.map(g => [g[0], g[1] || "🎁", g[2] || 0, true])); }
+function openCatalog(type, cb){
+  catType = type; catCb = cb;
+  $("#mTitle").textContent = {gift:"🎁 كتالوج الهدايا", model:"🧍 السكنات", weapon:"🔫 الأسلحة", vehicle:"🚗 الطوموبيلات", action:"⚡ الأكسيونات"}[type];
+  $("#mSearch").value = "";
+  $("#mAdd").style.display = type === "gift" ? "" : "none";
+  renderCatalog();
+  $("#modal").classList.add("on");
+  setTimeout(() => $("#mSearch").focus(), 50);
+}
+function renderCatalog(){
+  const q = $("#mSearch").value.trim().toLowerCase();
+  let items;
+  if (catType === "gift") items = allGifts().map(g => ({v:g[0], e:g[1], t:g[0], s:"≈ " + g[2] + " كوينز", raw:g}));
+  else if (catType === "action") items = ACTIONS.map(a => ({v:a.key, e:a.emoji, t:a.name, s:GROUPS[a.group] + " · " + a.key}));
+  else items = catList(catType).map(x => ({v:x[0], e:x[1], t:x[2], s:x[0]}));
+  if (q) items = items.filter(i => (i.v + " " + i.t + " " + i.s).toLowerCase().includes(q));
+  $("#mBody").innerHTML = items.map((i, n) => `<div class="citem" data-i="${n}"><span class="e">${esc(i.e)}</span><div style="min-width:0"><b>${esc(i.t)}</b><small>${esc(i.s)}</small></div></div>`).join("") || `<p class="hint">ما كاين والو</p>`;
+  $("#mBody").onclick = e => { const c = e.target.closest(".citem"); if (!c) return; const it = items[+c.dataset.i]; closeModal(); if (catCb) catCb(it.v, it); };
+}
+function closeModal(){ $("#modal").classList.remove("on"); }
+$("#mSearch").addEventListener("input", renderCatalog);
+$("#mClose").onclick = closeModal;
+$("#modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
+$("#mAdd").onclick = () => {
+  const name = prompt("سمية الهدية بالضبط كيفما كتبان فـ gifts-log.txt:"); if (!name) return;
+  const emoji = prompt("إيموجي:", "🎁") || "🎁";
+  const coins = parseInt(prompt("الكوينز (تقريباً):", "1"), 10) || 0;
+  state.customGifts.push([name.trim(), emoji, coins]); changed(); renderCatalog();
+};
+document.addEventListener("keydown", e => { if (e.key === "Escape"){ closeModal(); $("#promptModal").classList.remove("on"); } });
+
+// ------------------------------------------------------------- interactions
+function actionOptions(sel){
+  return Object.keys(GROUPS).map(g => `<optgroup label="${GROUPS[g]}">${ACTIONS.filter(a => a.group === g).map(a => `<option value="${a.key}" ${a.key===sel?"selected":""}>${a.emoji} ${a.name}</option>`).join("")}</optgroup>`).join("");
+}
+function giftCoins(name){ const g = allGifts().find(x => x[0].toLowerCase() === String(name).toLowerCase()); return g ? g[2] : null; }
+function iField(i, k, label, type, o){
+  const it = state.interactions[i];
+  const v = it[k];
+  const d = `data-ii="${i}" data-ik="${k}" data-t="${type}"`;
+  if (type === "b") return `<label class="tog" style="background:var(--bg2);border:1px solid var(--line2);border-radius:9px;padding:6px 9px"><span>${label}</span><span class="sw"><input type="checkbox" ${d} ${v?"checked":""}><i></i></span></label>`;
+  let inner;
+  if (type === "s") inner = `<select ${d}>${o.map(x => Array.isArray(x)?x:[x,x]).map(x => `<option value="${esc(x[0])}" ${x[0]==v?"selected":""}>${esc(x[1])}</option>`).join("")}</select>`;
+  else if (type === "k") inner = `<div class="row" style="display:flex;gap:5px"><select ${d} id="ik_${i}">${KEYS.map(x => `<option ${x===v?"selected":""}>${x}</option>`).join("")}</select><button class="btn sm icon" data-capture="ik_${i}" title="التقاط">🎯</button></div>`;
+  else if (type === "model" || type === "weapon" || type === "vehicle") inner = `<div class="row" style="display:flex;gap:5px"><input type="text" class="ltr" ${d} id="ix_${i}_${k}" value="${esc(v)}"><button class="btn sm icon" data-cat="${type}" data-for="ix_${i}_${k}">📖</button></div><div class="hint" data-label-for="ix_${i}_${k}">${catLabel(type, v)}</div>`;
+  else inner = `<input type="${type==="t"?"text":"number"}" ${d} value="${esc(v)}" ${type==="f"?'step="0.1"':""} ${o&&o.min!=null?`min="${o.min}"`:""} ${o&&o.max!=null?`max="${o.max}"`:""}>`;
+  return `<div><label>${label}</label>${inner}</div>`;
+}
+function mainFields(i){
+  const it = state.interactions[i], t = (ACT[it.Action] || {}).type;
+  if (t === "chars") return iField(i,"Model","🧍 السكن","model") + (it.Action === "Animals" ? "" : iField(i,"Weapon","🔫 السلاح","weapon"));
+  if (t === "crew") return iField(i,"VehicleModel","🚘 الطوموبيل","vehicle") + iField(i,"Model","🧍 السكن","model");
+  if (t === "clone") return iField(i,"Weapon","🔫 السلاح","weapon");
+  if (t === "vehicle") return iField(i,"VehicleModel","🚗 الطوموبيل","vehicle");
+  if (t === "weapon") return iField(i,"Weapon","🔫 السلاح","weapon");
+  if (t === "hp") return iField(i,"Amount","💖 نقاط +HP","i",{min:1});
+  if (t === "timed") return iField(i,"Duration","⏱️ المدة (ثانية)","f",{min:0.5});
+  if (t === "carrain") return iField(i,"Duration","⏱️ المدة (ثانية)","f",{min:0.5}) + iField(i,"Amount","🚗 عدد فالثانية","i",{min:1,max:20});
+  if (t === "weather") return iField(i,"Weather","🌦️ الطقس","s",WEATHERS) + iField(i,"Duration","⏱️ المدة","f",{min:0.5});
+  if (t === "random") return `<div class="hint">كيختار من لائحة 🎲 العشوائي (القسم 05)</div>`;
+  return `<div class="hint">أكسيون فوري</div>`;
+}
+function triggerFields(i){
+  const it = state.interactions[i], t = it.Trigger;
+  if (t === "Gift"){
+    const c = giftCoins(it.GiftName);
+    return `<div><label>🎁 الهدية</label><div class="row" style="display:flex;gap:5px"><input type="text" class="ltr" list="giftNames" data-ii="${i}" data-ik="GiftName" data-t="t" value="${esc(it.GiftName)}"><button class="btn sm icon" data-giftcat="${i}">📖</button></div>${c!=null?`<div class="coins">≈ ${c} كوينز</div>`:""}</div>` + iField(i,"GiftId","🆔 ID (اختياري)","t");
+  }
+  if (t === "Likes") return iField(i,"LikesCount","❤️ كل شحال من لايك","i",{min:1});
+  if (t === "Comment") return iField(i,"CommentText","💬 الكلمة (خاوي = أي تعليق)","t");
+  if (t === "Key") return `<div class="hint">كيخدم غير بزر التجربة</div>`;
+  return iField(i,"OncePerUser","مرة وحدة لكل شخص","b");
+}
+function advFields(i){
+  const it = state.interactions[i], t = (ACT[it.Action] || {}).type;
+  const person = t === "chars" || t === "crew" || t === "clone";
+  let h = `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">`;
+  h += iField(i,"Name","🏷️ الاسم (فالدليل)","t");
+  h += `<div style="grid-column:span 2">${iField(i,"Message","🔔 جملة الإشعار ({name} {count})","t")}</div>`;
+  h += iField(i,"Effect","✨ تأثير النزول","s",EFFECTS);
+  h += iField(i,"Cooldown","⏳ الانتظار بين كل مرة (ث)","f",{min:0});
+  h += iField(i,"MultiplyByCombo","✖️ ضرب فالكومبو","b");
+  h += iField(i,"EntryCam","🎥 كاميرا الدخول","b");
+  h += iField(i,"ShowInGuide","📋 يبان فدليل الهدايا","b");
+  if (it.Trigger !== "Follow" && it.Trigger !== "Share" && it.Trigger !== "Subscribe") h += iField(i,"OncePerUser","👤 مرة وحدة لكل شخص","b");
+  if (person){
+    h += iField(i,"Health","❤️ الدم (نقاط)","i",{min:1});
+    h += iField(i,"Armor","🛡️ الدرع","i",{min:0,max:100});
+    h += iField(i,"Accuracy","🎯 الدقة %","i",{min:0,max:100});
+    h += iField(i,"CombatAbility","🥋 مستوى القتال","s",[[0,"0 · ضعيف"],[1,"1 · متوسط"],[2,"2 · محترف"]]);
+    h += iField(i,"CombatMovement","😤 الشراسة","s",[[0,"0 · واقف"],[1,"1 · دفاعي"],[2,"2 · هجومي"],[3,"3 · انتحاري"]]);
+    h += iField(i,"ShootRate","🔥 سرعة الضرب","i",{min:10,max:1000});
+    h += iField(i,"Ammo","📦 الرصاص","i",{min:1});
+    h += iField(i,"SpawnDistance","📏 المسافة (متر)","f",{min:2});
+    h += iField(i,"Blip","📍 علامة فالخريطة","b");
+    if (t === "crew") h += iField(i,"Weapon","🔫 سلاح الطاقم","weapon");
+  }
+  if (t === "vehicle") h += iField(i,"WarpIntoVehicle","🪑 دخلو للسيارة","b");
+  if (t === "weapon") h += iField(i,"Ammo","📦 الرصاص","i",{min:1});
+  h += `</div>`;
+  return h;
+}
+function renderInteractions(){
+  const box = $("#interList");
+  box.innerHTML = state.interactions.map((it, i) => {
+    const a = ACT[it.Action] || ACTIONS[0];
+    return `<div class="inter ${it.Enabled?"":"off"} ${it.open?"open":""}" data-i="${i}">
+      <span class="idx">#${i+1}</span>
+      <div class="col">
+        ${iField(i,"Trigger","⚡ نوع التفاعل","s",TRIGGERS)}
+        ${iField(i,"Enabled","مشعول","b")}
+        ${iField(i,"TestKey","⌨️ زر التجربة","k")}
+      </div>
+      <div class="col">
+        ${triggerFields(i)}
+        <div class="imgpick"><div class="thumb gift" data-img="gift" data-i="${i}" title="صورة الهدية (PNG ولا إيموجي)">${thumbHTML(it.giftImg, it.giftEmoji)}</div>
+          <div style="flex:1"><label>صورة الهدية</label><div style="display:flex;gap:4px"><input type="text" data-ii="${i}" data-ik="giftEmoji" data-t="t" value="${esc(it.giftEmoji)}" style="width:60px;text-align:center">${it.giftImg?`<button class="btn sm icon" data-imgdel="gift" data-i="${i}">🗑️</button>`:""}</div></div></div>
+      </div>
+      <div class="col">
+        <div><label>🎬 الأكشن</label><select data-ii="${i}" data-ik="Action" data-t="s">${actionOptions(it.Action)}</select></div>
+        <div class="imgpick"><div class="thumb act" data-img="act" data-i="${i}" title="صورة الأكشن">${thumbHTML(it.actImg, it.actEmoji)}</div>
+          <div style="flex:1"><label>صورة الأكشن</label><div style="display:flex;gap:4px"><input type="text" data-ii="${i}" data-ik="actEmoji" data-t="t" value="${esc(it.actEmoji)}" style="width:60px;text-align:center">${it.actImg?`<button class="btn sm icon" data-imgdel="act" data-i="${i}">🗑️</button>`:""}</div></div></div>
+        <span class="tag">${GROUPS[a.group]}</span>
+      </div>
+      <div class="col">
+        <div><label>🔢 العدد</label><div class="units"><button class="btn" data-units="-1" data-i="${i}">−</button><input type="number" min="1" max="999" data-ii="${i}" data-ik="Units" data-t="i" value="${it.Units}"><button class="btn" data-units="1" data-i="${i}">+</button></div></div>
+        ${mainFields(i)}
+      </div>
+      <div class="col tools">
+        <button class="btn sm" data-tool="adv" data-i="${i}">⚙️ متقدم</button>
+        <button class="btn sm" data-tool="dup" data-i="${i}">📄 نسخ</button>
+        <button class="btn sm" data-tool="prompt" data-i="${i}">✨ برومبت</button>
+        <div style="display:flex;gap:4px"><button class="btn sm icon" data-tool="up" data-i="${i}">↑</button><button class="btn sm icon" data-tool="down" data-i="${i}">↓</button></div>
+        <button class="btn sm red" data-tool="del" data-i="${i}">🗑️ حذف</button>
+      </div>
+      <div class="adv">${advFields(i)}</div>
+    </div>`;
+  }).join("") || `<p class="hint">ما كاين حتى تفاعل. زيد واحد 👇</p>`;
+  let dl = document.getElementById("giftNames");
+  if (!dl){ dl = document.createElement("datalist"); dl.id = "giftNames"; document.body.appendChild(dl); }
+  dl.innerHTML = allGifts().map(g => `<option value="${esc(g[0])}">${esc(g[1])} ≈${g[2]}</option>`).join("");
+}
+function onActionChange(it, prev){
+  const a = ACT[it.Action];
+  if (!a) return;
+  if (!it.actImg && (!it.actEmoji || (ACT[prev] && it.actEmoji === ACT[prev].emoji))) it.actEmoji = a.emoji;
+  const dm = {SpawnEnemy:["s_m_y_clown_01","WEAPON_BAT",150],SpawnAlly:["s_m_y_swat_01","WEAPON_CARBINERIFLE",300],Animals:["a_c_mtlion","None",200],MafiaCar:["g_m_m_chicold_01","WEAPON_MICROSMG",150],MotoHitman:["g_m_y_lost_01","WEAPON_MICROSMG",150],Clone:["","WEAPON_CARBINERIFLE",300]};
+  if (dm[it.Action]){ const d = dm[it.Action]; it.Model = d[0]; it.Weapon = d[1]; it.Health = d[2]; }
+  if (it.Action === "MafiaCar"){ it.VehicleModel = "schafter2"; it.SpawnDistance = 80; }
+  if (it.Action === "MotoHitman"){ it.VehicleModel = "bati"; it.SpawnDistance = 70; }
+  if (it.Action === "GiveVehicle") it.VehicleModel = "zentorno";
+  if (it.Action === "GiveWeapon") it.Weapon = "WEAPON_CARBINERIFLE";
+  if (it.Action === "AddHealth") it.Amount = 250;
+  if (it.Action === "CarRain") it.Amount = 2;
+}
+const interBox = $("#interList");
+interBox.addEventListener("input", e => {
+  const el = e.target; if (!el.dataset || el.dataset.ii == null || el.tagName === "SELECT") return;
+  const it = state.interactions[+el.dataset.ii], k = el.dataset.ik;
+  it[k] = el.dataset.t === "b" ? el.checked : (el.dataset.t === "i" ? (parseInt(el.value, 10) || 0) : (el.dataset.t === "f" ? (parseFloat(el.value) || 0) : el.value));
+  if (k === "Units") it.Units = Math.max(1, Math.min(999, it.Units));
+  if (k === "Enabled") el.closest(".inter").classList.toggle("off", !it.Enabled);
+  if (["model","weapon","vehicle"].includes(el.dataset.t)){ const l = document.querySelector(`[data-label-for="${el.id}"]`); if (l) l.textContent = catLabel(el.dataset.t, el.value); }
+  if (k === "giftEmoji" && !it.giftImg) el.closest(".imgpick").querySelector(".thumb").textContent = it.giftEmoji;
+  if (k === "actEmoji" && !it.actImg) el.closest(".imgpick").querySelector(".thumb").textContent = it.actEmoji;
+  if (k === "GiftName"){ const g = allGifts().find(x => x[0].toLowerCase() === it.GiftName.toLowerCase()); if (g && !it.giftImg) it.giftEmoji = g[1]; }
+  changed();
+});
+interBox.addEventListener("change", e => {
+  const el = e.target; if (!el.dataset || el.dataset.ii == null) return;
+  const it = state.interactions[+el.dataset.ii], k = el.dataset.ik;
+  if (el.tagName === "SELECT"){
+    const prev = it[k];
+    it[k] = el.dataset.t === "s" && /^\d+$/.test(el.value) && (k === "CombatAbility" || k === "CombatMovement") ? +el.value : el.value;
+    if (k === "Action") onActionChange(it, prev);
+    if (k === "Action" || k === "Trigger" || k === "GiftName") renderInteractions();
+    changed();
+  }
+  if (k === "GiftName"){ renderInteractions(); changed(); }
+});
+interBox.addEventListener("click", e => {
+  const u = e.target.closest("[data-units]");
+  if (u){ const it = state.interactions[+u.dataset.i]; it.Units = Math.max(1, Math.min(999, it.Units + (+u.dataset.units))); u.parentElement.querySelector("input").value = it.Units; changed(); return; }
+  const gc = e.target.closest("[data-giftcat]");
+  if (gc){ const it = state.interactions[+gc.dataset.giftcat]; openCatalog("gift", (v, item) => { it.GiftName = v; if (!it.giftImg) it.giftEmoji = item.e; renderInteractions(); changed(); }); return; }
+  const th = e.target.closest(".thumb[data-img]");
+  if (th){ const it = state.interactions[+th.dataset.i]; pickImage(png => { it[th.dataset.img + "Img"] = png; renderInteractions(); changed(); }); return; }
+  const idl = e.target.closest("[data-imgdel]");
+  if (idl){ state.interactions[+idl.dataset.i][idl.dataset.imgdel + "Img"] = null; renderInteractions(); changed(); return; }
+  const t = e.target.closest("[data-tool]");
+  if (!t) return;
+  const i = +t.dataset.i, list = state.interactions;
+  switch (t.dataset.tool){
+    case "adv": list[i].open = !list[i].open; t.closest(".inter").classList.toggle("open", list[i].open); break;
+    case "dup": { const c = JSON.parse(JSON.stringify(list[i])); c.TestKey = "None"; list.splice(i + 1, 0, newInteraction(c)); renderInteractions(); break; }
+    case "prompt": showPrompts([i]); return;
+    case "up": if (i > 0){ [list[i-1], list[i]] = [list[i], list[i-1]]; renderInteractions(); } break;
+    case "down": if (i < list.length - 1){ [list[i+1], list[i]] = [list[i], list[i+1]]; renderInteractions(); } break;
+    case "del": if (confirm("نحيد هاد التفاعل؟")){ list.splice(i, 1); renderInteractions(); } break;
+  }
+  changed();
+});
+$("#btnAddInter").onclick = () => {
+  const used = new Set(state.interactions.map(x => x.TestKey));
+  const free = ["NumPad1","NumPad2","NumPad3","NumPad4","NumPad5","NumPad6","NumPad7","NumPad8","NumPad9","NumPad0"].find(k => !used.has(k)) || "None";
+  state.interactions.push(newInteraction({TestKey:free, open:true}));
+  renderInteractions(); changed();
+  interBox.lastElementChild.scrollIntoView({behavior:"smooth", block:"center"});
+};
+$("#btnGiftsCatalog").onclick = () => openCatalog("gift", (v, item) => { state.interactions.push(newInteraction({GiftName:v, giftEmoji:item.e, Name:"", open:true})); renderInteractions(); changed(); toast("➕ " + v); });
+
+// ------------------------------------------------------------- prompts (images for gifts & actions)
+const PROMPT_STYLES = [
+  ["3D","glossy 3D game icon, soft studio lighting, vibrant colors, rounded shapes, high detail, centered, isolated on a transparent background, no text"],
+  ["Neon","neon glow icon, dark background, cyberpunk style, bright outline in electric green and blue, centered, simple silhouette, no text"],
+  ["Cartoon","cute flat cartoon sticker, thick white outline, bold colors, playful, centered, transparent background, no text"],
+  ["GTA","GTA V loading screen art style, comic illustration, strong ink lines, dramatic shading, centered subject, transparent background, no text"]
+];
+const ACTION_SUBJECT = {SpawnEnemy:"an evil clown thug holding a baseball bat",SpawnAlly:"a SWAT police officer with a rifle giving a thumbs up",MafiaCar:"a black mafia sedan with gunmen leaning out of the windows",MotoHitman:"a hitman on a sport motorcycle aiming a pistol",Animals:"an angry mountain lion (cougar) leaping",Clone:"two identical heroes standing back to back",AddHealth:"a glowing pink heart with a plus sign",Heal:"a first aid kit with a green cross and sparkles",GodMode:"a golden shield with a halo",GiveVehicle:"a shiny supercar with a gift bow",GiveWeapon:"an assault rifle with a golden glow",GiveAllWeapons:"a weapon wheel full of guns",SuperSpeed:"a lightning bolt with speed lines and running shoes",SuperJump:"a character jumping high above rooftops",BoostVehicle:"a car with nitro flames from the exhaust",ClearArea:"a broom sweeping people away in a cartoon cloud",KillPlayer:"a skull with crossbones and red glow",Airstrike:"missiles falling from the sky with explosions",Fire:"a person on fire with big flames",Freeze:"a character frozen in a block of ice",RemoveWeapons:"a crossed-out gun",RemoveVehicle:"a car disappearing in a puff of smoke",EjectVehicle:"a driver flying out of a car seat",ExplodeVehicle:"a car exploding in a fireball",BurstTires:"a burst car tire with sparks",Launch:"a person launched into the sky with balloons",Skyfall:"a skydiver with an open parachute above clouds",Ragdoll:"a clumsy character tripping and falling",Drunk:"a dizzy character with spinning eyes and a beer mug",Earthquake:"a cracked city street during an earthquake",CarRain:"cars falling from a stormy sky like rain",ExplodeNearby:"a row of parked cars exploding",Storm:"a dark thunderstorm with lightning bolts",Blackout:"a city skyline with all lights turned off under the moon",SlowMotion:"an hourglass with bullets frozen in the air",LowGravity:"an astronaut floating above the moon",Teleport:"a swirling purple portal",Weather:"a sun, cloud and rain icon combined",Random:"a pair of glowing dice"};
+function promptsFor(i){
+  const it = state.interactions[i];
+  const subj = ACTION_SUBJECT[it.Action] || "a video game power-up";
+  const gift = it.Trigger === "Gift" ? (it.GiftName || "gift") : it.Trigger;
+  return PROMPT_STYLES.map(([n, s]) => ({style:n,
+    action:`Square 1:1 icon of ${subj}, ${s}.`,
+    gift:`Square 1:1 icon of the TikTok LIVE gift "${gift}" ${it.giftEmoji ? "(" + it.giftEmoji + ")" : ""}, ${s}.`}));
+}
+let promptText = "";
+function showPrompts(ids){
+  const parts = [];
+  let html = "";
+  ids.forEach(i => {
+    const it = state.interactions[i], a = ACT[it.Action] || {};
+    html += `<h3>#${i+1} ${esc(it.Name || a.name || "")}</h3>`;
+    promptsFor(i).forEach(p => {
+      html += `<div style="margin-bottom:8px"><span class="tag">${p.style}</span> <b>🎬 الأكشن</b><div class="prompt">${esc(p.action)}</div><b>🎁 الهدية</b><div class="prompt">${esc(p.gift)}</div></div>`;
+      parts.push(`#${i+1} ${it.Name || it.Action} [${p.style}]\nACTION: ${p.action}\nGIFT: ${p.gift}`);
+    });
+  });
+  promptText = parts.join("\n\n");
+  $("#pTitle").textContent = ids.length > 1 ? "✨ كل البرومبتات" : "✨ برومبت";
+  $("#pBody").innerHTML = html;
+  $("#promptModal").classList.add("on");
+}
+$("#pCopy").onclick = () => { navigator.clipboard.writeText(promptText).then(() => toast("📋 تنسخ"), () => toast("⚠️ ما قدرتش ننسخ")); };
+$("#pClose").onclick = () => $("#promptModal").classList.remove("on");
+$("#promptModal").addEventListener("click", e => { if (e.target.id === "promptModal") $("#promptModal").classList.remove("on"); });
+$("#btnAllPrompts").onclick = () => showPrompts(state.interactions.map((_, i) => i));
+</script>
+<script>
+"use strict";
+// ------------------------------------------------------------- section forms
+const TC_HINT = "أمثلة: rply_saturation · rply_vignette · NG_filmic01 · NG_filmnoir_BW01 · MP_Killstreak · REDMIST · spectator5 · LostTimeDay (خاصها تجربة)";
+function renderAllForms(){
+  renderForm("#concBox", [{sec:"Queue", fields:[
+    ["MaxEnemies","🦹 أقصى عدد ديال الأعداء","i",{min:1,max:100}],["MaxAllies","👮 أقصى عدد ديال المساعدين","i",{min:1,max:100}],
+    ["DelayMs","⏱️ الوقت بين كل نزول (ms)","i",{min:0}],["MaxPerEvent","🎁 أقصى لكل هدية (0 = بلا حد)","i",{min:0}]]}]);
+  renderForm("#formKeys", [
+    {sec:"General", title:"⌨️ الأزرار", fields:[["PowerKey","⏻ تشغيل / إطفاء","k"],["StartKey","▶️ بدا التحدي + الاتصال","k"],["HudStyleKey","🎨 شكل الهود","k"],["HudFontKey","🔤 الخط","k"],
+      ["LayoutKey","📱 16:9 ↔ 9:16","k"],["HypeTestKey","🔥 تجربة الحماس","k"],["PauseKey","⏸️ إيقاف مؤقت","k"],["EmergencyKey","🚨 الطوارئ (مسح كلشي)","k"]]},
+    {sec:"General", title:"⚙️ التشغيل", fields:[["TestKeysEnabled","🎯 أزرار التجربة","b"],["AutoReload","🔄 AutoReload (قراءة INI ملي يتبدل)","b"],["AutoImport","📥 AutoImport من Downloads","b"],
+      ["ShowLoadMessage","💬 رسالة «TikArena جاهز»","b"],["ShowStatusMessages","📝 رسائل الحالة","b"],["CleanupOnPowerOff","🧹 مسح كلشي ملي يتطفا","b"],["DebugLog","🐞 log.txt","b"]]},
+    {sec:"TikFinity", title:"🔌 TikFinity", fields:[["Enabled","الاتصال بـ TikFinity","b"],["Url","WebSocket","t",{ltr:true,wide:true}],["ReconnectSeconds","إعادة الاتصال (ث)","i",{min:1}],
+      ["LearnMode","📚 وضع التعلم (gifts-log.txt)","b"],["TestUserName","👤 اسم المجرب","t"]]}
+  ]);
+  renderForm("#formChallenge", [
+    {sec:"Challenge", title:"🏆 التحدي", fields:[["Enabled","التحدي (العداد)","b"],["DurationMinutes","⏱️ مدة الجولة (دقايق)","f",{min:0.1}],["AutoRestart","🔁 تعاود أوتوماتيكياً","b"],
+      ["EndScreenEnabled","🖼️ شاشة النهاية","b"],["EndScreenSeconds","مدة شاشة النهاية (ث)","f",{min:1}],["MvpEnabled","⭐ MVP","b"]]},
+    {sec:"Queue", title:"📋 الطابور والتنظيف", fields:[["CorpseCleanupSeconds","💨 مسح الجثث بعد (ث، 0 = مباشرة)","f",{min:0}],["VehicleCleanupSeconds","🚗 مسح الطوموبيلات بعد (ث)","f",{min:1}],["ClearQueueOnRoundEnd","🗑️ مسح الطابور فنهاية الجولة","b"]]}
+  ]);
+  renderForm("#formChars", [
+    {sec:"Player", title:"🧍 الشخصية ديالك", hint:"الدم بالنقاط الحقيقية (اللعبة كتزيد 100).", fields:[["ApplyOnRoundStart","تطبيق فبداية كل جولة","b"],["Health","❤️ الدم","i",{min:1}],["Armor","🛡️ الدرع","i",{min:0,max:100}],["Invincible","♾️ ما كيموتش (تجربة)","b"]]},
+    {sec:"World", title:"🌍 العالم", fields:[["PoliceIgnore","👮 البوليس كيتجاهلك (بلا نجوم)","b"],["GangsIgnore","🧢 العصابات كيتجاهلوك","b"]]}
+  ]);
+  renderRandom();
+  renderForm("#formHud", [
+    {sec:"Hud", title:"🖥️ عام", fields:[["Enabled","الهود","b"],["LayoutMode","📐 الوضع فالبداية","s",{opts:[["Normal","16:9 عادي"],["Vertical","9:16 TikTok"]]}],["Style","🎨 الشكل","s",{opts:STYLES}],
+      ["StyleCycle","F11 كيدور على","list",{opts:STYLES,wide:true}],["Font","🔤 الخط","s",{opts:FONTS}],["FontCycle","F8 كيدور على","list",{opts:FONTS,wide:true}],
+      ["FontScale","حجم الكتابة","range",{min:0.5,max:2,step:0.05}],["Opacity","الشفافية","range",{min:0,max:255}],["TextOutline","الحواشي","b"],["TextShadow","الظل","b"],
+      ["AccentColor","اللون الرئيسي","c"],["TextColor","لون الكتابة","c"],["PanelColor","لون الخلفية","c"],["WinColor","لون الفوز","c"],["LossColor","لون الخسارة","c"],
+      ["AvatarShape","شكل الصور","s",{opts:[["Circle","⚪ دائرة"],["Square","⬜ مربع"]]}],["HideRadar","🗺️ إخفاء الرادار","b"]]},
+    {sec:"Hud", title:"🏆 الفوز والخسارة", fields:[["ScoreEnabled","اللوحة","b"],["TitleEnabled","العنوان","b"],["Title","العنوان","t"],["ShowScore","الفوز والخسارة","b"],["ShowTimer","العداد","b"],["ShowStreak","السلسلة","b"]]},
+    {sec:"Hud", title:"👑 لوحة الداعمين", fields:[["Top3Enabled","اللوحة","b"],["ShowTop3","الداعمين","b"],["TopCount","عدد الداعمين","range",{min:1,max:10}],["Top3Title","العنوان","t"],["ShowCoins","الكوينز","b"],["ShowCounters","العدادات","b"],["ShowStatus","حالة TikFinity","b"]]},
+    {sec:"Hud", title:"❤️ شريط الطاقة", fields:[["HealthEnabled","الشريط","b"],["HealthLabel","الكلمة","t"],["HealthColor","اللون","c"],["ShowArmor","شريط الدرع","b"],["ShowHealthPoints","النقاط (722 / 1000)","b"]]},
+    {sec:"Hud", title:"🎁 دليل الهدايا", fields:[["GuideEnabled","الدليل","b"],["GuideMode","الشكل","s",{opts:[["Cards","🃏 كروت"],["List","📋 لائحة"],["Rotate","🔄 كيتبدلو"]]}],["GuideMax","أقصى عدد","i",{min:1,max:30}],
+      ["GuideRotateCount","Rotate: شحال فمرة","i",{min:1}],["GuideRotateSeconds","Rotate: كل (ث)","f",{min:1}],["GuideRandom","Rotate: عشوائي","b"],["GuideShowGiftImage","صورة الهدية","b"],["GuideShowActionImage","صورة الأكشن","b"],
+      ["GuideTitleEnabled","العنوان","b"],["GuideTitle","العنوان","t"],["GuideGiftColor","لون الهدية","c"],["GuideActionColor","لون الأكشن","c"]]},
+    {sec:"Hud", title:"🧍 فوق راس الشخصيات", fields:[["OverheadEnabled","مشعول","b"],["OverheadAvatar","الصورة","b"],["OverheadName","الاسم","b"],["OverheadHealth","شريط الدم","b"],["OverheadHeight","العلو","f",{min:0,step:0.1}]]},
+    {sec:"Notifications", title:"🔔 الإشعارات", fields:[["Enabled","مشعولة","b"],["Seconds","المدة (ث)","f",{min:1}],["MaxVisible","أقصى عدد","i",{min:1,max:20}],["ShowAvatar","صورة البروفايل","b"],["ShowGiftIcon","صورة الهدية","b"]]},
+    {sec:"KillFeed", title:"☠️ Kill Feed", fields:[["Enabled","مشعول","b"],["Seconds","المدة (ث)","f",{min:1}],["MaxVisible","أقصى عدد","i",{min:1,max:20}]]},
+    {sec:"Texts", title:"📝 النصوص", fields:Object.keys(state.ini.Texts).map(k => [k, k, "t"])}
+  ]);
+  renderForm("#formHype", [
+    {sec:"Hype", title:"🔥 عام", hint:"المتغيرات: {name} {level} {count} {rival}", fields:[["Enabled","رسائل الحماس","b"],["Seconds","المدة (ث)","f",{min:1}],["MaxVisible","أقصى عدد","i",{min:1,max:10}],["ShowLevel","الليفل (Lv)","b"],["Color","اللون الذهبي","c"]]},
+    {sec:"Hype", title:"👑 دخول الملك", fields:[["KingJoinEnabled","مشعول","b"],["KingJoinText","الجملة","t",{wide:true}]]},
+    {sec:"Hype", title:"⚠️ دخول VIP", fields:[["VipJoinEnabled","مشعول","b"],["VipJoinMinLevel","الليفل ≥","i",{min:0}],["VipJoinMinCoins","ولا الكوينز ≥","i",{min:0}],["VipJoinText","الجملة","t",{wide:true}]]},
+    {sec:"Hype", title:"👀 الرجوع (Comeback)", fields:[["ComebackEnabled","مشعول","b"],["ComebackMinCoins","عطا ≥ (كوينز)","i",{min:0}],["ComebackMinutes","سكت (دقايق)","f",{min:0.1}],["ComebackText","الجملة","t",{wide:true}]]},
+    {sec:"Hype", title:"⚔️ التحدي (Rivalry)", fields:[["RivalryEnabled","مشعول","b"],["RivalrySeconds","خلال (ث)","f",{min:1}],["RivalryText","الجملة","t",{wide:true}]]},
+    {sec:"Hype", title:"👑 ملك جديد", fields:[["NewKingEnabled","مشعول","b"],["NewKingMinCoins","الكوينز ≥","i",{min:0}],["NewKingText","الجملة","t",{wide:true}]]},
+    {sec:"Hype", title:"🔥 كومبو", fields:[["ComboEnabled","مشعول","b"],["ComboMin","العدد ≥","i",{min:2}],["ComboText","الجملة","t",{wide:true}]]}
+  ]);
+  renderForm("#formCam", [
+    {sec:"Camera", title:"🎥 الكاميرا", fields:[["InvincibleDuringCam","🛡️ ما كتموتش وقت الكاميرا","b"],["EntryEnabled","🎬 كاميرا الدخول","b"],["EntryMinCoins","للهدايا ≥ (كوينز)","i",{min:0}],["EntrySeconds","المدة (ث)","f",{min:0.5}],
+      ["KillerEnabled","🔪 كاميرا القاتل","b"],["KillerSeconds","المدة (ث)","f",{min:0.5}],["SlowMoMode","🐢 سلو موشن","s",{opts:[["Off","مطفي"],["EveryKill","كل قتلة"],["LastInWave","آخر عدو فالموجة"]]}],
+      ["SlowMoScale","السرعة","range",{min:0.05,max:1,step:0.05}],["SlowMoSeconds","المدة (ث)","f",{min:0.1}],["WinEnabled","🏆 كاميرا الفوز","b"],["WinSeconds","المدة (ث)","f",{min:0.5}]]}
+  ]);
+  renderForm("#formGfx", [
+    {sec:"Graphics", title:"🕘 الوقت والطقس", fields:[["LockTime","تثبيت الوقت","b"],["Hour","الساعة","i",{min:0,max:23}],["Minute","الدقيقة","i",{min:0,max:59}],["LockWeather","تثبيت الطقس","b"],["Weather","الطقس","s",{opts:WEATHERS.slice(1).concat(["Clear"])}]]},
+    {sec:"Graphics", title:"🎞️ فلتر Timecycle", fields:[["TimecycleEnabled","مشعول","b"],["Timecycle","الاسم","t",{ltr:true,hint:TC_HINT,wide:true}],["TimecycleStrength","القوة","range",{min:0,max:1,step:0.05}]]},
+    {sec:"Graphics", title:"👥 الكثافة", fields:[["DensityEnabled","مشعولة","b"],["PedDensity","الناس","range",{min:0,max:3,step:0.1}],["VehicleDensity","الطوموبيلات","range",{min:0,max:3,step:0.1}]]}
+  ]);
+  renderForm("#formFx", [
+    {sec:"KillEffects", title:"💀 تأثير القتل", fields:[["Enabled","مشعول","b"],["Effect","التأثير","s",{opts:KILL_EFFECTS}],["SmokeColor","لون الدخان","c"],["OnlyPlayerKills","غير اللي قتلتهم أنا","b"],["SoundEnabled","🎵 صوت WAV ديالك","b"],["Sound","ملف القتل","wav",{slot:"kill"}]]},
+    {sec:"Sounds", title:"🔊 أصوات اللعبة", fields:[["EnemySpawn","🦹 نزول عدو","sound"],["AllySpawn","👮 نزول مساعد","sound"],["Help","💚 المساعدة","sound"],["Kill","💀 القتل","sound"],["Hype","🔥 الحماس","sound"]]},
+    {sec:"Death", title:"⚰️ الاحتفال ملي كتموت", hint:"الرقصة وحمل التابوت تقريبيين (خاصهم تجربة فاللعبة).", fields:[["CelebrationEnabled","مشعول","b"],["Seconds","المدة (ث)","f",{min:1,max:60}],["Dance","💃 الرقصة","b"],["DanceDict","Anim Dict","t",{ltr:true}],["DanceAnim","Anim","t",{ltr:true}],
+      ["Coffin","⚰️ التابوت","b"],["CoffinModel","موديل التابوت","t",{ltr:true}],["SoundEnabled","🎵 موسيقى WAV (Coffin Dance)","b"],["Sound","ملف الموسيقى","wav",{slot:"death"}]]}
+  ]);
+  renderObsForm();
+}
+function renderRandom(){
+  const R = state.ini.Random;
+  const base = [{sec:"Random", title:"⚙️ إعدادات الأحداث العشوائية", fields:[["Duration","⏱️ المدة (ث)","f",{min:1}],["Effect","✨ التأثير","s",{opts:EFFECTS}],["EnemyModel","🦹 سكن العدو","model"],["EnemyWeapon","🔫 سلاح العدو","weapon"],["EnemyHealth","❤️ دم العدو","i",{min:1}],
+    ["AllyModel","👮 سكن المساعد","model"],["AllyWeapon","🔫 سلاح المساعد","weapon"],["AllyHealth","❤️ دم المساعد","i",{min:1}],["AnimalsAmount","🐺 عدد الحيوانات","i",{min:1}],["HealthAmount","💖 نقاط +HP","i",{min:1}],["VehicleModel","🚗 الطوموبيل","vehicle"],["GiveWeapon","🔫 السلاح","weapon"]]}];
+  const el = $("#formRandom");
+  renderForm(el, base);
+  const h = document.createElement("div");
+  h.innerHTML = `<h3>🎲 الأحداث (${RANDOM_ACTIONS.length}) · الحظ ديال كل واحد</h3><div class="grid">${RANDOM_ACTIONS.map(a => {
+    const A = ACT[a];
+    return `<div class="fld">${fieldHTML("Random",[a+"Enabled",A.emoji+" "+A.name,"b"],R)}${fieldHTML("Random",[a+"Weight","🍀 الحظ","range",{min:1,max:50}],R)}</div>`;
+  }).join("")}</div>`;
+  h.querySelectorAll(".fld .fld").forEach(x => { x.style.border = "0"; x.style.padding = "2px 0"; x.style.background = "none"; });
+  el.appendChild(h);
+}
+
+// ------------------------------------------------------------- HUD designer
+const FONT_CSS = {ChaletLondon:"Arial, Helvetica, sans-serif", ChaletComprimeCologne:"'Arial Narrow', Arial, sans-serif", Pricedown:"Impact, 'Arial Black', sans-serif", HouseScript:"'Brush Script MT', cursive", Monospace:"Consolas, monospace"};
+function rgba(hex, a){ const n = parseInt(String(hex).slice(1), 16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${Math.max(0,Math.min(1,a)).toFixed(3)})`; }
+function mixHex(a, b, t){ const x = parseInt(a.slice(1),16), y = parseInt(b.slice(1),16); const c = s => Math.round(((x>>s)&255) + (((y>>s)&255) - ((x>>s)&255)) * t); return "#" + [16,8,0].map(s => c(s).toString(16).padStart(2,"0")).join(""); }
+function bgCss(alpha){
+  const H = state.ini.Hud, op = H.Opacity / 255 * (alpha == null ? 1 : alpha), acc = H.AccentColor;
+  switch (String(H.Style).toLowerCase()){
+    case "glass": return `background:${rgba(mixHex(H.PanelColor,"#ffffff",0.12), op*0.55)};border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px)`;
+    case "neon": return `background:${rgba(H.PanelColor, op)};border:1px solid ${acc};box-shadow:0 0 0 2px ${rgba(acc,.25)},0 0 12px ${rgba(acc,.5)}`;
+    case "minimal": return `background:${rgba(H.PanelColor, op*0.3)}`;
+    case "esports": return `background:${rgba(H.PanelColor, op)};border-left:4px solid ${acc};border-bottom:2px solid ${rgba(acc,.5)}`;
+    case "retro": return `background:${rgba(H.PanelColor, op)};border:2px solid ${rgba(H.TextColor,.67)}`;
+    default: return `background:${rgba(H.PanelColor, op)};border-top:2px solid ${acc}`;
+  }
+}
+function fpx(scale){ return (scale * 38 * state.ini.Hud.FontScale).toFixed(1) + "px"; }
+function txtCss(){ const H = state.ini.Hud; return `font-family:${FONT_CSS[H.Font]||FONT_CSS.ChaletLondon};color:${H.TextColor};${H.TextOutline?"-webkit-text-stroke:.3px #000;":""}${H.TextShadow?"text-shadow:1px 1px 1px #000;":""}`; }
+function header(text, w){
+  const H = state.ini.Hud;
+  if (String(H.Style).toLowerCase() === "esports") return `<div style="background:${H.AccentColor};color:${H.PanelColor};text-align:center;font-size:${fpx(.34)};height:22px;line-height:22px;font-weight:700">${esc(text)}</div>`;
+  return `<div style="color:${H.AccentColor};text-align:center;font-size:${fpx(.34)};height:22px;line-height:22px;font-weight:700">${esc(text)}</div>`;
+}
+const SAMPLE_SUPS = [["Amine_77","🦁","#f59e0b",12500],["Sara.x","🌸","#ec4899",4300],["Yassine","🐺","#3b82f6",1250],["Nora","🦋","#8b5cf6",640],["Karim","🐉","#22c55e",300],["Lina","🌙","#06b6d4",120],["Omar","⚡","#eab308",99],["Hiba","🍓","#ef4444",50],["Adam","🎮","#10b981",20],["Salma","🌟","#f97316",5]];
+function avatarHTML(s, size){ const H = state.ini.Hud; return `<span style="display:inline-grid;place-items:center;width:${size}px;height:${size}px;border-radius:${H.AvatarShape==="Square"?"3px":"50%"};background:${s[2]};font-size:${size*0.6}px;flex:none">${s[1]}</span>`; }
+function thumbSmall(img, emoji, size){ return img ? `<img src="${img}" style="width:${size}px;height:${size}px;object-fit:contain;flex:none">` : `<span style="font-size:${size*0.8}px;width:${size}px;text-align:center;flex:none;line-height:${size}px">${esc(emoji||"")}</span>`; }
+
+function pvScore(){
+  const H = state.ini.Hud, rows = H.ScoreOrder.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="title" && H.TitleEnabled && H.Title) || (r==="score" && (H.ShowScore || (H.ShowTimer && state.ini.Challenge.Enabled))) || (r==="streak" && H.ShowStreak));
+  if (!rows.length) return null;
+  const w = 290; let h = 10, html = "";
+  rows.forEach(r => {
+    if (r === "title"){ html += `<div style="position:absolute;top:${h}px;left:0;width:${w}px">${header(H.Title)}</div>`; h += 26; }
+    if (r === "score"){
+      if (H.ShowScore) html += `<div style="position:absolute;top:${h+3}px;left:8px;width:72px;height:44px;background:${rgba(H.WinColor,.24)};border-top:3px solid ${H.WinColor};text-align:center"><div style="font-size:${fpx(.55)};color:${H.WinColor};line-height:1.1">3</div><div style="font-size:${fpx(.28)}">${esc(state.ini.Texts.WinShort)}</div></div>
+        <div style="position:absolute;top:${h+3}px;left:${w-80}px;width:72px;height:44px;background:${rgba(H.LossColor,.24)};border-top:3px solid ${H.LossColor};text-align:center"><div style="font-size:${fpx(.55)};color:${H.LossColor};line-height:1.1">1</div><div style="font-size:${fpx(.28)}">${esc(state.ini.Texts.LossShort)}</div></div>`;
+      if (H.ShowTimer && state.ini.Challenge.Enabled) html += `<div style="position:absolute;top:${h+6}px;left:0;width:${w}px;text-align:center;font-size:${fpx(.62)};font-weight:700">09:41</div>`;
+      h += 50;
+    }
+    if (r === "streak"){ html += `<div style="position:absolute;top:${h+2}px;left:0;width:${w}px;text-align:center;font-size:${fpx(.34)};color:${H.WinColor}">3 ${esc(state.ini.Texts.WinStreakText)}</div>`; h += 22; }
+  });
+  h += 4;
+  return {w, h, html:`<div class="hbg" style="${bgCss()}"></div>${html}`};
+}
+function pvTop(){
+  const H = state.ini.Hud, rows = H.Top3Order.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="top3" && H.ShowTop3) || (r==="counters" && H.ShowCounters) || (r==="status" && H.ShowStatus && state.ini.TikFinity.Enabled));
+  if (!rows.length) return null;
+  const w = 236, n = Math.max(1, Math.min(10, H.TopCount)); let h = 6, html = "";
+  const medal = ["#ffc828","#c8d2dc","#d78c50"];
+  rows.forEach(r => {
+    if (r === "top3"){
+      html += `<div style="position:absolute;top:${h}px;left:0;width:${w}px">${header(H.Top3Title)}</div>`; h += 24;
+      SAMPLE_SUPS.slice(0, n).forEach((s, i) => {
+        const mc = medal[i] || H.TextColor;
+        html += `<div style="position:absolute;top:${h+2}px;left:6px;width:${w-12}px;height:26px;background:${rgba(mc,.11)};display:flex;align-items:center;gap:6px;padding:0 6px;font-size:${fpx(.34)}"><b style="color:${mc};width:12px;text-align:center">${i+1}</b>${avatarHTML(s,22)}<span style="flex:1;overflow:hidden">${s[0]}</span>${H.ShowCoins?`<b style="color:${H.AccentColor}">${s[3]>=10000?(s[3]/1000).toFixed(1)+"K":s[3]}</b>`:""}</div>`;
+        h += 30;
+      });
+    }
+    if (r === "counters"){ const T = state.ini.Texts; html += `<div style="position:absolute;top:${h+3}px;left:0;width:${w}px;text-align:center;font-size:${fpx(.28)}">${esc(T.EnemiesShort)} 4 · ${esc(T.AlliesShort)} 2 · ${esc(T.QueueShort)} 7</div>`; h += 22; }
+    if (r === "status"){ html += `<div style="position:absolute;top:${h+3}px;left:0;width:${w}px;text-align:center;font-size:${fpx(.28)}"><span style="display:inline-block;width:7px;height:7px;background:${H.WinColor};margin-right:5px"></span>TikFinity</div>`; h += 22; }
+  });
+  h += 4;
+  return {w, h, html:`<div class="hbg" style="${bgCss()}"></div>${html}`};
+}
+function pvHealth(L){
+  const H = state.ini.Hud, w = Math.max(80, +L.HealthWidth || 260), h = 22 + 12 + (H.ShowArmor ? 8 : 0) + 8;
+  return {w, h, html:`<div class="hbg" style="${bgCss(0.85)}"></div>
+    <div style="position:absolute;top:3px;left:8px;font-size:${fpx(.34)}">${esc(H.HealthLabel)} 72.2%</div>
+    ${H.ShowHealthPoints?`<div style="position:absolute;top:3px;right:8px;font-size:${fpx(.34)}">722 / 1000</div>`:""}
+    <div style="position:absolute;top:22px;left:8px;width:${w-16}px;height:12px;background:rgba(0,0,0,.6)"><div style="width:72.2%;height:100%;background:${H.HealthColor}"></div></div>
+    ${H.ShowArmor?`<div style="position:absolute;top:37px;left:8px;width:${w-16}px;height:5px;background:rgba(0,0,0,.6)"><div style="width:60%;height:100%;background:#5aaaff"></div></div>`:""}`};
+}
+function triggerLabel(it){
+  switch (it.Trigger){ case "Gift": return it.GiftName || ("#" + it.GiftId); case "Likes": return it.LikesCount + " Likes"; case "Comment": return it.CommentText ? `"${it.CommentText}"` : "Comment"; default: return it.Trigger; }
+}
+function pvGuide(){
+  const H = state.ini.Hud;
+  let items = state.interactions.filter(i => i.Enabled && i.ShowInGuide && i.Trigger !== "Key");
+  items = items.slice(0, H.GuideMode === "Rotate" ? H.GuideRotateCount : H.GuideMax);
+  if (!items.length) return null;
+  const list = H.GuideMode === "List", w = list ? 270 : 290, rowH = list ? 26 : 36;
+  const titleH = H.GuideTitleEnabled && H.GuideTitle ? 26 : 0;
+  const h = titleH + items.length * (rowH + (list ? 0 : 4)) + (list ? 10 : 2);
+  let y = 0, html = list ? `<div class="hbg" style="${bgCss()}"></div>` : "";
+  if (titleH){ html += `<div style="position:absolute;top:0;left:0;width:${w}px;height:${titleH-2}px;${list?"":bgCss()}">${header(H.GuideTitle)}</div>`; y += titleH; }
+  if (list) y += 5;
+  items.forEach(it => {
+    const act = it.Name || (ACT[it.Action]||{}).name || it.Action;
+    if (list){
+      html += `<div style="position:absolute;top:${y}px;left:8px;height:${rowH}px;display:flex;align-items:center;gap:5px;font-size:${fpx(.34)}">${H.GuideShowGiftImage?thumbSmall(it.giftImg,it.giftEmoji,22):""}<span style="color:${H.GuideGiftColor}">${esc(triggerLabel(it))}</span><span style="opacity:.6">&gt;</span>${H.GuideShowActionImage?thumbSmall(it.actImg,it.actEmoji,22):""}<span>${esc(act)}</span></div>`;
+      y += rowH;
+    } else {
+      const gw = w * 0.42;
+      html += `<div style="position:absolute;top:${y}px;left:0;width:${gw}px;height:${rowH}px;background:${rgba(H.GuideGiftColor,H.Opacity/255*0.9)};display:flex;align-items:center;gap:4px;padding-left:6px;font-size:${fpx(.34)};color:#fff">${H.GuideShowGiftImage?thumbSmall(it.giftImg,it.giftEmoji,28):""}<span style="overflow:hidden;white-space:nowrap">${esc(triggerLabel(it))}</span></div>
+        <div style="position:absolute;top:${y}px;left:${gw}px;width:${w-gw}px;height:${rowH}px;background:${rgba(mixHex(H.PanelColor,H.GuideActionColor,.25),H.Opacity/255)};border-left:3px solid ${H.GuideActionColor};display:flex;align-items:center;gap:4px;padding-left:6px;font-size:${fpx(.34)}">${H.GuideShowActionImage?thumbSmall(it.actImg,it.actEmoji,28):""}<span style="overflow:hidden;white-space:nowrap">${esc(act)}</span></div>`;
+      y += rowH + 4;
+    }
+  });
+  return {w, h, html};
+}
+function pvFeed(rows, rowH, img, size, hype, panel, L){
+  const H = state.ini.Hud;
+  const w = Math.min(520, Math.max(150, Math.max(...rows.map(r => 12 + img + 6 + r.t.length * size * 17 + (r.icon ? img + 6 : 0) + (hype ? 44 : 0)))));
+  const pos = L[panel + "Position"] || "";
+  const al = /Right$/.test(pos) ? "flex-end" : (/Left$/.test(pos) ? "flex-start" : "center");
+  let html = `<div style="display:flex;flex-direction:column;gap:4px;align-items:${al}">`;
+  rows.forEach(r => {
+    html += `<div style="position:relative;height:${rowH}px;display:flex;align-items:center;gap:6px;padding:0 6px;font-size:${fpx(size)};${bgCss()};${hype?`border:1px solid ${rgba(state.ini.Hype.Color,.86)};`:""}">${avatarHTML(r.s, img)}${hype&&state.ini.Hype.ShowLevel?`<b style="background:${state.ini.Hype.Color};color:#000;font-size:${fpx(.25)};padding:0 4px">Lv ${r.lv}</b>`:""}<span style="color:${hype?state.ini.Hype.Color:H.TextColor};white-space:nowrap">${esc(r.t)}</span>${r.icon?thumbSmall(r.icon.img,r.icon.emoji,img):""}</div>`;
+  });
+  html += `</div>`;
+  return {w, h:rows.length * (rowH + 4), html};
+}
+function fill(t, n){ return String(t||"").replace(/\{name\}/g, n).replace(/\{count\}/g, "3").replace(/\{level\}/g, "25").replace(/\{rival\}/g, "Sara.x"); }
+function anchor(L, p, w, h, frame){
+  const pos = String(L[p + "Position"] || "TopLeft"); const m = 14;
+  let x = /Left$/.test(pos) ? frame.x + m : (/Right$/.test(pos) ? frame.x + frame.w - w - m : frame.x + (frame.w - w) / 2);
+  let y = /^Top/.test(pos) ? m : (/^Bottom/.test(pos) ? 720 - h - m - 40 : (720 - h) / 2);
+  return [x + (+L[p + "OffsetX"] || 0), y + (+L[p + "OffsetY"] || 0)];
+}
+function renderPreview(){
+  const stage = $("#stage"), vp = $("#vp");
+  if (!stage.clientWidth) return;
+  vp.style.transform = `scale(${stage.clientWidth / 1280})`;
+  const vert = state.ui.preview === "Vertical";
+  const L = state.ini[vert ? "LayoutVertical" : "Layout"], H = state.ini.Hud;
+  const frame = vert ? {x:437.5, w:405} : {x:0, w:1280};
+  const sc = +L.Scale || 1;
+  const ints = state.interactions.filter(i => i.Enabled);
+  const panels = {
+    Score: H.ScoreEnabled && pvScore(),
+    Top3: H.Top3Enabled && pvTop(),
+    Health: H.HealthEnabled && pvHealth(L),
+    Guide: H.GuideEnabled && pvGuide(),
+    Notif: state.ini.Notifications.Enabled && pvFeed(ints.slice(0, Math.min(3, state.ini.Notifications.MaxVisible)).map((it, n) => ({s:SAMPLE_SUPS[n], t:fill(it.Message || it.Name, SAMPLE_SUPS[n][0]), icon:state.ini.Notifications.ShowGiftIcon ? {img:it.giftImg, emoji:it.giftEmoji} : null})), 30, 24, .34, false, "Notif", L),
+    Feed: state.ini.KillFeed.Enabled && pvFeed([0,2].map(n => ({s:SAMPLE_SUPS[n], t:fill(state.ini.Texts.KillFeedText, SAMPLE_SUPS[n][0])})), 26, 20, .34, false, "Feed", L),
+    Hype: state.ini.Hype.Enabled && pvFeed([{s:SAMPLE_SUPS[0], t:fill(state.ini.Hype.KingJoinText, SAMPLE_SUPS[0][0]), lv:48},{s:SAMPLE_SUPS[1], t:fill(state.ini.Hype.ComboText, SAMPLE_SUPS[1][0]), lv:25}], 38, 30, .38, true, "Hype", L)
+  };
+  let html = vert ? `<div class="vframe" style="left:${frame.x}px;width:${frame.w}px"></div>` : "";
+  Object.keys(panels).forEach(p => {
+    const P = panels[p];
+    if (!P || !L[p + "Show"]) return;
+    const [x, y] = anchor(L, p, P.w * sc, P.h * sc, frame);
+    html += `<div class="pp ${state.ui.selPanel===p?"sel":""}" data-panel="${p}" style="left:${x}px;top:${y}px;width:${P.w}px;height:${P.h}px;transform:scale(${sc});${txtCss()}">${P.html}</div>`;
+  });
+  html += `<div style="position:absolute;left:${frame.x + frame.w/2 - 40}px;top:330px;${txtCss()}text-align:center;font-size:${fpx(.3)}">${avatarHTML(SAMPLE_SUPS[2],30)}<div style="color:${H.LossColor}">${SAMPLE_SUPS[2][0]}</div><div style="width:56px;height:5px;background:rgba(0,0,0,.6);margin:2px auto"><div style="width:70%;height:100%;background:${H.LossColor}"></div></div><div style="font-size:44px;line-height:1">🤡</div></div>`;
+  vp.innerHTML = html;
+}
+$("#vp").addEventListener("click", e => {
+  const p = e.target.closest("[data-panel]"); if (!p) return;
+  state.ui.selPanel = p.dataset.panel; renderHudSide(); renderPreview();
+  const el = document.getElementById("pc_" + p.dataset.panel); if (el) el.scrollIntoView({behavior:"smooth", block:"center"});
+});
+window.addEventListener("resize", () => renderPreview());
+
+function renderHudSide(){
+  const vert = state.ui.preview === "Vertical", sec = vert ? "LayoutVertical" : "Layout", L = state.ini[sec], H = state.ini.Hud;
+  let h = `<div class="panelcfg"><h4>${vert?"📱 TikTok 9:16":"🖥️ عادي 16:9"} <span class="hint">كل وضع عندو البلايص ديالو</span></h4><div class="grid" style="grid-template-columns:1fr 1fr">${fieldHTML(sec,["Scale","📏 الحجم (Scale)","range",{min:0.4,max:2,step:0.05}],L)}${fieldHTML(sec,["HealthWidth","↔️ عرض شريط الطاقة","i",{min:80,max:900}],L)}</div></div>`;
+  PANELS.forEach(([p, name]) => {
+    h += `<div class="panelcfg ${state.ui.selPanel===p?"sel":""}" id="pc_${p}"><h4><span>${name}</span>${fieldHTML(sec,[p+"Show","يبان","b"],L).replace('class="fld"','style="min-width:90px"')}</h4>
+      <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><div class="pos9" data-pos="${sec}|${p}">${POSITIONS.map(x => `<b class="${L[p+"Position"]===x?"on":""}" data-v="${x}" title="${x}"></b>`).join("")}</div>
+      <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:150px">${fieldHTML(sec,[p+"OffsetX","↔ X","i"],L)}${fieldHTML(sec,[p+"OffsetY","↕ Y","i"],L)}</div></div>`;
+    if (p === "Score") h += orderList("ScoreOrder", ["Title","Score","Streak"], {Title:"العنوان",Score:"الفوز · العداد · الخسارة",Streak:"السلسلة"});
+    if (p === "Top3") h += orderList("Top3Order", ["Top3","Counters","Status"], {Top3:"الداعمين",Counters:"العدادات",Status:"حالة TikFinity"});
+    h += `</div>`;
+  });
+  $("#hudSide").innerHTML = h;
+  $("#styleBtns").innerHTML = STYLES.map(s => { const old = H.Style; H.Style = s; const css = bgCss(); H.Style = old; return `<div class="stylebtn ${H.Style===s?"on":""}" data-style="${s}"><div class="sw8" style="${css}"></div>${s}</div>`; }).join("");
+  $("#pvNormal").classList.toggle("pri", !vert); $("#pvVertical").classList.toggle("pri", vert);
+}
+function orderList(key, all, names){
+  const cur = state.ini.Hud[key].split(",").map(x => x.trim()).filter(x => all.includes(x));
+  all.forEach(x => { if (!cur.includes(x)) cur.push(x); });
+  return `<div class="orderlist" style="margin-top:8px" data-order="${key}">${cur.map((x, i) => `<div><span>${i+1}. ${names[x]}</span><button class="btn sm icon" data-mv="-1" data-x="${x}">↑</button><button class="btn sm icon" data-mv="1" data-x="${x}">↓</button></div>`).join("")}</div>`;
+}
+$("#hudSide").addEventListener("click", e => {
+  const b = e.target.closest(".pos9 b");
+  if (b){ const [sec, p] = b.parentElement.dataset.pos.split("|"); state.ini[sec][p + "Position"] = b.dataset.v; state.ui.selPanel = p; renderHudSide(); changed(); return; }
+  const mv = e.target.closest("[data-mv]");
+  if (mv){
+    const key = mv.closest("[data-order]").dataset.order;
+    const all = key === "ScoreOrder" ? ["Title","Score","Streak"] : ["Top3","Counters","Status"];
+    const cur = state.ini.Hud[key].split(",").map(x => x.trim()).filter(x => all.includes(x));
+    all.forEach(x => { if (!cur.includes(x)) cur.push(x); });
+    const i = cur.indexOf(mv.dataset.x), j = i + (+mv.dataset.mv);
+    if (j >= 0 && j < cur.length){ [cur[i], cur[j]] = [cur[j], cur[i]]; state.ini.Hud[key] = cur.join(","); renderHudSide(); changed(); }
+  }
+});
+$("#styleBtns").addEventListener("click", e => {
+  const s = e.target.closest("[data-style]"); if (!s) return;
+  state.ini.Hud.Style = s.dataset.style;
+  const cyc = state.ini.Hud.StyleCycle.split(",").filter(Boolean); if (!cyc.includes(s.dataset.style)) { cyc.push(s.dataset.style); state.ini.Hud.StyleCycle = cyc.join(","); }
+  renderHudSide(); renderAllForms(); changed();
+});
+$("#pvNormal").onclick = () => { state.ui.preview = "Normal"; renderHudSide(); renderPreview(); save(); };
+$("#pvVertical").onclick = () => { state.ui.preview = "Vertical"; renderHudSide(); renderPreview(); save(); };
+const PRESETS = {
+  "🏠 الأصل": s => { s.ini.Layout = layoutDefaults(false); s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.Style = "Classic"; s.ini.Hud.GuideMode = "Cards"; s.ini.Hud.LayoutMode = "Normal"; s.ui.preview = "Normal"; },
+  "📱 TikTok": s => { s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.LayoutMode = "Vertical"; s.ini.Hud.Style = "Glass"; s.ui.preview = "Vertical"; },
+  "🎮 Esports": s => { const L = s.ini.Layout = layoutDefaults(false); L.FeedPosition = "TopRight"; L.FeedOffsetY = 0; L.HypePosition = "MiddleRight"; L.HypeOffsetY = 0; L.NotifPosition = "BottomLeft"; s.ini.Hud.Style = "Esports"; s.ini.Hud.GuideMode = "Rotate"; s.ui.preview = "Normal"; },
+  "✨ بسيط": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Style = "Minimal"; s.ini.Hud.GuideMode = "List"; s.ini.Hud.ShowCounters = false; s.ini.Hud.ShowStatus = false; s.ini.Hud.ShowStreak = false; s.ini.Hud.TitleEnabled = false; s.ui.preview = "Normal"; }
+};
+$("#presets").innerHTML = Object.keys(PRESETS).map(k => `<span class="chip" data-preset="${k}">${k}</span>`).join("");
+$("#presets").addEventListener("click", e => { const c = e.target.closest("[data-preset]"); if (!c) return; PRESETS[c.dataset.preset](state); renderAllForms(); renderHudSide(); changed(); toast("✅ " + c.dataset.preset); });
+
+// ------------------------------------------------------------- OBS
+function renderObsForm(){
+  const O = state.obs;
+  $("#obsForm").innerHTML = `
+    <div class="fld"><label>عدد الأعمدة</label><input type="number" min="1" max="8" data-obs="Columns" value="${O.Columns}"></div>
+    <div class="fld"><label>حجم الصور (px)</label><input type="number" min="32" max="256" data-obs="Size" value="${O.Size}"></div>
+    <div class="fld"><label class="tog"><span>الأسماء</span><span class="sw"><input type="checkbox" data-obs="ShowNames" ${O.ShowNames?"checked":""}><i></i></span></label></div>
+    <div class="fld"><label>الخلفية</label><select data-obs="Background"><option value="transparent" ${O.Background==="transparent"?"selected":""}>شفافة</option><option value="#070a10" ${O.Background!=="transparent"?"selected":""}>داكنة</option></select></div>`;
+  renderObsPreview();
+}
+$("#obsForm").addEventListener("input", e => {
+  const k = e.target.dataset.obs; if (!k) return;
+  state.obs[k] = e.target.type === "checkbox" ? e.target.checked : (e.target.tagName === "SELECT" ? e.target.value : (+e.target.value || 1));
+  save(); renderObsPreview();
+});
+function obsTiles(forExport){
+  const O = state.obs, H = state.ini.Hud, s = O.Size;
+  return state.interactions.filter(i => i.Enabled && i.ShowInGuide && i.Trigger !== "Key").map((it, n) => {
+    const gi = it.giftImg || emojiToPng(it.giftEmoji), ai = it.actImg || emojiToPng(it.actEmoji);
+    const act = it.Name || (ACT[it.Action] || {}).name || it.Action;
+    return `<div class="t"><div class="g" style="background:${H.GuideGiftColor}"><img src="${gi}" style="width:${s}px;height:${s}px">${O.ShowNames?`<span>${esc(triggerLabel(it))}</span>`:""}</div><div class="a" style="background:${rgba(mixHex(H.PanelColor,H.GuideActionColor,.3),.92)};border-left:4px solid ${H.GuideActionColor}"><img src="${ai}" style="width:${s}px;height:${s}px">${O.ShowNames?`<span>${esc(act)}</span>`:""}</div></div>`;
+  }).join("");
+}
+const OBS_CSS = O => `.wrap{display:grid;grid-template-columns:repeat(${O.Columns},max-content);gap:10px}.t{display:flex;border-radius:14px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.45)}.t .g,.t .a{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 10px;gap:4px;min-width:${O.Size+20}px}.t span{font:700 ${Math.max(11,O.Size/6)}px Cairo,Arial,sans-serif;color:#fff;text-shadow:0 1px 2px #000;max-width:${O.Size*1.6}px;text-align:center}`;
+function renderObsPreview(){
+  const O = state.obs;
+  $("#obsPrev").innerHTML = `<style>#obsPrev ${OBS_CSS(O).replace(/}\./g, "}#obsPrev .")}</style><div class="wrap">${obsTiles()}</div>`;
+  $("#obsPrev").style.background = O.Background === "transparent" ? "repeating-conic-gradient(#1a1f29 0 25%,#11151d 0 50%) 0 0/20px 20px" : O.Background;
+}
+function obsHTML(){
+  const O = state.obs;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>TikArena OBS</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@700&display=swap"><style>html,body{margin:0;background:${O.Background};}body{padding:12px}${OBS_CSS(O)}</style></head><body><div class="wrap">${obsTiles(true)}</div></body></html>`;
+}
+
+// ------------------------------------------------------------- nav
+const NAV = [["sec-inter","🎁 التفاعلات"],["sec-keys","⌨️ الأزرار"],["sec-challenge","🏆 التحدي"],["sec-chars","🧍 الشخصيات"],["sec-random","🎲 العشوائي"],["sec-hud","🖥️ الهود"],["sec-hype","🔥 الحماس"],["sec-cam","🎥 الكاميرا"],["sec-gfx","🌦️ الجرافيك"],["sec-fx","💥 التأثيرات"],["sec-export","📦 التصدير"]];
+$("#nav").innerHTML = NAV.map(([id, t]) => `<a href="#${id}" data-id="${id}">${t}</a>`).join("");
+const io = new IntersectionObserver(ents => ents.forEach(en => { if (en.isIntersecting) $$("#nav a").forEach(a => a.classList.toggle("on", a.dataset.id === en.target.id)); }), {rootMargin:"-45% 0px -50% 0px"});
+NAV.forEach(([id]) => io.observe(document.getElementById(id)));
+</script>
+<script>
+"use strict";
+// ------------------------------------------------------------- INI export
+const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death"];
+const INTER_KEYS = ["Enabled","Name","Action","Trigger","GiftName","GiftId","LikesCount","CommentText","OncePerUser","TestKey","Units","MultiplyByCombo","Cooldown","Effect","Message","GiftImage","ActionImage","EntryCam","ShowInGuide",
+  "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","Amount","Weather"];
+function iniVal(v){
+  if (typeof v === "boolean") return v ? "true" : "false";
+  if (typeof v === "number") return String(Math.round(v * 1000) / 1000);
+  return String(v == null ? "" : v).replace(/[\r\n]+/g, " ").trim();
+}
+function hasGiftImg(it){ return !!(it.giftImg || (it.giftEmoji && it.giftEmoji.trim())); }
+function hasActImg(it){ return !!(it.actImg || (it.actEmoji && it.actEmoji.trim())); }
+function stamp(){ const d = new Date(), p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function buildIni(){
+  const S = JSON.parse(JSON.stringify(state.ini));
+  S.KillEffects.Sound = state.sounds.kill ? "kill.wav" : "";
+  S.Death.Sound = state.sounds.death ? "death.wav" : "";
+  const out = [`; TikArena · DarkRing Studio · ${stamp()}`, "; Keys = .NET System.Windows.Forms.Keys names. None = disabled.", ""];
+  SECTION_ORDER.forEach(sec => {
+    out.push(`[${sec}]`);
+    Object.keys(S[sec]).forEach(k => out.push(`${k}=${iniVal(S[sec][k])}`));
+    out.push("");
+  });
+  out.push("[Interactions]", `Count=${state.interactions.length}`, "");
+  state.interactions.forEach((it, i) => {
+    const n = i + 1;
+    const o = Object.assign({}, it, {GiftImage: hasGiftImg(it) ? `images/i${n}_gift.png` : "", ActionImage: hasActImg(it) ? `images/i${n}_action.png` : ""});
+    out.push(`[Interaction${n}]`);
+    INTER_KEYS.forEach(k => out.push(`${k}=${iniVal(o[k])}`));
+    out.push("");
+  });
+  return out.join("\r\n");
+}
+
+// ------------------------------------------------------------- ZIP (store, no compression)
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b){ let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+const utf8 = s => new TextEncoder().encode(s);
+function withBom(s){ const b = utf8(s), r = new Uint8Array(b.length + 3); r.set([0xEF,0xBB,0xBF]); r.set(b, 3); return r; }
+function b64bytes(b64){ const s = atob(b64), r = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) r[i] = s.charCodeAt(i); return r; }
+function dataUrlBytes(u){ return b64bytes(String(u).split(",")[1] || ""); }
+function makeZip(files){
+  const d = new Date();
+  const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  const parts = [], central = [];
+  let off = 0;
+  files.forEach(f => {
+    const name = utf8(f.name), data = f.data, crc = crc32(data);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+    h.setUint16(10, dosTime, true); h.setUint16(12, dosDate, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true);
+    h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+    parts.push(new Uint8Array(h.buffer), name, data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+    c.setUint16(12, dosTime, true); c.setUint16(14, dosDate, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true);
+    c.setUint16(28, name.length, true); c.setUint16(30, 0, true); c.setUint16(32, 0, true); c.setUint16(34, 0, true); c.setUint16(36, 0, true); c.setUint32(38, 0, true); c.setUint32(42, off, true);
+    central.push(new Uint8Array(c.buffer), name);
+    off += 30 + name.length + data.length;
+  });
+  const cdSize = central.reduce((a, b) => a + b.length, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cdSize, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(e.buffer)], {type:"application/zip"});
+}
+function download(name, data, type){
+  const blob = data instanceof Blob ? data : new Blob([data], {type: type || "application/octet-stream"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+  toast("⬇️ " + name);
+}
+
+// ------------------------------------------------------------- files
+const emojiCache = new Map();
+const _emojiToPng = emojiToPng;
+emojiToPng = function(e, s){ const k = e + "|" + (s || 128); if (!emojiCache.has(k)) emojiCache.set(k, _emojiToPng(e, s)); return emojiCache.get(k); };
+function engineReady(){ return ENGINE_SRC && ENGINE_SRC !== "%%ENGINE" + "%%"; }
+function dllReady(){ return ENGINE_DLL && ENGINE_DLL !== "%%ENGINE_DLL" + "%%" && ENGINE_DLL.length > 100; }
+function assetFiles(prefix){
+  const files = [];
+  state.interactions.forEach((it, i) => {
+    const n = i + 1;
+    if (hasGiftImg(it)) files.push({name:`${prefix}images/i${n}_gift.png`, data:dataUrlBytes(it.giftImg || emojiToPng(it.giftEmoji))});
+    if (hasActImg(it)) files.push({name:`${prefix}images/i${n}_action.png`, data:dataUrlBytes(it.actImg || emojiToPng(it.actEmoji))});
+  });
+  if (state.sounds.kill) files.push({name:`${prefix}sounds/kill.wav`, data:dataUrlBytes(state.sounds.kill.data)});
+  if (state.sounds.death) files.push({name:`${prefix}sounds/death.wav`, data:dataUrlBytes(state.sounds.death.data)});
+  return files;
+}
+function readme(){
+  const G = state.ini.General;
+  return [
+"TikArena · DarkRing Studio",
+"==========================",
+"",
+"1) المتطلبات:",
+"   - ScriptHookV + ScriptHookVDotNet v3 فالدوسي ديال اللعبة (فين كاين GTA5.exe).",
+"   - .NET Framework 4.8.",
+"",
+"2) التثبيت: حل الـ ZIP وحط الدوسي scripts فالدوسي ديال اللعبة. أمثلة:",
+"   Steam:    C:\\Program Files (x86)\\Steam\\steamapps\\common\\Grand Theft Auto V",
+"   Epic:     C:\\Program Files\\Epic Games\\GTAV",
+"   Rockstar: C:\\Program Files\\Rockstar Games\\Grand Theft Auto V",
+"   خاص يكونو: scripts\\TikArena.3.cs  و  scripts\\TikArena.ini  و  scripts\\TikArena\\images ...",
+"",
+"3) حل TikFinity على نفس البيسي واتصل باللايف (WebSocket: " + state.ini.TikFinity.Url + ").",
+"",
+"4) فـ Story Mode: ضغط " + G.PowerKey + " (تشغيل) ومن بعد " + G.StartKey + " (بدا التحدي + الهود + الاتصال).",
+"   " + G.HudStyleKey + " شكل الهود · " + G.HudFontKey + " الخط · " + G.LayoutKey + " 16:9/9:16 · " + G.PauseKey + " إيقاف مؤقت · " + G.EmergencyKey + " الطوارئ · " + G.HypeTestKey + " تجربة الحماس",
+"   أزرار التجربة: " + state.interactions.filter(i => i.TestKey && i.TestKey !== "None").map(i => i.TestKey + "=" + (i.Name || i.Action)).join(" · "),
+"",
+"5) OBS: Browser Source <- Local file <- OBS-overlay.html",
+"",
+"التحديث التلقائي:",
+"   - AutoImport: السكريبت كيقلب كل ثانيتين فـ Downloads على أحدث TikArena*.ini ولا TikArena*.ini.txt وكينسخو.",
+"   - AutoReload: ملي كيتبدل TikArena.ini كيتقرا من جديد.",
+"",
+"حل المشاكل:",
+"   1. خاص تبان «TikArena جاهز» ملي كتدخل. إلا ما بانتش، السكريبت ما تحملش.",
+"   2. الأسماء: scripts\\TikArena.3.cs و scripts\\TikArena.ini (ماشي .zip ولا .txt).",
+"   3. ScriptHookVDotNet.log فالدوسي ديال اللعبة كيبين أخطاء التجميع.",
+"   4. إلا تحدثات GTA V، خاص ScriptHookV يتحدث حتى هو.",
+"   5. البديل: Alternative-DLL\\TikArena.dll -> حطو فـ scripts بلاصت TikArena.3.cs (كليك يمين > Properties > Unblock).",
+"   6. scripts\\TikArena\\errors.txt فيه الأخطاء وسط اللعب (أول 3 كيبانو فاللعبة).",
+"   7. scripts\\TikArena\\gifts-log.txt فيه الأسماء والـ IDs الحقيقيين ديال الهدايا (وضع التعلم).",
+""].join("\r\n");
+}
+function fullPackage(){
+  const files = [];
+  if (engineReady()) files.push({name:"scripts/TikArena.3.cs", data:withBom(ENGINE_SRC)});
+  files.push({name:"scripts/TikArena.ini", data:withBom(buildIni())});
+  files.push(...assetFiles("scripts/TikArena/"));
+  if (dllReady()) files.push({name:"Alternative-DLL/TikArena.dll", data:b64bytes(ENGINE_DLL)});
+  files.push({name:"OBS-overlay.html", data:utf8(obsHTML())});
+  files.push({name:"README-INSTALL.txt", data:withBom(readme())});
+  files.push({name:"TikArena-settings.json", data:utf8(JSON.stringify(state, null, 1))});
+  return makeZip(files);
+}
+function claudeMode(){
+  if (state.ui.claude === true || state.ui.claude === false) return state.ui.claude;
+  return /claude|anthropic|usercontent/i.test(location.hostname);
+}
+function doExport(kind){
+  const cm = claudeMode();
+  if ((kind === "cs" || kind === "full") && !engineReady()) toast("⚠️ المحرك ما مدموجش: شغل python3 build.py واستعمل index.html");
+  switch (kind){
+    case "cs":
+      if (!engineReady()) return;
+      if (cm) download("TikArena-cs.zip", makeZip([{name:"TikArena.3.cs", data:withBom(ENGINE_SRC)}]));
+      else download("TikArena.3.cs", withBom(ENGINE_SRC), "text/plain");
+      break;
+    case "dll":
+      if (!dllReady()) return toast("⚠️ الـ DLL ما مدموجش فهاد الصفحة");
+      if (cm) download("TikArena-dll.zip", makeZip([{name:"TikArena.dll", data:b64bytes(ENGINE_DLL)}]));
+      else download("TikArena.dll", b64bytes(ENGINE_DLL));
+      break;
+    case "ini": download(cm ? "TikArena.ini.txt" : "TikArena.ini", withBom(buildIni()), "text/plain"); break;
+    case "assets": download("TikArena-assets.zip", makeZip(assetFiles("scripts/TikArena/"))); break;
+    case "obs": download("OBS-overlay.html", obsHTML(), "text/html"); break;
+    case "json": download("TikArena-settings.json", JSON.stringify(state, null, 1), "application/json"); break;
+    case "full": download("TikArena-DarkRing.zip", fullPackage()); break;
+  }
+}
+$$("[data-exp]").forEach(b => b.onclick = () => doExport(b.dataset.exp));
+$("#btnFull").onclick = () => doExport("full");
+$("#btnSaveJson").onclick = () => doExport("json");
+$("#btnLoadJson").onclick = () => $("#fileJson").click();
+$("#fileJson").onchange = e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const obj = JSON.parse(r.result);
+      if (Array.isArray(obj)){ const s = defaults(); importOldRules(s, obj); state = s; }
+      else state = normalize(obj);
+      renderEverything(); save(); toast("✅ تحملات الإعدادات");
+    } catch(err){ toast("⚠️ JSON ماشي صحيح"); }
+  };
+  r.readAsText(f);
+};
+$("#btnSound").onclick = () => { state.ui.sound = !state.ui.sound; $("#btnSound").textContent = state.ui.sound ? "🔊" : "🔇"; save(); };
+$("#claudeMode").onchange = e => { state.ui.claude = e.target.checked; save(); };
+
+// ------------------------------------------------------------- validation
+function validate(){
+  const out = [], G = state.ini.General;
+  const gk = {};
+  ["PowerKey","StartKey","HudStyleKey","HudFontKey","EmergencyKey","PauseKey","LayoutKey","HypeTestKey"].forEach(k => { const v = G[k]; if (v && v !== "None"){ (gk[v] = gk[v] || []).push(k); } });
+  Object.keys(gk).forEach(v => { if (gk[v].length > 1) out.push(["err", `⌨️ الزر ${v} مستعمل جوج مرات: ${gk[v].join(" · ")}`]); });
+  const tk = {};
+  state.interactions.forEach((it, i) => {
+    const n = `#${i+1} ${it.Name || (ACT[it.Action]||{}).name || it.Action}`;
+    if (it.TestKey && it.TestKey !== "None"){ (tk[it.TestKey] = tk[it.TestKey] || []).push(i + 1); if (gk[it.TestKey]) out.push(["err", `⌨️ ${n}: الزر ${it.TestKey} مستعمل حتى فـ ${gk[it.TestKey].join(" · ")}`]); }
+    if (!it.Enabled) return;
+    if (it.Trigger === "Gift" && !it.GiftName.trim() && !String(it.GiftId).trim()) out.push(["err", `🎁 ${n}: هدية بلا اسم وبلا ID`]);
+    if (it.Trigger === "Gift" && it.GiftName && !allGifts().some(g => g[0].toLowerCase() === it.GiftName.toLowerCase())) out.push(["warn", `🎁 ${n}: «${it.GiftName}» ماشي فالكتالوج، تأكد من الاسم فـ gifts-log.txt`]);
+    if (it.Action === "KillPlayer" && it.Trigger !== "Key"){ const c = it.Trigger === "Gift" ? giftCoins(it.GiftName) : 0; if (c == null || c < 1000) out.push(["warn", `💀 ${n}: «قتل مفاجئ» خاصو يتربط بهدية غالية`]); }
+    if (it.Action === "Random" && !RANDOM_ACTIONS.some(a => state.ini.Random[a + "Enabled"])) out.push(["err", `🎲 ${n}: لائحة الأحداث العشوائية خاوية`]);
+    if (it.Units > 50 && ["SpawnEnemy","MafiaCar","Animals"].includes(it.Action)) out.push(["warn", `🔢 ${n}: ${it.Units} فكل مرة بزاف (الطابور غادي يطول)`]);
+  });
+  Object.keys(tk).forEach(k => { if (tk[k].length > 1) out.push(["err", `⌨️ زر التجربة ${k} مستعمل فالتفاعلات: #${tk[k].join(", #")}`]); });
+  if (!state.interactions.some(i => i.Enabled)) out.push(["warn", "🎁 ما كاين حتى تفاعل مشعول"]);
+  if (state.ini.KillEffects.SoundEnabled && !state.sounds.kill) out.push(["warn", "🎵 صوت القتل مشعول ولكن ملف WAV ناقص"]);
+  if (state.ini.Death.SoundEnabled && !state.sounds.death) out.push(["warn", "🎵 موسيقى الموت مشعولة ولكن ملف WAV ناقص"]);
+  if (!state.ini.Hud.StyleCycle) out.push(["warn", "🎨 F11 ما عندو حتى شكل"]);
+  if (!engineReady()) out.push(["warn", "📜 المحرك ما مدموجش فهاد الصفحة (src). استعمل index.html من بعد python3 build.py"]);
+  if (!out.length) out.push(["ok", "✅ كلشي مزيان. تقدر تصدر."]);
+  $("#validList").innerHTML = out.map(([t, m]) => `<li class="${t === "err" ? "" : t}">${esc(m)}</li>`).join("");
+}
+
+// ------------------------------------------------------------- init
+function refreshLive(){ renderPreview(); validate(); renderObsPreview(); }
+function renderEverything(){
+  renderInteractions(); renderAllForms(); renderHudSide(); refreshLive();
+  $("#btnSound").textContent = state.ui.sound ? "🔊" : "🔇";
+  $("#claudeMode").checked = claudeMode();
+  $("#installText").innerHTML = esc(readme()).replace(/\r?\n/g, "<br>");
+}
+renderEverything();
+setTimeout(renderPreview, 300);
+</script>
+</body>
+</html>
