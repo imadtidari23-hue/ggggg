@@ -400,7 +400,7 @@ function defaults(){
     ComboEnabled:true,ComboMin:10,ComboText:"🔥 كومبو x{count} من {name}!"};
   S.Sounds = {EnemySpawn:"CHECKPOINT_MISSED|HUD_MINI_GAME_SOUNDSET",AllySpawn:"CHALLENGE_UNLOCKED|HUD_AWARDS",Help:"PICK_UP|HUD_FRONTEND_DEFAULT_SOUNDSET",Kill:"CHECKPOINT_PERFECT|HUD_MINI_GAME_SOUNDSET",Hype:"MEDAL_UP|HUD_MINI_GAME_SOUNDSET"};
   S.Music = {Enabled:true,Key:"F4",Background:true,Shuffle:true,Volume:60,EventVolume:90,DeathVolume:90};
-  S.DamageFx = {Enabled:true,Numbers:true,Ghost:true,Blood:true,HitFx:"scr_solomon3|scr_trev4_747_blood_impact"};
+  S.DamageFx = {Enabled:true,Numbers:true,Ghost:true,NoBlood:true};
   S.Camera = {ZoomKey:"F2",ZoomOnStart:true,ZoomInKey:"PageUp",ZoomOutKey:"PageDown",ZoomDistance:2.3,ZoomHeight:0.55,ZoomSide:0.45,ZoomFov:50,ZoomVehDistance:5.5,ZoomVehHeight:1.3,ZoomNormalWhenAiming:true,
     InvincibleDuringCam:true,EntryEnabled:true,EntryMinCoins:1000,EntrySeconds:3,KillerEnabled:true,KillerSeconds:3,SlowMoMode:"LastInWave",SlowMoScale:0.3,SlowMoSeconds:1.5,WinEnabled:true,WinSeconds:4};
   S.Graphics = {Preset:"Off",Key:"Home",LockTime:false,Hour:21,Minute:0,LockWeather:false,Weather:"Clear",TimecycleEnabled:false,Timecycle:"rply_saturation",TimecycleStrength:0.6,DensityEnabled:false,PedDensity:1,VehicleDensity:1};
@@ -415,7 +415,7 @@ function defaults(){
   S.LiveTest = {Enabled:true,Key:"F9",ShowBadge:true,Names:"أحمد,سارة,Yassine,Nora,Karim,Lina,Omar,Hiba,Adam,Salma,Mehdi,Imane,Zakaria,Khadija,Anas,Rania",AvatarUrls:"",Comments:"GG,🔥,يلاه,اقتلوه,عاونوه,واو",
     MinDelayMs:700,MaxDelayMs:2200,GiftWeight:45,LikeWeight:25,CommentWeight:10,FollowWeight:8,ShareWeight:6,JoinWeight:6,ComboChance:25,MaxCombo:15};
   S.Spotlight = {Enabled:true,Seconds:3,MinCoins:1000,Sound:"CHALLENGE_UNLOCKED|HUD_AWARDS",OffsetY:0};
-  S.Effects = {MaxSeconds:300,Stack:"Extend",ShowBars:true,MaxBars:4,BlackoutNight:true,QuakeStrength:2.5,QuakeRagdollPlayer:true};
+  S.Effects = {MaxSeconds:300,Stack:"Extend",ShowBars:true,BarsPosition:"Bottom",MaxBars:4,BlackoutNight:true,QuakeStrength:2.5,QuakeRagdollPlayer:true};
   S.PlayerFx = {Enabled:true,Popup:true,PopupSeconds:2.5,Burst:true,BuffAura:true,SpeedColor:"#29b6ff",GodColor:"#ffc828",JumpColor:"#39ff14",FreezeColor:"#bff4ff",WeaponColor:"#ff9f1c",HealColor:"#00e676",SpeedTrail:"core|ent_amb_elec_crackle"};
   S.Death = {CustomDeath:true,RespawnSeconds:6,RespawnMode:"Here",CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Overlay:"Clear",ExtraDancers:3,KillerBanner:true,Coffin:false,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
   return {
@@ -488,6 +488,7 @@ function normalize(obj){
   // update 13: no level in the join sentence, only the number under the supporters, close cars
   s.ini.Hype.VipJoinText = String(s.ini.Hype.VipJoinText || "").replace(/\s*\(?\s*(Lv|ليفل|level)\s*\{level\}\s*\)?/gi, "");
   if (s.ini.Hud.DesignCoinsWord === "كوينز") s.ini.Hud.DesignCoinsWord = "";
+  delete s.ini.DamageFx.Blood; delete s.ini.DamageFx.HitFx;
   s.interactions.forEach(i => { if ((i.Action === "MafiaCar" || i.Action === "MotoHitman") && +i.SpawnDistance > 35) i.SpawnDistance = i.Action === "MafiaCar" ? 28 : 26; });
   return s;
 }
@@ -1172,7 +1173,7 @@ function renderAllForms(){
       ["Enabled","مشعولة","b"],["Key","⌨️ تشعل / تطفي","k"],["Background","🎶 موسيقى الخلفية","b"],["Shuffle","🔀 عشوائي","b"],
       ["Volume","🔊 الخلفية","range",{min:0,max:100}],["EventVolume","🔊 الأحداث","range",{min:0,max:100}],["DeathVolume","🔊 الموت","range",{min:0,max:100}]]},
     {sec:"DamageFx", title:"🩸 الضربات على شريط الطاقة", hint:"كل ضربة (رصاص، بونية، انفجار...) كيبان فوق شريط الطاقة الرقم اللي نقص (-5، -12...) كيطلع ويختفي، الجزء اللي ضاع كيبقى أبيض شوية عاد كيخوا، والشريط كيضوي بالحمر. والرصاص كيدير الدم على الشخصية ديالك مع تأثير الضربة.", fields:[
-      ["Enabled","مشعول","b"],["Numbers","🔢 الأرقام (-5)","b"],["Ghost","⬜ الجزء اللي ضاع","b"],["Blood","🩸 الدم ملي كيضربك الرصاص","b"],["HitFx","💥 تأثير الضربة (asset|name)","t",{ltr:true}]]},
+      ["Enabled","مشعول","b"],["Numbers","🔢 الأرقام (-5)","b"],["Ghost","⬜ الجزء اللي ضاع","b"],["NoBlood","🚫 بلا دم نهائياً (قوانين TikTok)","b"]]},
     {sec:"KillEffects", title:"💀 تأثير القتل", fields:[["Enabled","مشعول","b"],["Effect","التأثير","s",{opts:KILL_EFFECTS}],["SmokeColor","لون الدخان","c"],["OnlyPlayerKills","غير اللي قتلتهم أنا","b"],["SoundEnabled","🎵 صوت WAV ديالك","b"],["Sound","ملف القتل","wav",{slot:"kill"}]]},
     {sec:"Sounds", title:"🔊 أصوات اللعبة", fields:[["EnemySpawn","🦹 نزول عدو","sound"],["AllySpawn","👮 نزول مساعد","sound"],["Help","💚 المساعدة","sound"],["Kill","💀 القتل","sound"],["Hype","🔥 الحماس","sound"]]},
     {sec:"PlayerFx", title:"⚡ التأثيرات على الشخصية ديالك", hint:"ملي شي داعم كيدير ليك شي أكسيون (سلاح، سرعة، علاج، تجميد...): كتبان فوق راسك بطاقة صغيرة فيها الصورة ديالو + صورة الأكشن + الاسم (مثلاً: أحمد · إعطاء سلاح · Carbinerifle)، مع دائرة ضو كتوسع. ووقت ما التأثير خدام (سرعة خارقة، درع، قفزة...) كيبان توهج ملون وموجات تحت رجليك، والسرعة فيها حتى شرارات (particle، خاصها تجربة).", fields:[
@@ -1180,7 +1181,7 @@ function renderAllForms(){
       ["SpeedColor","⚡ السرعة","c"],["GodColor","🛡️ الدرع","c"],["JumpColor","🦘 القفزة/الجاذبية","c"],["FreezeColor","❄️ التجميد","c"],["WeaponColor","🔫 السلاح","c"],["HealColor","💚 العلاج","c"],["SpeedTrail","⚡ شرارات السرعة (asset|name)","t",{ltr:true}]]},
     {sec:"Effects", title:"⏱️ مدة التأثيرات (زلزال، صواريخ، قطع الضو...)", hint:"كل تأثير عندو مدة (كتختارها فكل تفاعل: 15ث، 30ث، دقيقة، ولا كتب الرقم). فوق راسك كيبان شريط فيه صورة الداعم + الأكشن + الوقت الباقي، كيخوا شوية بشوية وملي يسالي التأثير كيحبس بوحدو. إلا جات هدية جديدة ديال نفس التأثير: Extend = كتزاد المدة، Reset = كترجع من اللول، Max = كتبقى الأطول. MaxSeconds = أقصى مدة (0 = بلا حد). والساروت ⏹️ (End) كيحبس كلشي فالحين.", fields:[
       ["MaxSeconds","⛔ أقصى مدة (ث، 0 = بلا حد)","f",{min:0,max:3600}],["Stack","➕ ملي تتعاود الهدية","s",{opts:[["Extend","➕ زيد المدة"],["Reset","🔄 رجع من اللول"],["Max","⬆️ خلي الأطول"]]}],
-      ["ShowBars","📊 الشريط فوق الراس","b"],["MaxBars","عدد الشرائط","i",{min:1,max:8}],
+      ["ShowBars","📊 بطاقة الوقت","b"],["BarsPosition","📍 فين كتبان","s",{opts:[["Bottom","⬇️ تحت شريط الطاقة"],["Top","⬆️ الفوق (تحت الفوز والخسارة)"],["Left","⬅️ اليسار"],["Right","➡️ اليمين"],["Player","🧍 فوق الشخصية"]]}],["MaxBars","عدد البطاقات","i",{min:1,max:8}],
       ["BlackoutNight","🌑 قطع الضو كيرد الوقت ليل","b"],["QuakeStrength","🌋 قوة الزلزال","range",{min:0.2,max:6,step:0.1}],["QuakeRagdollPlayer","🥴 الزلزال كيطيحك حتى نتا","b"]]},
     {sec:"Aura", title:"🌟 تأثيرات الشخصيات (Aura)", hint:"تأثير دائم حول الأعداء والمساعدين اللي نزلو (ضو، دائرة، عمود، تاج، نار...). الملك (الداعم رقم 1) كيجيه تاج ذهبي. كل تفاعل يقدر يختار التأثير ديالو فـ ⚙️ متقدم. أسماء الـ particles (asset|name) خاصها تجربة.", fields:[
       ["Enabled","مشعول","b"],["EnemyAura","🦹 تأثير الأعداء","s",{opts:AURAS.slice(1)}],["EnemyColor","لون الأعداء","c"],["AllyAura","👮 تأثير المساعدين","s",{opts:AURAS.slice(1)}],["AllyColor","لون المساعدين","c"],
@@ -1736,6 +1737,23 @@ function pvSpot(frame, vert){
     <div style="position:absolute;left:117px;top:75px;display:flex;align-items:center;gap:8px;color:${state.ini.Hype.Color};font-size:${fpx(.34)}">${avatarHTML(sup, 30, state.ini.Hype.Color)}${sup[0]}</div>
     <div style="position:absolute;left:10px;bottom:2px;height:3px;width:${w-20}px;background:${acc};animation:spotbar ${state.ini.Spotlight.Seconds}s linear forwards"></div></div>`;
 }
+// sample timer card of a running effect (Effects.BarsPosition)
+function pvFxCard(frame, vert, rects){
+  const E = state.ini.Effects; if (!E.ShowBars || E.BarsPosition === "Player") return "";
+  const w = 250, h = 42, acc = "#9b8cff", sup = SAMPLE_SUPS[1];
+  let s = vert ? Math.min(1, (frame.w - 20) / w) : 1, x = frame.x + (frame.w - w*s)/2, y = 640;
+  const H = rects.Health, S = rects.Score;
+  if (E.BarsPosition === "Bottom" && H){ y = H.y + H.h + 6; if (y + h*s > 716) y = H.y - 6 - h*s; x = H.x + (H.w - w*s)/2; }
+  if (E.BarsPosition === "Top") y = S ? S.y + S.h + 8 : 90;
+  if (E.BarsPosition === "Left"){ x = frame.x + 14; y = (720 - h*s)/2; }
+  if (E.BarsPosition === "Right"){ x = frame.x + frame.w - w*s - 14; y = (720 - h*s)/2; }
+  if (E.BarsPosition === "Bottom" && rects.FxSlot){ x = rects.FxSlot.x; y = rects.FxSlot.y; s = rects.FxSlot.s; }
+  return `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:scale(${s});transform-origin:0 0;${bgCss(1.3)};border-left:4px solid ${acc};${txtCss()};font-size:${fpx(.3)}">
+    <div style="position:absolute;left:8px;top:5px">${avatarHTML(sup, 28)}</div><div style="position:absolute;left:42px;top:3px;font-size:22px">🌑</div>
+    <div style="position:absolute;left:76px;top:3px;color:#fff">قطع الضو على المدينة</div><div style="position:absolute;left:76px;top:21px;color:${state.ini.Hype.Color};font-size:${fpx(.26)}">${sup[0]}</div>
+    <div style="position:absolute;right:10px;top:4px;color:${acc};font-size:${fpx(.5)};font-weight:700">0:42</div>
+    <div style="position:absolute;left:8px;bottom:2px;height:3px;width:${(w-16)*.7}px;background:${acc}"></div></div>`;
+}
 function renderPreview(){
   const stage = $("#stage"), vp = $("#vp");
   if (!stage.clientWidth) return;
@@ -1756,7 +1774,8 @@ function renderPreview(){
   };
   let html = vert ? `<div class="vframe" style="left:${frame.x}px;width:${frame.w}px"></div>` : "";
   if (H.OverheadEnabled){ html += pvOverhead(frame.x + frame.w/2 - 90, 330, 1, true, true) + pvOverhead(frame.x + frame.w/2 + 40, 345, .9, false, false); }
-  const put = (p, P, x, y, s) => { html += `<div class="pp ${state.ui.selPanel===p?"sel":""}" data-panel="${p}" style="left:${x}px;top:${y}px;width:${P.w}px;height:${P.h}px;transform:scale(${s});${txtCss()}">${P.html}</div>`; };
+  const rects = {};
+  const put = (p, P, x, y, s) => { rects[p] = {x, y, w:P.w*s, h:P.h*s}; html += `<div class="pp ${state.ui.selPanel===p?"sel":""}" data-panel="${p}" style="left:${x}px;top:${y}px;width:${P.w}px;height:${P.h}px;transform:scale(${s});${txtCss()}">${P.html}</div>`; };
   const fit = P => vert ? Math.min(sc, (frame.w - 20) / P.w) : sc;
   if (vert && L.AutoArrange){
     let top = 8, bottom = 720 - (+L.BottomMargin || 0), gap = +L.Gap || 0;
@@ -1764,6 +1783,8 @@ function renderPreview(){
     const need = ["Score","Top3","Hype","Health","Notif","Feed"].filter(on).reduce((t, p) => t + panels[p].h * fit(panels[p]) + gap, 0);
     const room = bottom - top - 150, k = need > room ? Math.max(0.55, room / need) : 1;
     ["Score","Top3","Hype"].forEach(p => { if (!on(p)) return; const P = panels[p], s = fit(P) * k; put(p, P, frame.x + (frame.w - P.w*s)/2, top, s); top += P.h*s + gap*k; });
+    const E = state.ini.Effects;
+    if (E.ShowBars && E.BarsPosition === "Bottom"){ const fs = Math.min(1, (frame.w - 20) / 250) * k; bottom -= 42 * fs; rects.FxSlot = {x:frame.x + (frame.w - 250 * fs) / 2, y:bottom, s:fs}; bottom -= gap * k; }
     ["Health","Notif","Feed"].forEach(p => { if (!on(p)) return; const P = panels[p], s = fit(P) * k; bottom -= P.h*s; put(p, P, frame.x + (frame.w - P.w*s)/2, bottom, s); bottom -= gap*k; });
     const G = panels.Guide; if (G && L.GuideShow){ const s = fit(G); const [x, y] = anchor(L, "Guide", G.w*s, G.h*s, frame); put("Guide", G, x, y, s); }
   } else Object.keys(panels).forEach(p => {
@@ -1774,6 +1795,7 @@ function renderPreview(){
     put(p, P, x, y, s);
   });
   if (state.ui.spotUntil && Date.now() < state.ui.spotUntil) html += pvSpot(frame, vert);
+  html += pvFxCard(frame, vert, rects);
   if (state.ini.LiveTest.Enabled && state.ini.LiveTest.ShowBadge) html += `<div style="position:absolute;left:${frame.x + frame.w - 110}px;top:4px;background:#fe2c55;color:#fff;font:700 12px Arial;padding:2px 8px">● LIVE TEST</div>`;
   vp.innerHTML = html;
 }

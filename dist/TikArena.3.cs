@@ -713,8 +713,7 @@ namespace TikArena
         public Keys ZoomKey, ZoomInKey, ZoomOutKey;
         public float ZoomDistance, ZoomHeight, ZoomSide, ZoomFov, ZoomVehDistance, ZoomVehHeight;
         // [DamageFx]
-        public bool DmgEnabled, DmgNumbers, DmgGhost, DmgBlood;
-        public string DmgHitFx;
+        public bool DmgEnabled, DmgNumbers, DmgGhost, NoBlood;
         // [Death] extras
         public string DeathOverlay;
         public int ExtraDancers;
@@ -733,6 +732,7 @@ namespace TikArena
         public float FxMaxSeconds, QuakeStrength;
         public string FxStack;
         public bool FxBars, BlackoutNight, QuakeRagdollPlayer;
+        public string FxBarsPos;
         public int FxBarsMax;
         public Keys StopEffectsKey;
         public Color FxSpeedColor, FxGodColor, FxJumpColor, FxFreezeColor, FxWeaponColor, FxHealColor;
@@ -779,6 +779,8 @@ namespace TikArena
             c.FxStack = ini.S("Effects", "Stack", "Extend");
             c.FxBars = ini.B("Effects", "ShowBars", true);
             c.FxBarsMax = U.Clamp(ini.I("Effects", "MaxBars", 4), 1, 8);
+            // where the timer cards of the effects are drawn: Player (above the head) | Top | Left | Right | Bottom (under the health bar)
+            c.FxBarsPos = ini.S("Effects", "BarsPosition", "Bottom");
             c.BlackoutNight = ini.B("Effects", "BlackoutNight", true);
             c.QuakeStrength = U.Clamp(ini.F("Effects", "QuakeStrength", 2.5f), 0.2f, 6f);
             c.QuakeRagdollPlayer = ini.B("Effects", "QuakeRagdollPlayer", true);
@@ -1056,8 +1058,8 @@ namespace TikArena
             c.DmgEnabled = ini.B("DamageFx", "Enabled", true);
             c.DmgNumbers = ini.B("DamageFx", "Numbers", true);
             c.DmgGhost = ini.B("DamageFx", "Ghost", true);
-            c.DmgBlood = ini.B("DamageFx", "Blood", true);
-            c.DmgHitFx = ini.S("DamageFx", "HitFx", "scr_solomon3|scr_trev4_747_blood_impact");
+            // TikTok rules: no blood on the characters (the game's blood is removed all the time)
+            c.NoBlood = ini.B("DamageFx", "NoBlood", true);
             c.DensityEnabled = ini.B("Graphics", "DensityEnabled", false);
             c.PedDensity = U.Clamp(ini.F("Graphics", "PedDensity", 1), 0, 3);
             c.VehicleDensity = U.Clamp(ini.F("Graphics", "VehicleDensity", 1), 0, 3);
@@ -2609,6 +2611,7 @@ namespace TikArena
             try { UpdateMusic(); } catch (Exception ex) { U.Error("Music", ex); }
             try { UpdateZoomCam(); } catch (Exception ex) { U.Error("ZoomCam", ex); }
             try { WatchHealth(); } catch (Exception ex) { U.Error("DamageFx", ex); }
+            try { ClearBlood(); } catch (Exception ex) { U.Error("NoBlood", ex); }
             try { UpdateEffects(dt); } catch (Exception ex) { U.Error("Effects", ex); }
             try { UpdateCamera(dt); } catch (Exception ex) { U.Error("Camera", ex); }
             try { UpdateAuras(); } catch (Exception ex) { U.Error("Aura", ex); }
@@ -4750,12 +4753,27 @@ namespace TikArena
 
         // ================================================================ damage effects on the health bar
         //  [DamageFx] Numbers: "-5" floats up from the bar for every hit (+N for heals),
-        //  Ghost: the lost part stays white a moment then drains, Blood: blood + impact on the player
+        //  Ghost: the lost part stays white a moment then drains. No blood anywhere (NoBlood).
         class DmgPop { public int Amount; public long Start; }
         readonly List<DmgPop> dmgPops = new List<DmgPop>();
         int lastHp = -1;
         float ghostFrac;
         long ghostHold, dmgFlash, lastWatch;
+
+        long nextBloodClear;
+
+        // removes the blood the game puts on the player and on the spawned characters
+        void ClearBlood()
+        {
+            if (!cfg.NoBlood || U.Now < nextBloodClear) return;
+            nextBloodClear = U.Now + 200;
+            Ped pl = Game.Player.Character;
+            if (pl.Exists()) { Function.Call((Hash)0x8FE22675A5A45817UL, pl); Function.Call((Hash)0x3AC1F7B898F30C05UL, pl); }
+            foreach (Tracked t in tracked)
+                if (t.Ped != null && t.Ped.Exists()) { Function.Call((Hash)0x8FE22675A5A45817UL, t.Ped); Function.Call((Hash)0x3AC1F7B898F30C05UL, t.Ped); }
+            foreach (Ped p in dancers)
+                if (p != null && p.Exists()) Function.Call((Hash)0x8FE22675A5A45817UL, p);
+        }
 
         void WatchHealth()
         {
@@ -4783,16 +4801,6 @@ namespace TikArena
                     if (ghostFrac < before) ghostFrac = before;
                     ghostHold = now + 450;
                     dmgFlash = now;
-                    if (cfg.DmgBlood && Function.Call<bool>((Hash)0x2D343D2219CD027AUL, pl, 0, 2))
-                    {
-                        Function.Call((Hash)0x83F7E01C7B769A26UL, pl, 0, U.RandF(0, 1), U.RandF(0, 1), U.RandF(0, 1), "BulletSmall");
-                        if (!string.IsNullOrEmpty(cfg.DmgHitFx) && !Is(cfg.DmgHitFx, "None"))
-                        {
-                            string[] f = cfg.DmgHitFx.Split('|');
-                            if (f.Length > 1) try { Ptfx(f[0].Trim(), f[1].Trim(), pl.Position + new Vector3(0, 0, 0.35f), 0.7f, false); } catch { }
-                        }
-                        Function.Call((Hash)0x0E98F88A24C5F4B8UL, pl);
-                    }
                 }
             }
             lastHp = hp;
@@ -6053,6 +6061,7 @@ namespace TikArena
             float s = FitScale(sz.Width, L.Scale) * stackScale;
             Gfx.Origin(frameX + (frameW - sz.Width * s) / 2, y, s);
             fn(true);
+            panelRects[name] = new RectangleF(frameX + (frameW - sz.Width * s) / 2, y, sz.Width * s, sz.Height * s);
             y += sz.Height * s + cfg.VGap * stackScale;
         }
 
@@ -6067,6 +6076,7 @@ namespace TikArena
             y -= sz.Height * s;
             Gfx.Origin(frameX + (frameW - sz.Width * s) / 2, y, s);
             fn(true);
+            panelRects[name] = new RectangleF(frameX + (frameW - sz.Width * s) / 2, y, sz.Width * s, sz.Height * s);
             y -= cfg.VGap * stackScale;
         }
 
@@ -6338,17 +6348,111 @@ namespace TikArena
         // The bar drains with the remaining time; when it is empty the effect stops.
         int fxBarsShown;
 
-        void DrawFxBars()
+        bool FxOnPlayer { get { return Is(cfg.FxBarsPos, "Player"); } }
+
+        List<KeyValuePair<string, long>> RunningFx()
         {
-            fxBarsShown = 0;
-            if (!cfg.FxEnabled || !cfg.FxBars || fxEnd.Count == 0) return;
-            Ped pl = Game.Player.Character;
-            if (!pl.Exists()) return;
             long now = U.Now;
             List<KeyValuePair<string, long>> list = new List<KeyValuePair<string, long>>();
             foreach (KeyValuePair<string, long> kv in fxEnd) if (kv.Value > now && fxInfo.ContainsKey(kv.Key)) list.Add(kv);
-            if (list.Count == 0) return;
             list.Sort(delegate(KeyValuePair<string, long> x, KeyValuePair<string, long> y) { return x.Value.CompareTo(y.Value); });
+            return list;
+        }
+
+        static string TimeLeft(float ms)
+        {
+            int s = (int)Math.Ceiling(ms / 1000f);
+            return (s / 60).ToString(U.IC) + ":" + (s % 60).ToString("00", U.IC);
+        }
+
+        // timer cards in the HUD (not over the character): supporter + action + time left + draining bar
+        void DrawFxCards()
+        {
+            if (!cfg.FxEnabled || !cfg.FxBars || FxOnPlayer || fxEnd.Count == 0) return;
+            List<KeyValuePair<string, long>> list = RunningFx();
+            if (list.Count == 0) return;
+            long now = U.Now;
+            int count = Math.Min(list.Count, cfg.FxBarsMax);
+            const float w = 250, h = 42, gap = 6;
+            string pos = (cfg.FxBarsPos ?? "Bottom").ToLowerInvariant();
+            float s = vertical ? Math.Min(L.Scale, (frameW - 20) / w) : L.Scale;
+            float total = count * h + (count - 1) * gap;
+            float x0, y0;
+            bool up = false;
+            RectangleF r;
+            switch (pos)
+            {
+                case "top":
+                    x0 = frameX + (frameW - w * s) / 2;
+                    y0 = panelRects.TryGetValue("Score", out r) ? r.Bottom + 8 : frameY + 90;
+                    break;
+                case "left":
+                    x0 = frameX + 14;
+                    y0 = frameY + (frameH - total * s) / 2;
+                    break;
+                case "right":
+                    x0 = frameX + frameW - w * s - 14;
+                    y0 = frameY + (frameH - total * s) / 2;
+                    break;
+                default: // bottom: under the health bar (above it when there is no room)
+                    if (VAuto && fxCardsY >= 0) { x0 = frameX + (frameW - w * s) / 2; y0 = fxCardsY; s *= stackScale; }
+                    else if (panelRects.TryGetValue("Health", out r))
+                    {
+                        x0 = r.X + (r.Width - w * s) / 2;
+                        y0 = r.Bottom + 6;
+                        if (y0 + total * s > frameY + frameH - 4) { y0 = r.Y - 6; up = true; }
+                    }
+                    else { x0 = frameX + (frameW - w * s) / 2; y0 = frameY + frameH - 12; up = true; }
+                    break;
+            }
+            for (int i = 0; i < count; i++)
+            {
+                FxInfo fi = fxInfo[list[i].Key];
+                float span = Math.Max(1, list[i].Value - fi.Start);
+                float left = Math.Max(0, list[i].Value - now);
+                float ratio = U.Clamp(left / span, 0, 1);
+                float tin = U.Clamp((now - fi.Start) / 250f, 0, 1);
+                int a = (int)(255 * Math.Min(1f, Math.Min(tin + 0.2f, left / 400f)));
+                Color col = FxColor(fi.Action);
+                float yy = up ? y0 - (i + 1) * h * s - i * gap * s : y0 + i * (h + gap) * s;
+                Gfx.Origin(x0 + (1 - tin) * (pos == "right" ? 30 : -30) * (pos == "left" || pos == "right" ? 1 : 0), yy, s);
+                DBox(0, 0, w, h);
+                Gfx.Rect(0, 0, 4, h, U.WithAlpha(col, a));
+                Gfx.Image(Avatar(fi.Sup), 10, 5, 28, 28, a);
+                float x = 44;
+                if (Gfx.FileOk(fi.Icon)) { Gfx.Image(fi.Icon, x, 5, 28, 28, a); x += 32; }
+                List<string> parts = new List<string> { Txt.Prep(U.Trunc(fi.Title, 16)) };
+                if (fi.Hits > 1) parts.Add("x" + fi.Hits);
+                Gfx.Parts(parts, x + 2, 4, SMALL * 1.1f, U.WithAlpha(Color.White, a));
+                if (fi.Sup != null) Gfx.Text(U.Trunc(fi.Sup.Nick, 16), x + 2, 21, SMALL * 0.9f, U.WithAlpha(cfg.HypeColor, (int)(a * 0.9f)), Alignment.Left);
+                Gfx.Text(TimeLeft(left), w - 10, 6, 0.5f, U.WithAlpha(col, a), Alignment.Right);
+                Gfx.Rect(8, h - 5, w - 16, 3, Color.FromArgb(a / 3, 0, 0, 0));
+                Gfx.Rect(8, h - 5, (w - 16) * ratio, 3, U.WithAlpha(col, a));
+            }
+            Gfx.Origin(0, 0, 1);
+        }
+
+        float fxCardsY = -1;
+
+        // height the cards need under the health bar in the 9:16 automatic layout
+        float FxCardsHeight()
+        {
+            if (!cfg.FxEnabled || !cfg.FxBars || !Is(cfg.FxBarsPos, "Bottom")) return 0;
+            int n = Math.Min(RunningFx().Count, cfg.FxBarsMax);
+            if (n == 0) return 0;
+            float s = Math.Min(L.Scale, (frameW - 20) / 250f);
+            return (n * 42 + (n - 1) * 6) * s;
+        }
+
+        void DrawFxBars()
+        {
+            fxBarsShown = 0;
+            if (!cfg.FxEnabled || !cfg.FxBars || !FxOnPlayer || fxEnd.Count == 0) return;
+            Ped pl = Game.Player.Character;
+            if (!pl.Exists()) return;
+            long now = U.Now;
+            List<KeyValuePair<string, long>> list = RunningFx();
+            if (list.Count == 0) return;
             Vector3 head = (pl.IsInVehicle() ? pl.CurrentVehicle.Position + new Vector3(0, 0, 1.4f) : pl.Position + new Vector3(0, 0, 1.15f));
             PointF sp = Screen.WorldToScreen(head + new Vector3(0, 0, 0.35f));
             if (sp.X == 0 && sp.Y == 0) return;
@@ -6955,9 +7059,11 @@ namespace TikArena
             PointF a = Anchor(p, sz.Width * s, sz.Height * s);
             Gfx.Origin(a.X, a.Y, s);
             fn(true);
+            panelRects[name] = new RectangleF(a.X, a.Y, sz.Width * s, sz.Height * s);
         }
 
         PanelFn fScore, fTop, fHealth, fGuide, fNotif, fFeed, fHype;
+        readonly Dictionary<string, RectangleF> panelRects = new Dictionary<string, RectangleF>();
 
         void DrawHud()
         {
@@ -6981,6 +7087,7 @@ namespace TikArena
             }
 
             PruneFeeds();
+            panelRects.Clear();
             Overheads();
             DrawFxBars();
             DrawPopups();
@@ -6997,6 +7104,9 @@ namespace TikArena
                 StackTop("Score", cfg.ScoreEnabled, fScore, ref top);
                 StackTop("Top3", cfg.Top3Enabled, fTop, ref top);
                 StackTop("Hype", cfg.HypeEnabled && hypes.Count > 0, fHype, ref top);
+                fxCardsY = -1;
+                float fxH = FxCardsHeight();
+                if (fxH > 0) { bottom -= fxH * stackScale; fxCardsY = bottom; bottom -= cfg.VGap * stackScale; }
                 StackBottom("Health", cfg.HealthEnabled, fHealth, ref bottom);
                 StackBottom("Notif", cfg.NotifEnabled && notifs.Count > 0, fNotif, ref bottom);
                 StackBottom("Feed", cfg.FeedEnabled && feed.Count > 0, fFeed, ref bottom);
@@ -7012,6 +7122,7 @@ namespace TikArena
                 Place("Feed", cfg.FeedEnabled && feed.Count > 0, fFeed);
                 Place("Hype", cfg.HypeEnabled && hypes.Count > 0, fHype);
             }
+            DrawFxCards();
             DrawSpotlight();
             DrawDeathOverlay();
             DrawKillerBanner();
