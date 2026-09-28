@@ -2500,6 +2500,7 @@ namespace TikArena
             if (first)
             {
                 first = false;
+                try { ClearBlips(true); } catch (Exception ex) { U.Error("Blips", ex); }
                 if (cfg.ShowLoadMessage)
                 {
                     toastParts = new List<string> { "TikArena" };
@@ -2519,6 +2520,7 @@ namespace TikArena
             try { UpdateRound(dt); } catch (Exception ex) { U.Error("Round", ex); }
             try { UpdateQueues(); } catch (Exception ex) { U.Error("Queue", ex); }
             try { UpdateTracked(); } catch (Exception ex) { U.Error("Tracked", ex); }
+            try { UpdateBlips(); } catch (Exception ex) { U.Error("Blips", ex); }
             try { UpdateEffects(dt); } catch (Exception ex) { U.Error("Effects", ex); }
             try { UpdateCamera(dt); } catch (Exception ex) { U.Error("Camera", ex); }
             try { UpdateAuras(); } catch (Exception ex) { U.Error("Aura", ex); }
@@ -2571,6 +2573,7 @@ namespace TikArena
         void OnAborted(object sender, EventArgs e)
         {
             try { live.Stop(); avatars.Stop(); if (powered) Cleanup(); } catch { }
+            try { ClearBlips(false); } catch { }
         }
 
         static string Cycle(List<string> list, string cur)
@@ -2633,6 +2636,8 @@ namespace TikArena
                 tracked.RemoveAt(i);
             }
             if (cfg.RoundClearEffects) StopAllEffects();
+            UpdateBlips();
+            if (cfg.RoundClearEnemies && cfg.RoundClearAllies) ClearBlips(true);
         }
 
         void StartRound()
@@ -2672,6 +2677,7 @@ namespace TikArena
             spawnQ.Clear();
             instantQ.Clear();
             StopAllEffects();
+            ClearBlips(true);
             Status(cfg.Tx("EmergencyText", "Cleared"));
         }
 
@@ -2686,6 +2692,7 @@ namespace TikArena
             spawnQ.Clear();
             instantQ.Clear();
             notifs.Clear(); feed.Clear(); hypes.Clear();
+            ClearBlips(true);
             RestoreWorld();
         }
 
@@ -3495,6 +3502,12 @@ namespace TikArena
             else Function.Call(Hash.SET_PED_CAN_BE_TARGETTED, p, false);
         }
 
+        // map blips: always on the character (never on the car / motorbike), registered here and
+        // marked with alpha 254 so leftovers of a previous run can be found and removed.
+        const int BlipMark = 254;
+        readonly List<Blip> blips = new List<Blip>();
+        long nextBlipCheck;
+
         void AddBlip(Entity e, bool enemy)
         {
             try
@@ -3502,8 +3515,65 @@ namespace TikArena
                 Blip b = e.AddBlip();
                 b.Color = enemy ? BlipColor.Red : BlipColor.Blue;
                 b.Scale = 0.75f;
+                b.Alpha = BlipMark;
+                blips.Add(b);
             }
             catch { }
+        }
+
+        // a blip disappears as soon as its character is dead or gone
+        void UpdateBlips()
+        {
+            if (U.Now < nextBlipCheck) return;
+            nextBlipCheck = U.Now + 400;
+            for (int i = blips.Count - 1; i >= 0; i--)
+            {
+                Blip b = blips[i];
+                bool keep = false;
+                try
+                {
+                    if (b.Exists())
+                    {
+                        Entity en = b.Entity;
+                        keep = en != null && en.Exists() && !en.IsDead;
+                        if (!keep) b.Delete();
+                    }
+                }
+                catch { }
+                if (!keep) blips.RemoveAt(i);
+            }
+        }
+
+        // removes every blip of the script; orphans = also the marked ones left by an earlier run
+        // (script reloaded / crashed) with their characters and vehicles
+        void ClearBlips(bool orphans)
+        {
+            foreach (Blip b in blips) { try { if (b.Exists()) b.Delete(); } catch { } }
+            blips.Clear();
+            if (!orphans) return;
+            try
+            {
+                Ped pl = Game.Player.Character;
+                foreach (Blip b in World.GetAllBlips())
+                {
+                    try
+                    {
+                        if (b == null || !b.Exists() || b.Alpha != BlipMark) continue;
+                        Entity en = b.Entity;
+                        b.Delete();
+                        if (en == null || !en.Exists() || (pl.Exists() && en.Handle == pl.Handle)) continue;
+                        if (en is Ped && !IsTracked((Ped)en))
+                        {
+                            Ped p = (Ped)en;
+                            if (p.IsInVehicle()) SafeDeleteVehicle(p.CurrentVehicle);
+                            p.Delete();
+                        }
+                        else if (en is Vehicle) SafeDeleteVehicle((Vehicle)en);
+                    }
+                    catch { }
+                }
+            }
+            catch (Exception ex) { U.Error("ClearBlips", ex); }
         }
 
         void TaskPed(Tracked t)
@@ -3665,9 +3735,9 @@ namespace TikArena
                 Function.Call(Hash.SET_PED_COMBAT_ATTRIBUTES, p, 3, i != 0);
                 Tracked t = Track(p, j, true, false, v, i == 0);
                 TaskPed(t);
+                if (it.Blip) AddBlip(p, true);
             }
             pm.MarkAsNoLongerNeeded();
-            if (it.Blip) AddBlip(v, true);
             Function.Call(Hash.SET_VEHICLE_ENGINE_ON, v, true, true, false);
             SpawnFx(it.Effect, road);
             Snd(cfg.SndEnemy);
