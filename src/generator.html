@@ -133,6 +133,12 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
 .atile:hover{border-color:var(--acc);box-shadow:0 0 14px rgba(0,230,118,.3);transform:translateY(-2px)}
 .atile.on{border-color:var(--acc);background:linear-gradient(180deg,rgba(0,230,118,.18),#0a1019)}
 .actbtn{width:100%;justify-content:space-between}
+.seg{display:flex;gap:3px;background:#080d15;border:1px solid var(--line2);border-radius:10px;padding:3px}
+.seg b{flex:1;text-align:center;font-size:12px;padding:5px 2px;border-radius:7px;cursor:pointer;color:var(--mut);font-weight:600}
+.seg b.on{background:linear-gradient(135deg,rgba(41,121,255,.35),rgba(0,230,118,.2));color:#fff;box-shadow:inset 0 0 0 1px rgba(41,121,255,.6)}
+.giftcard{display:flex;align-items:center;gap:8px;width:100%;text-align:right;border:1px solid rgba(41,121,255,.5);background:linear-gradient(135deg,rgba(41,121,255,.16),#0a1019);border-radius:11px;padding:6px 9px;cursor:pointer}
+.giftcard .e{font-size:28px}
+.giftcard small{display:block;color:var(--mut);direction:ltr;text-align:right;font-size:11px}
 .actbtn .e{font-size:22px}
 .citem{border:1px solid var(--line2);background:#0a1019;border-radius:11px;padding:8px;cursor:pointer;display:flex;gap:8px;align-items:center;transition:.15s}
 .citem:hover{border-color:var(--acc);box-shadow:0 0 10px rgba(0,230,118,.2)}
@@ -142,6 +148,8 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
 .toast.on{transform:translateX(-50%) translateY(0)}
 .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:6px;background:rgba(139,92,246,.2);color:#c4b5fd;border:1px solid rgba(139,92,246,.35)}
 .ltr{direction:ltr;text-align:left}
+@keyframes spotpop{from{opacity:0;transform:scale(.8)}}
+@keyframes spotbar{from{width:460px}to{width:0}}
 @media (max-width:1100px){.inter{grid-template-columns:1fr 1fr}.col.tools{flex-direction:row;flex-wrap:wrap;grid-column:1/-1}.hudwrap{grid-template-columns:1fr}.previewBox{position:relative;top:0}}
 @media (max-width:640px){.inter{grid-template-columns:1fr}.fld.wide{grid-column:auto}main{padding:12px}.top{padding:8px 12px}nav.pills{top:59px;padding:8px 12px}}
 </style>
@@ -191,6 +199,7 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
         <div class="styles" id="styleBtns"></div>
         <h3>🧩 تخطيطات جاهزة</h3>
         <div class="chips" id="presets"></div>
+        <div style="margin-top:8px"><button class="btn sm" id="btnSpotDemo">⭐ معاينة الإشعار الكبير (3 ث)</button></div>
         <h3>🏟️ الديزاين (على اللوحات الأصلية)</h3>
         <div class="chips" id="kitChips"></div>
       </div>
@@ -395,6 +404,7 @@ function defaults(){
     FireFx:"core|ent_amb_torch_fire",SmokeFx:"core|exp_grd_bzgas_smoke",ElectricFx:"core|ent_amb_elec_crackle",SparklesFx:"core|ent_amb_sparking_wires"};
   S.LiveTest = {Enabled:true,Key:"F9",ShowBadge:true,Names:"أحمد,سارة,Yassine,Nora,Karim,Lina,Omar,Hiba,Adam,Salma,Mehdi,Imane,Zakaria,Khadija,Anas,Rania",AvatarUrls:"",Comments:"GG,🔥,يلاه,اقتلوه,عاونوه,واو",
     MinDelayMs:700,MaxDelayMs:2200,GiftWeight:45,LikeWeight:25,CommentWeight:10,FollowWeight:8,ShareWeight:6,JoinWeight:6,ComboChance:25,MaxCombo:15};
+  S.Spotlight = {Enabled:true,Seconds:3,MinCoins:1000,Sound:"CHALLENGE_UNLOCKED|HUD_AWARDS",OffsetY:0};
   S.PlayerFx = {Enabled:true,Popup:true,PopupSeconds:2.5,Burst:true,BuffAura:true,SpeedColor:"#29b6ff",GodColor:"#ffc828",JumpColor:"#39ff14",FreezeColor:"#bff4ff",WeaponColor:"#ff9f1c",HealColor:"#00e676",SpeedTrail:"core|ent_amb_elec_crackle"};
   S.Death = {CustomDeath:true,RespawnSeconds:6,RespawnMode:"Here",CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Coffin:true,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
   return {
@@ -423,7 +433,7 @@ function newInteraction(over){
   const it = {Enabled:true,Name:"",Action:"SpawnEnemy",Trigger:"Gift",GiftName:"Rose",GiftId:"",LikesCount:100,CommentText:"",OncePerUser:false,TestKey:"None",
     Units:1,MultiplyByCombo:true,Cooldown:0,Effect:"SoftSmoke",Message:"قام {name} بإنزال عدو",EntryCam:false,ShowInGuide:true,
     Model:"s_m_y_clown_01",Health:150,Armor:0,Weapon:"WEAPON_BAT",Ammo:9999,Accuracy:25,CombatAbility:1,CombatMovement:2,ShootRate:100,Blip:true,SpawnDistance:20,
-    VehicleModel:"zentorno",WarpIntoVehicle:true,Duration:15,Amount:5,Weather:"Random",Aura:"Default",AuraColor:"",
+    VehicleModel:"zentorno",WarpIntoVehicle:true,Duration:15,Amount:5,Weather:"Random",Aura:"Default",AuraColor:"",GiftMatch:"Catalog",Spotlight:false,SpotlightText:"",
     giftImg:null, giftEmoji:"🌹", actImg:null, actEmoji:"🦹", open:false};
   return Object.assign(it, over||{});
 }
@@ -433,7 +443,7 @@ function defaultInteractions(){
     newInteraction({Name:"سوات مساعد",Action:"SpawnAlly",GiftName:"Finger Heart",TestKey:"NumPad2",Model:"s_m_y_swat_01",Weapon:"WEAPON_CARBINERIFLE",Health:300,Armor:100,Accuracy:50,CombatAbility:2,Effect:"SoftSmoke",Message:"قام {name} بإنزال مساعد",giftEmoji:"🫰",actEmoji:"👮"}),
     newInteraction({Name:"+250 دم",Action:"AddHealth",Trigger:"Likes",LikesCount:100,TestKey:"NumPad3",Amount:250,Message:"{name} زاد 250 نقطة دم",giftEmoji:"❤️",actEmoji:"💖"}),
     newInteraction({Name:"علاج كامل",Action:"Heal",Trigger:"Follow",OncePerUser:true,TestKey:"NumPad4",Message:"{name} عالجك",giftEmoji:"➕",actEmoji:"❤️‍🩹"}),
-    newInteraction({Name:"سيارة المافيا",Action:"MafiaCar",GiftName:"Perfume",TestKey:"NumPad5",Model:"g_m_m_chicold_01",Weapon:"WEAPON_MICROSMG",VehicleModel:"schafter2",SpawnDistance:80,Effect:"None",Message:"{name} صيفط المافيا",giftEmoji:"🧴",actEmoji:"🚘"}),
+    newInteraction({Name:"سيارة المافيا",Action:"MafiaCar",Spotlight:true,GiftName:"Perfume",TestKey:"NumPad5",Model:"g_m_m_chicold_01",Weapon:"WEAPON_MICROSMG",VehicleModel:"schafter2",SpawnDistance:80,Effect:"None",Message:"{name} صيفط المافيا",giftEmoji:"🧴",actEmoji:"🚘"}),
     newInteraction({Name:"كوغار",Action:"Animals",GiftName:"Doughnut",TestKey:"NumPad6",Units:3,Model:"a_c_mtlion",Weapon:"None",Health:200,Effect:"Smoke",Message:"{name} طلق {count} ديال الحيوانات",giftEmoji:"🍩",actEmoji:"🐺"}),
     newInteraction({Name:"زلزال",Action:"Earthquake",GiftName:"Hand Hearts",TestKey:"NumPad7",Duration:15,Message:"{name} دار زلزال!",giftEmoji:"🫶",actEmoji:"🌋"}),
     newInteraction({Name:"زينتورنو",Action:"GiveVehicle",GiftName:"Confetti",TestKey:"NumPad8",VehicleModel:"zentorno",Effect:"SoftSmoke",Message:"قام {name} بإعطاء سيارة",giftEmoji:"🎊",actEmoji:"🚗"}),
@@ -780,7 +790,7 @@ function iField(i, k, label, type, o){
 function mainFields(i){
   const it = state.interactions[i], t = (ACT[it.Action] || {}).type;
   if (t === "chars") return iField(i,"Model","🧍 السكن","model") + (it.Action === "Animals" ? "" : iField(i,"Weapon","🔫 السلاح","weapon"));
-  if (t === "crew") return iField(i,"VehicleModel","🚘 الطوموبيل","vehicle") + iField(i,"Model","🧍 السكن","model");
+  if (t === "crew") return iField(i,"VehicleModel","🚘 الطوموبيل","vehicle") + iField(i,"Model","🧍 السكن","model") + iField(i,"Spotlight","⭐ إشعار كبير (3 ث)","b");
   if (t === "clone") return iField(i,"Weapon","🔫 السلاح","weapon");
   if (t === "vehicle") return iField(i,"VehicleModel","🚗 الطوموبيل","vehicle");
   if (t === "weapon") return iField(i,"Weapon","🔫 السلاح","weapon");
@@ -791,13 +801,22 @@ function mainFields(i){
   if (t === "random") return `<div class="hint">كيختار من لائحة 🎲 العشوائي (القسم 05)</div>`;
   return `<div class="hint">أكسيون فوري</div>`;
 }
+// gift chosen by name, by ID or from the catalog (under the interaction type)
+function giftPicker(i){
+  const it = state.interactions[i], m = it.GiftMatch || "Catalog";
+  const seg = [["Name","🔤 بالاسم"],["Id","🆔 بالـ ID"],["Catalog","📖 الكتالوج"]].map(([v, n]) => `<b class="${m===v?"on":""}" data-gm="${v}" data-i="${i}">${n}</b>`).join("");
+  let body;
+  if (m === "Name") body = `<input type="text" class="ltr" list="giftNames" placeholder="Rose" data-ii="${i}" data-ik="GiftName" data-t="t" value="${esc(it.GiftName)}">`;
+  else if (m === "Id") body = `<input type="text" class="ltr" inputmode="numeric" placeholder="${giftId(it.GiftName) || "5655"}" data-ii="${i}" data-ik="GiftId" data-t="t" value="${esc(it.GiftId)}">`;
+  else { const g = allGifts().find(x => x[0].toLowerCase() === String(it.GiftName).toLowerCase());
+    body = `<button class="giftcard" data-giftcat="${i}"><span class="e">${esc(g ? g[1] : (it.giftEmoji || "🎁"))}</span><span style="flex:1"><b>${esc(it.GiftName || "اختار هدية")}</b><small>${(it.GiftId || giftId(it.GiftName)) ? "ID " + esc(it.GiftId || giftId(it.GiftName)) + " · " : ""}${g ? "≈ " + g[2] + " كوينز" : ""}</small></span><span>📖</span></button>`; }
+  return `<div><label>🎁 الهدية</label><div class="seg">${seg}</div><div style="margin-top:5px">${body}</div></div>`;
+}
 function triggerFields(i){
   const it = state.interactions[i], t = it.Trigger;
   if (t === "Gift"){
-    const c = giftCoins(it.GiftName);
-    const known = giftId(it.GiftName);
-    return `<div><label>🎁 الهدية</label><div class="row" style="display:flex;gap:5px"><input type="text" class="ltr" list="giftNames" data-ii="${i}" data-ik="GiftName" data-t="t" value="${esc(it.GiftName)}"><button class="btn sm icon" data-giftcat="${i}">📖</button></div>${c!=null?`<div class="coins">≈ ${c} كوينز</div>`:""}</div>
-      <div><label>🆔 ID ديال الهدية</label><div class="row" style="display:flex;gap:5px"><input type="text" class="ltr" inputmode="numeric" placeholder="${known ? "مثلاً " + known : "مثلاً 5655"}" data-ii="${i}" data-ik="GiftId" data-t="t" value="${esc(it.GiftId)}">${known && known !== it.GiftId ? `<button class="btn sm" data-fillid="${i}" title="استعمل ${known}">↙ ${known}</button>` : ""}</div><div class="hint">بالاسم ولا بالـ ID (واحد منهم كيكفي)</div></div>`;
+    const g = allGifts().find(x => x[0].toLowerCase() === String(it.GiftName).toLowerCase());
+    return `<div><label>🎁 ${esc(it.GiftName || "—")}</label><div class="hint ltr" style="text-align:right">${it.GiftId ? "ID " + esc(it.GiftId) : "ID —"}${g ? " · ≈ " + g[2] + " كوينز" : ""}</div><div class="hint">${{Name:"كيتعرف بالاسم فقط",Id:"كيتعرف بالـ ID فقط",Catalog:"كيتعرف بالاسم ولا بالـ ID"}[it.GiftMatch || "Catalog"]}</div></div>`;
   }
   if (t === "Likes") return iField(i,"LikesCount","❤️ كل شحال من لايك","i",{min:1});
   if (t === "Comment") return iField(i,"CommentText","💬 الكلمة (خاوي = أي تعليق)","t");
@@ -829,6 +848,8 @@ function advFields(i){
     if (t === "crew") h += iField(i,"Weapon","🔫 سلاح الطاقم","weapon");
   }
   if (person){ h += iField(i,"Aura","🌟 تأثير الشخصية (Aura)","s",AURAS); h += `<div><label>🎨 لون التأثير (خاوي = حسب النوع)</label><div style="display:flex;gap:4px"><input type="color" value="${esc(it.AuraColor||"#ffc828")}" data-auracolor="${i}"><input type="text" class="ltr" data-ii="${i}" data-ik="AuraColor" data-t="t" value="${esc(it.AuraColor)}" placeholder="#ff3b5c"></div></div>`; }
+  h += iField(i,"Spotlight","⭐ إشعار كبير فالوسط (3 ث)","b");
+  h += `<div style="grid-column:span 2">${iField(i,"SpotlightText","⭐ نص الإشعار الكبير (خاوي = جملة الإشعار) {name} {count}","t")}</div>`;
   if (t === "vehicle") h += iField(i,"WarpIntoVehicle","🪑 دخلو للسيارة","b");
   if (t === "weapon") h += iField(i,"Ammo","📦 الرصاص","i",{min:1});
   h += `</div>`;
@@ -842,6 +863,7 @@ function renderInteractions(){
       <span class="idx">#${i+1}</span>
       <div class="col">
         ${iField(i,"Trigger","⚡ نوع التفاعل","s",TRIGGERS)}
+        ${it.Trigger === "Gift" ? giftPicker(i) : ""}
         ${iField(i,"Enabled","مشعول","b")}
         ${iField(i,"TestKey","⌨️ زر التجربة","k")}
       </div>
@@ -890,6 +912,7 @@ function onActionChange(it, prev){
   if (!it.actImg && (!it.actEmoji || (ACT[prev] && it.actEmoji === ACT[prev].emoji))) it.actEmoji = a.emoji;
   const dm = {SpawnEnemy:["s_m_y_clown_01","WEAPON_BAT",150],SpawnAlly:["s_m_y_swat_01","WEAPON_CARBINERIFLE",300],Animals:["a_c_mtlion","None",200],MafiaCar:["g_m_m_chicold_01","WEAPON_MICROSMG",150],MotoHitman:["g_m_y_lost_01","WEAPON_MICROSMG",150],Clone:["","WEAPON_CARBINERIFLE",300]};
   if (dm[it.Action]){ const d = dm[it.Action]; it.Model = d[0]; it.Weapon = d[1]; it.Health = d[2]; }
+  if (it.Action === "MafiaCar" || it.Action === "MotoHitman") it.Spotlight = true;
   if (it.Action === "MafiaCar"){ it.VehicleModel = "schafter2"; it.SpawnDistance = 80; }
   if (it.Action === "MotoHitman"){ it.VehicleModel = "bati"; it.SpawnDistance = 70; }
   if (it.Action === "GiveVehicle") it.VehicleModel = "zentorno";
@@ -931,6 +954,8 @@ interBox.addEventListener("change", e => {
 interBox.addEventListener("click", e => {
   const u = e.target.closest("[data-units]");
   if (u){ const it = state.interactions[+u.dataset.i]; it.Units = Math.max(1, Math.min(999, it.Units + (+u.dataset.units))); u.parentElement.querySelector("input").value = it.Units; changed(); return; }
+  const gm = e.target.closest("[data-gm]");
+  if (gm){ const it = state.interactions[+gm.dataset.i]; it.GiftMatch = gm.dataset.gm; if (gm.dataset.gm === "Id" && !it.GiftId) it.GiftId = giftId(it.GiftName); renderInteractions(); changed(); return; }
   const fid = e.target.closest("[data-fillid]");
   if (fid){ const it = state.interactions[+fid.dataset.fillid]; it.GiftId = giftId(it.GiftName); renderInteractions(); changed(); return; }
   const ap = e.target.closest("[data-actpick]");
@@ -1063,6 +1088,8 @@ function renderAllForms(){
       ["GuideTitleEnabled","العنوان","b"],["GuideTitle","العنوان","t"],["GuideGiftColor","لون الهدية","c"],["GuideActionColor","لون الأكشن","c"]]},
     {sec:"Hud", title:"🧍 فوق راس الشخصيات", fields:[["OverheadEnabled","مشعول","b"],["OverheadAvatar","الصورة","b"],["OverheadName","الاسم","b"],["OverheadHealth","شريط الدم","b"],["OverheadHeight","العلو","f",{min:0,step:0.1}]]},
     {sec:"Notifications", title:"🔔 الإشعارات", fields:[["Enabled","مشعولة","b"],["Seconds","المدة (ث)","f",{min:1}],["MaxVisible","أقصى عدد","i",{min:1,max:20}],["ShowAvatar","صورة البروفايل","b"],["ShowGiftIcon","صورة الهدية","b"]]},
+    {sec:"Spotlight", title:"⭐ الإشعار الكبير (Spotlight)", hint:"كارطة كبيرة فوسط الشاشة لمدة 3 ثواني: صورة الأكشن، العنوان ديال التفاعل، الجملة، والصورة ديال الداعم. كتبان للتفاعلات اللي مشعول فيهم «⭐ إشعار كبير» (سيارة المافيا والموطور افتراضياً)، ولا أوتوماتيكياً لأي هدية ≥ الكوينز (0 = بلا).", fields:[
+      ["Enabled","مشعول","b"],["Seconds","⏱️ المدة (ث)","f",{min:1,max:15}],["MinCoins","💎 أوتوماتيكي للهدايا ≥ (كوينز، 0 = بلا)","i",{min:0}],["Sound","🔊 الصوت","sound"],["OffsetY","↕ Y","i"]]},
     {sec:"KillFeed", title:"☠️ Kill Feed", fields:[["Enabled","مشعول","b"],["Seconds","المدة (ث)","f",{min:1}],["MaxVisible","أقصى عدد","i",{min:1,max:20}]]},
     {sec:"Texts", title:"📝 النصوص", fields:Object.keys(state.ini.Texts).map(k => [k, k, "t"])}
   ]);
@@ -1569,6 +1596,18 @@ function pvScoreWrap(P){
     `<span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${H.LossColor};margin:0 5px"></i>${esc(T.EnemiesShort)} 4</span><span style="opacity:.4">|</span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${H.WinColor};margin:0 5px"></i>${esc(T.AlliesShort)} 2</span>`);
   return {w, h: top + 22, html: (P ? `<div style="position:absolute;left:${(w - P.w)/2}px;top:0;width:${P.w}px;height:${P.h}px">${P.html}</div>` : "") + strip};
 }
+// sample of the big Spotlight card (mafia car / expensive gift)
+function pvSpot(frame, vert){
+  const it = state.interactions.find(x => x.Spotlight) || state.interactions[0] || newInteraction({});
+  const acc = designOn() ? dAcc() : HV().AccentColor, w = 480, h = 118, s = vert ? Math.min(1, (frame.w - 16) / w) : 1;
+  const x = frame.x + (frame.w - w*s)/2, y = (vert ? 300 : 150) + (+state.ini.Spotlight.OffsetY || 0), sup = SAMPLE_SUPS[0];
+  return `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:scale(${s});transform-origin:0 0;background:rgba(14,16,24,.95);border-radius:14px;border-top:3px solid ${acc};box-shadow:0 10px 40px rgba(0,0,0,.6);${txtCss()}animation:spotpop .3s ease-out">
+    <div style="position:absolute;left:17px;top:17px;width:84px;height:84px;display:grid;place-items:center;font-size:64px;filter:drop-shadow(0 0 18px ${acc})">${it.actImg ? `<img src="${it.actImg}" style="width:84px">` : esc(it.actEmoji)}</div>
+    <div style="position:absolute;left:118px;top:8px;color:${acc};font-size:${fpx(.56)};font-weight:700">${esc(it.Name || (ACT[it.Action]||{}).name || "")}</div>
+    <div style="position:absolute;left:118px;top:46px;font-size:${fpx(.36)}">${esc(fill(it.SpotlightText || it.Message, sup[0]))}</div>
+    <div style="position:absolute;left:117px;top:75px;display:flex;align-items:center;gap:8px;color:${state.ini.Hype.Color};font-size:${fpx(.34)}">${avatarHTML(sup, 30, state.ini.Hype.Color)}${sup[0]}</div>
+    <div style="position:absolute;left:10px;bottom:2px;height:3px;width:${w-20}px;background:${acc};animation:spotbar ${state.ini.Spotlight.Seconds}s linear forwards"></div></div>`;
+}
 function renderPreview(){
   const stage = $("#stage"), vp = $("#vp");
   if (!stage.clientWidth) return;
@@ -1606,6 +1645,7 @@ function renderPreview(){
     const [x, y] = anchor(L, p, P.w * s, P.h * s, frame);
     put(p, P, x, y, s);
   });
+  if (state.ui.spotUntil && Date.now() < state.ui.spotUntil) html += pvSpot(frame, vert);
   if (state.ini.LiveTest.Enabled && state.ini.LiveTest.ShowBadge) html += `<div style="position:absolute;left:${frame.x + frame.w - 110}px;top:4px;background:#fe2c55;color:#fff;font:700 12px Arial;padding:2px 8px">● LIVE TEST</div>`;
   vp.innerHTML = html;
 }
@@ -1656,6 +1696,7 @@ $("#styleBtns").addEventListener("click", e => {
   const cyc = state.ini.Hud.StyleCycle.split(",").filter(Boolean); if (!cyc.includes(s.dataset.style)) { cyc.push(s.dataset.style); state.ini.Hud.StyleCycle = cyc.join(","); }
   renderHudSide(); renderAllForms(); changed();
 });
+$("#btnSpotDemo").onclick = () => { state.ui.spotUntil = Date.now() + (state.ini.Spotlight.Seconds || 3) * 1000; renderPreview(); setTimeout(renderPreview, (state.ini.Spotlight.Seconds || 3) * 1000 + 50); };
 $("#pvNormal").onclick = () => { state.ui.preview = "Normal"; renderHudSide(); renderPreview(); save(); };
 $("#pvVertical").onclick = () => { state.ui.preview = "Vertical"; renderHudSide(); renderPreview(); save(); };
 const PRESETS = {
@@ -1722,9 +1763,9 @@ NAV.forEach(([id]) => io.observe(document.getElementById(id)));
 <script>
 "use strict";
 // ------------------------------------------------------------- INI export
-const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest","PlayerFx"];
+const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest","PlayerFx","Spotlight"];
 const INTER_KEYS = ["Enabled","Name","Action","Trigger","GiftName","GiftId","LikesCount","CommentText","OncePerUser","TestKey","Units","MultiplyByCombo","Cooldown","Effect","Message","GiftImage","ActionImage","EntryCam","ShowInGuide",
-  "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","Amount","Weather","Aura","AuraColor","GiftCoins"];
+  "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","Amount","Weather","Aura","AuraColor","GiftCoins","GiftMatch","Spotlight","SpotlightText"];
 function iniVal(v){
   if (typeof v === "boolean") return v ? "true" : "false";
   if (typeof v === "number") return String(Math.round(v * 1000) / 1000);
@@ -1746,7 +1787,7 @@ function buildIni(){
   out.push("[Interactions]", `Count=${state.interactions.length}`, "");
   state.interactions.forEach((it, i) => {
     const n = i + 1;
-    const o = Object.assign({}, it, {GiftCoins: it.Trigger === "Gift" ? (giftCoins(it.GiftName) || 0) : 0, GiftImage: hasGiftImg(it) ? `images/i${n}_gift.png` : "", ActionImage: hasActImg(it) ? `images/i${n}_action.png` : ""});
+    const o = Object.assign({}, it, {GiftMatch: it.GiftMatch === "Name" || it.GiftMatch === "Id" ? it.GiftMatch : "Both", GiftCoins: it.Trigger === "Gift" ? (giftCoins(it.GiftName) || 0) : 0, GiftImage: hasGiftImg(it) ? `images/i${n}_gift.png` : "", ActionImage: hasActImg(it) ? `images/i${n}_action.png` : ""});
     out.push(`[Interaction${n}]`);
     INTER_KEYS.forEach(k => out.push(`${k}=${iniVal(o[k])}`));
     out.push("");

@@ -534,6 +534,9 @@ namespace TikArena
         public string Aura = "Default";
         public string AuraColor = "";
         public int GiftCoins;
+        public string GiftMatch = "Both";
+        public bool Spotlight;
+        public string SpotlightText = "";
 
         // runtime
         public long LastFire = -999999;
@@ -583,6 +586,9 @@ namespace TikArena
             it.Aura = ini.S(s, "Aura", "Default");
             it.AuraColor = ini.S(s, "AuraColor", "");
             it.GiftCoins = Math.Max(0, ini.I(s, "GiftCoins", 0));
+            it.GiftMatch = ini.S(s, "GiftMatch", "Both");
+            it.Spotlight = ini.B(s, "Spotlight", it.Action == "MafiaCar" || it.Action == "MotoHitman");
+            it.SpotlightText = ini.S(s, "SpotlightText", "");
             return it;
         }
 
@@ -692,6 +698,10 @@ namespace TikArena
         public Dictionary<string, string> T = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         // [Layout] / [LayoutVertical]
         public LayoutCfg Normal, Vertical;
+        public bool SpotEnabled;
+        public float SpotSeconds, SpotOffsetY;
+        public long SpotMinCoins;
+        public string SpotSound;
         public bool FxEnabled, FxPopup, FxBurst, FxBuffAura;
         public float FxPopupSeconds;
         public Color FxSpeedColor, FxGodColor, FxJumpColor, FxFreezeColor, FxWeaponColor, FxHealColor;
@@ -985,6 +995,11 @@ namespace TikArena
 
             c.Normal = LayoutCfg.Read(ini, "Layout", false);
             c.Vertical = LayoutCfg.Read(ini, "LayoutVertical", true);
+            c.SpotEnabled = ini.B("Spotlight", "Enabled", true);
+            c.SpotSeconds = U.Clamp(ini.F("Spotlight", "Seconds", 3), 1, 15);
+            c.SpotMinCoins = Math.Max(0, ini.I("Spotlight", "MinCoins", 1000));
+            c.SpotSound = ini.S("Spotlight", "Sound", "CHALLENGE_UNLOCKED|HUD_AWARDS");
+            c.SpotOffsetY = ini.F("Spotlight", "OffsetY", 0);
             c.FxEnabled = ini.B("PlayerFx", "Enabled", true);
             c.FxPopup = ini.B("PlayerFx", "Popup", true);
             c.FxPopupSeconds = U.Clamp(ini.F("PlayerFx", "PopupSeconds", 2.5f), 0.5f, 10f);
@@ -2568,6 +2583,7 @@ namespace TikArena
             fakeDead = false;
             StopSpeedFx();
             popups.Clear();
+            spots.Clear();
             shaking = drunkClip = speedOn = freezeOn = gravOn = blackoutOn = false;
             radarHidden = clockLocked = tcApplied = wantedApplied = false;
             appliedWeather = null;
@@ -2871,6 +2887,9 @@ namespace TikArena
                     if (e.Type != "gift") return 0;
                     bool byName = it.GiftName.Length > 0 && string.Equals(it.GiftName.Trim(), e.GiftName.Trim(), StringComparison.OrdinalIgnoreCase);
                     bool byId = it.GiftId.Length > 0 && it.GiftId.Trim() == e.GiftId.Trim();
+                    string gm = (it.GiftMatch ?? "Both").ToLowerInvariant();
+                    if (gm == "name") byId = false;
+                    else if (gm == "id") byName = false;
                     if (!byName && !byId) return 0;
                     units = it.Units * (it.MultiplyByCombo ? e.Count : 1);
                     break;
@@ -2930,6 +2949,7 @@ namespace TikArena
             if (IsEnemyAction(it.Action)) { lastEnemySup = s; lastEnemyAt = U.Now; }
             else if (IsRivalHelp(it.Action)) CheckRivalry(s);
 
+            QueueSpotlight(it, s, units, coins);
             if (cfg.NotifEnabled && it.Message.Length > 0)
             {
                 FeedItem f = new FeedItem();
@@ -5602,6 +5622,71 @@ namespace TikArena
             Gfx.PartsCentered(new List<string> { cfg.Tx("RespawnText", "Respawn"), Math.Ceiling(left).ToString(U.IC) }, bw / 2, 4, SMALL * 1.15f, Color.White);
         }
 
+        // ================================================================ Spotlight: big 3-second notification (mafia car, moto hitman, expensive gifts)
+        //  [Spotlight] Enabled, Seconds, MinCoins (0 = only interactions with Spotlight=true), Sound, OffsetY
+        //  shows: supporter picture + action picture + interaction title + text, in the HUD design
+        class Spot { public Supporter Sup; public string Title, Icon, Gift; public List<string> Parts; public int Count; public long Start, End; }
+        readonly List<Spot> spots = new List<Spot>();
+
+        void QueueSpotlight(Interaction it, Supporter s, int units, long coins)
+        {
+            if (!cfg.SpotEnabled) return;
+            bool on = it.Spotlight || (cfg.SpotMinCoins > 0 && coins >= cfg.SpotMinCoins);
+            if (!on) return;
+            Spot sp = new Spot();
+            sp.Sup = s;
+            sp.Title = it.Title;
+            sp.Icon = ImgPath(it.ActionImage);
+            sp.Gift = ImgPath(it.GiftImage);
+            string tpl = it.SpotlightText.Length > 0 ? it.SpotlightText : it.Message;
+            sp.Parts = Txt.Parts(tpl, s != null ? s.Nick : "", units, null, s != null ? s.Level : 0);
+            sp.Count = units;
+            spots.Add(sp);
+            while (spots.Count > 6) spots.RemoveAt(1);
+        }
+
+        void DrawSpotlight()
+        {
+            if (spots.Count == 0) return;
+            long now = U.Now;
+            Spot sp = spots[0];
+            if (sp.Start == 0)
+            {
+                sp.Start = now;
+                sp.End = now + (long)(cfg.SpotSeconds * 1000);
+                Snd(cfg.SpotSound);
+            }
+            if (now >= sp.End) { spots.RemoveAt(0); return; }
+            float life = (now - sp.Start) / (float)Math.Max(1, sp.End - sp.Start);
+            float tin = U.Clamp((now - sp.Start) / 260f, 0, 1);
+            float a = life > 0.9f ? (1 - life) / 0.1f : 1f;
+            float pop = 0.8f + 0.2f * tin + (tin < 1 ? (float)Math.Sin(tin * Math.PI) * 0.06f : 0f);
+            float w = 480, h = 118;
+            float s = pop * (vertical ? Math.Min(1f, (frameW - 16) / w) : 1f);
+            float x0 = frameX + (frameW - w * s) / 2, y0 = frameY + (vertical ? 300 : 150) + cfg.SpotOffsetY;
+            Gfx.Origin(x0, y0, s);
+            Color acc = DesignOn ? DAcc : cAcc;
+            DBox(0, 0, w, h);
+            // light sweep
+            float sweep = (life * 1.6f) % 1f;
+            for (int k = 0; k < 6; k++) Gfx.Rect(w * sweep - 40 + k * 8, 3, 8, h - 6, Color.FromArgb((int)(18 * a * (1 - Math.Abs(k - 2.5f) / 3f)), 255, 255, 255));
+            Gfx.Rect(0, 0, w, 3, U.WithAlpha(acc, (int)(255 * a)));
+            // action picture (big, with glow)
+            Gfx.Shape("glow", 4, 4, 110, 110, U.WithAlpha(acc, (int)(120 * a)));
+            if (Gfx.FileOk(sp.Icon)) Gfx.Image(sp.Icon, 17, 17, 84, 84, (int)(255 * a));
+            else if (Gfx.FileOk(sp.Gift)) Gfx.Image(sp.Gift, 17, 17, 84, 84, (int)(255 * a));
+            // texts
+            Gfx.Text(U.Trunc(sp.Title, 26), 118, 10, 0.56f, U.WithAlpha(acc, (int)(255 * a)), Alignment.Left);
+            if (sp.Count > 1) Gfx.Text("x" + sp.Count, w - 14, 10, 0.56f, U.WithAlpha(Color.White, (int)(255 * a)), Alignment.Right);
+            Gfx.Parts(sp.Parts, 118, 46, TXT * 1.05f, U.WithAlpha(Color.White, (int)(235 * a)));
+            // supporter
+            AvRing(sp.Sup, 132, 90, 30, cfg.HypeColor, false, false);
+            if (sp.Sup != null) Gfx.Text(U.Trunc(sp.Sup.Nick, 20), 154, 81, TXT, U.WithAlpha(cfg.HypeColor, (int)(255 * a)), Alignment.Left);
+            if (Gfx.FileOk(sp.Gift) && Gfx.FileOk(sp.Icon)) Gfx.Image(sp.Gift, w - 46, h - 46, 36, 36, (int)(255 * a));
+            // time bar
+            Gfx.Rect(10, h - 5, (w - 20) * (1 - life), 3, U.WithAlpha(acc, (int)(230 * a)));
+        }
+
         // ================================================================ HUD
         const float TXT = 0.34f, SMALL = 0.28f, BIG = 0.62f;
         float frameX, frameY, frameW = 1280, frameH = 720;
@@ -5880,6 +5965,7 @@ namespace TikArena
                 Place("Feed", cfg.FeedEnabled && feed.Count > 0, fFeed);
                 Place("Hype", cfg.HypeEnabled && hypes.Count > 0, fHype);
             }
+            DrawSpotlight();
             DrawDeathOverlay();
             EndScreen();
             LiveBadge();
