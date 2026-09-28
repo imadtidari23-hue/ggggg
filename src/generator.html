@@ -310,10 +310,10 @@ const EFFECTS = [["None","بلا تأثير"],["SoftSmoke","دخان ناعم م
 const KILL_EFFECTS = EFFECTS.filter(e => e[0] !== "SkyDrop");
 const TRIGGERS = [["Gift","🎁 هدية"],["Likes","❤️ لايكات"],["Share","🔁 بارتاج"],["Follow","➕ فولو"],["Comment","💬 تعليق"],["Subscribe","⭐ اشتراك"],["Key","⌨️ زر فقط"]];
 const WEATHERS = ["Random","CLEAR","EXTRASUNNY","CLOUDS","OVERCAST","RAIN","CLEARING","THUNDER","SMOG","FOGGY","XMAS","SNOWLIGHT","BLIZZARD","HALLOWEEN"];
-const STYLES = ["Broadcast","Cyber","Royal","Hologram","Gradient","Stream","Carbon","Classic","Glass","Neon","Minimal","Esports","Retro"];
+const STYLES = ["Broadcast","Cyber","Royal","Hologram","Gradient","Stream","Carbon","Classic","Glass","Neon","Minimal","Esports","Retro","Luxury","Aurora","Ember"];
 // a look = a design (whole HUD in one design) or a style without design. F11 goes through LookCycle.
 const LOOK_DESIGNS = ["Arena","Broadcast","Podium","Cards","Esports","Minimal","Classic"];
-const LOOKS = [...LOOK_DESIGNS, "Cyber","Royal","Hologram","Gradient","Stream","Carbon","Glass","Neon","Retro"];
+const LOOKS = [...LOOK_DESIGNS, "Luxury","Aurora","Ember","Cyber","Royal","Hologram","Gradient","Stream","Carbon","Glass","Neon","Retro"];
 const AURAS = [["Default","↩️ حسب النوع (عدو/مساعد)"],["None","بلا"],["Glow","💡 توهج"],["Ring","⭕ دائرة تحت الرجلين"],["Pulse","📡 موجات"],["Beam","🔦 عمود ضو"],["Crown","👑 تاج"],["Rainbow","🌈 قوس قزح"],["Fire","🔥 نار"],["Smoke","💨 دخان ملون"],["Electric","⚡ كهرباء"],["Sparkles","✨ شرارات"]];
 const FONTS = ["ChaletLondon","ChaletComprimeCologne","Pricedown","HouseScript","Monospace"];
 const POSITIONS = ["TopLeft","TopCenter","TopRight","MiddleLeft","MiddleCenter","MiddleRight","BottomLeft","BottomCenter","BottomRight"];
@@ -378,7 +378,7 @@ function defaults(){
   S.Random = {Duration:15,Effect:"SoftSmoke",EnemyModel:"s_m_y_clown_01",EnemyWeapon:"WEAPON_BAT",EnemyHealth:150,AllyModel:"s_m_y_swat_01",AllyWeapon:"WEAPON_CARBINERIFLE",AllyHealth:300,
     AnimalsAmount:3,HealthAmount:250,VehicleModel:"zentorno",GiveWeapon:"WEAPON_CARBINERIFLE"};
   RANDOM_ACTIONS.forEach(a => { S.Random[a+"Enabled"] = !(a==="KillPlayer"||a==="Airstrike"); S.Random[a+"Weight"] = 10; });
-  S.Hud = {Enabled:true,Style:"Broadcast",StylePalette:true,StyleCycle:"Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro",LookCycle:"Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
+  S.Hud = {Enabled:true,Style:"Broadcast",StylePalette:true,StyleCycle:"Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro",LookCycle:"Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Luxury,Aurora,Ember,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
     AccentColor:"#00e676",TextColor:"#ffffff",PanelColor:"#0a0e16",WinColor:"#00e676",LossColor:"#ff3b5c",LayoutMode:"Normal",
     ScoreEnabled:true,ScoreOrder:"Title,Score,Streak",TitleEnabled:true,Title:"حاول تقتلني",ShowScore:true,ShowTimer:true,ShowStreak:true,
     Top3Enabled:true,Top3Order:"Top3,Status",ShowTop3:true,TopCount:3,Top3Title:"أفضل الداعمين",ShowCoins:true,ShowCounters:true,ShowStatus:true,
@@ -393,17 +393,20 @@ function defaults(){
   S.KillFeed = {Enabled:true,Seconds:4,MaxVisible:4};
   S.Hype = {Enabled:true,Seconds:6,MaxVisible:3,ShowLevel:true,Color:"#ffc828",
     KingJoinEnabled:true,KingJoinText:"👑 احذر! لقد دخل الملك {name}",
-    VipJoinEnabled:true,VipJoinMinLevel:20,VipJoinMinCoins:100,VipJoinText:"⚠️ احذر! لقد دخل {name} (Lv {level})",
+    VipJoinEnabled:true,VipJoinMinLevel:20,VipJoinMinCoins:100,VipJoinText:"⚠️ احذر! لقد دخل {name}",
     ComebackEnabled:true,ComebackMinCoins:100,ComebackMinutes:5,ComebackText:"👀 أين أنت يا {name}؟ اللايف كيتسناك",
     RivalryEnabled:true,RivalrySeconds:60,RivalryText:"⚔️ {name} كيتحدى {rival}!",
     NewKingEnabled:true,NewKingMinCoins:50,NewKingText:"👑 {name} ولى هو الملك ديال اللايف!",
     ComboEnabled:true,ComboMin:10,ComboText:"🔥 كومبو x{count} من {name}!"};
   S.Sounds = {EnemySpawn:"CHECKPOINT_MISSED|HUD_MINI_GAME_SOUNDSET",AllySpawn:"CHALLENGE_UNLOCKED|HUD_AWARDS",Help:"PICK_UP|HUD_FRONTEND_DEFAULT_SOUNDSET",Kill:"CHECKPOINT_PERFECT|HUD_MINI_GAME_SOUNDSET",Hype:"MEDAL_UP|HUD_MINI_GAME_SOUNDSET"};
-  S.Camera = {InvincibleDuringCam:true,EntryEnabled:true,EntryMinCoins:1000,EntrySeconds:3,KillerEnabled:true,KillerSeconds:3,SlowMoMode:"LastInWave",SlowMoScale:0.3,SlowMoSeconds:1.5,WinEnabled:true,WinSeconds:4};
-  S.Graphics = {LockTime:false,Hour:21,Minute:0,LockWeather:false,Weather:"Clear",TimecycleEnabled:false,Timecycle:"rply_saturation",TimecycleStrength:0.6,DensityEnabled:false,PedDensity:1,VehicleDensity:1};
+  S.Music = {Enabled:true,Key:"F4",Background:true,Shuffle:true,Volume:60,EventVolume:90,DeathVolume:90};
+  S.DamageFx = {Enabled:true,Numbers:true,Ghost:true,Blood:true,HitFx:"scr_solomon3|scr_trev4_747_blood_impact"};
+  S.Camera = {ZoomKey:"F2",ZoomOnStart:true,ZoomInKey:"PageUp",ZoomOutKey:"PageDown",ZoomDistance:2.3,ZoomHeight:0.55,ZoomSide:0.45,ZoomFov:50,ZoomVehDistance:5.5,ZoomVehHeight:1.3,ZoomNormalWhenAiming:true,
+    InvincibleDuringCam:true,EntryEnabled:true,EntryMinCoins:1000,EntrySeconds:3,KillerEnabled:true,KillerSeconds:3,SlowMoMode:"LastInWave",SlowMoScale:0.3,SlowMoSeconds:1.5,WinEnabled:true,WinSeconds:4};
+  S.Graphics = {Preset:"Off",Key:"Home",LockTime:false,Hour:21,Minute:0,LockWeather:false,Weather:"Clear",TimecycleEnabled:false,Timecycle:"rply_saturation",TimecycleStrength:0.6,DensityEnabled:false,PedDensity:1,VehicleDensity:1};
   S.Texts = {WinText:"فوز",LossText:"خسارة",WinShort:"فوز",LossShort:"خسارة",MvpText:"MVP",MvpWinReason:"ساعدك باش تربح",MvpLossReason:"هو السبب ف الخسارة",KillFeedText:"{name} قُتل",
     WinStreakText:"انتصارات متتالية",LossStreakText:"خسارات متتالية",EnemiesShort:"أعداء",AlliesShort:"مساعدين",KillsShort:"قتلات",QueueShort:"الطابور",QueueWaitText:"⏳ {name}: {count} أعداء فالانتظار",QueueWaitAllyText:"⏳ {name}: {count} مساعدين فالانتظار",PausedText:"إيقاف مؤقت",RespawnText:"الرجوع بعد",ResumedText:"استئناف",
-    StartedText:"بدأ التحدي",EmergencyText:"تم مسح كل شيء",StopEffectsText:"تحبسو جميع التأثيرات",LoadedText:"جاهز. ضغط",ReloadedText:"تحدثات الإعدادات",ImportedText:"تجابو الإعدادات الجداد من Downloads"};
+    StartedText:"بدأ التحدي",EmergencyText:"تم مسح كل شيء",KilledByText:"💀 قتلك",StopEffectsText:"تحبسو جميع التأثيرات",LoadedText:"جاهز. ضغط",ReloadedText:"تحدثات الإعدادات",ImportedText:"تجابو الإعدادات الجداد من Downloads"};
   S.Layout = layoutDefaults(false);
   S.LayoutVertical = layoutDefaults(true);
   S.KillEffects = {Enabled:true,Effect:"SoftSmoke",SmokeColor:"#33ccff",OnlyPlayerKills:false,SoundEnabled:false,Sound:""};
@@ -414,7 +417,7 @@ function defaults(){
   S.Spotlight = {Enabled:true,Seconds:3,MinCoins:1000,Sound:"CHALLENGE_UNLOCKED|HUD_AWARDS",OffsetY:0};
   S.Effects = {MaxSeconds:300,Stack:"Extend",ShowBars:true,MaxBars:4,BlackoutNight:true,QuakeStrength:2.5,QuakeRagdollPlayer:true};
   S.PlayerFx = {Enabled:true,Popup:true,PopupSeconds:2.5,Burst:true,BuffAura:true,SpeedColor:"#29b6ff",GodColor:"#ffc828",JumpColor:"#39ff14",FreezeColor:"#bff4ff",WeaponColor:"#ff9f1c",HealColor:"#00e676",SpeedTrail:"core|ent_amb_elec_crackle"};
-  S.Death = {CustomDeath:true,RespawnSeconds:6,RespawnMode:"Here",CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Coffin:true,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
+  S.Death = {CustomDeath:true,RespawnSeconds:6,RespawnMode:"Here",CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Overlay:"Clear",ExtraDancers:3,KillerBanner:true,Coffin:false,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
   return {
     v:1, ini:S, interactions:defaultInteractions(),
     sounds:{kill:null, death:null},             // {name, data(dataURL)}
@@ -441,7 +444,7 @@ function newInteraction(over){
   const it = {Enabled:true,Name:"",Action:"SpawnEnemy",Trigger:"Gift",GiftName:"Rose",GiftId:"",LikesCount:100,CommentText:"",OncePerUser:false,TestKey:"None",
     Units:1,MultiplyByCombo:true,Cooldown:0,Effect:"SoftSmoke",Message:"قام {name} بإنزال عدو",EntryCam:false,ShowInGuide:true,
     Model:"s_m_y_clown_01",Health:150,Armor:0,Weapon:"WEAPON_BAT",Ammo:9999,Accuracy:25,CombatAbility:1,CombatMovement:2,ShootRate:100,Blip:true,SpawnDistance:20,
-    VehicleModel:"zentorno",WarpIntoVehicle:true,Duration:15,KeepSeconds:0,Amount:5,Weather:"Random",Aura:"Default",AuraColor:"",GiftMatch:"Catalog",Spotlight:false,SpotlightText:"",
+    VehicleModel:"zentorno",WarpIntoVehicle:true,Duration:15,KeepSeconds:0,Amount:5,Weather:"Random",Music:"",Aura:"Default",AuraColor:"",GiftMatch:"Catalog",Spotlight:false,SpotlightText:"",
     giftImg:null, giftEmoji:"🌹", actImg:null, actEmoji:"🦹", open:false};
   return Object.assign(it, over||{});
 }
@@ -451,9 +454,9 @@ function defaultInteractions(){
     newInteraction({Name:"سوات مساعد",Action:"SpawnAlly",GiftName:"Finger Heart",TestKey:"NumPad2",Model:"s_m_y_swat_01",Weapon:"WEAPON_CARBINERIFLE",Health:300,Armor:100,Accuracy:50,CombatAbility:2,Effect:"SoftSmoke",Message:"قام {name} بإنزال مساعد",giftEmoji:"🫰",actEmoji:"👮"}),
     newInteraction({Name:"+250 دم",Action:"AddHealth",Trigger:"Likes",LikesCount:100,TestKey:"NumPad3",Amount:250,Message:"{name} زاد 250 نقطة دم",giftEmoji:"❤️",actEmoji:"💖"}),
     newInteraction({Name:"علاج كامل",Action:"Heal",Trigger:"Follow",OncePerUser:true,TestKey:"NumPad4",Message:"{name} عالجك",giftEmoji:"➕",actEmoji:"❤️‍🩹"}),
-    newInteraction({Name:"سيارة المافيا",Action:"MafiaCar",Spotlight:true,GiftName:"Perfume",TestKey:"NumPad5",Model:"g_m_m_chicold_01",Weapon:"WEAPON_MICROSMG",VehicleModel:"schafter2",SpawnDistance:80,Effect:"None",Message:"{name} صيفط المافيا",giftEmoji:"🧴",actEmoji:"🚘"}),
+    newInteraction({Name:"سيارة المافيا",Action:"MafiaCar",Spotlight:true,GiftName:"Perfume",TestKey:"NumPad5",Model:"g_m_m_chicold_01",Weapon:"WEAPON_MICROSMG",VehicleModel:"schafter2",SpawnDistance:28,Music:"mafia.mp3",Effect:"None",Message:"{name} صيفط المافيا",giftEmoji:"🧴",actEmoji:"🚘"}),
     newInteraction({Name:"كوغار",Action:"Animals",GiftName:"Doughnut",TestKey:"NumPad6",Units:3,Model:"a_c_mtlion",Weapon:"None",Health:200,Effect:"Smoke",Message:"{name} طلق {count} ديال الحيوانات",giftEmoji:"🍩",actEmoji:"🐺"}),
-    newInteraction({Name:"زلزال",Action:"Earthquake",GiftName:"Hand Hearts",TestKey:"NumPad7",Duration:15,Message:"{name} دار زلزال!",giftEmoji:"🫶",actEmoji:"🌋"}),
+    newInteraction({Name:"زلزال",Action:"Earthquake",GiftName:"Hand Hearts",TestKey:"NumPad7",Duration:15,Music:"earthquake.mp3",Message:"{name} دار زلزال!",giftEmoji:"🫶",actEmoji:"🌋"}),
     newInteraction({Name:"زينتورنو",Action:"GiveVehicle",GiftName:"Confetti",TestKey:"NumPad8",VehicleModel:"zentorno",Effect:"SoftSmoke",Message:"قام {name} بإعطاء سيارة",giftEmoji:"🎊",actEmoji:"🚗"}),
     newInteraction({Name:"حدث عشوائي",Action:"Random",Trigger:"Share",TestKey:"NumPad9",Message:"{name} دار حدث عشوائي",giftEmoji:"🔁",actEmoji:"🎲"}),
     newInteraction({Name:"قتل مفاجئ",Action:"KillPlayer",GiftName:"Lion",TestKey:"None",Message:"💀 {name} قتلك!",giftEmoji:"🦁",actEmoji:"💀"})
@@ -482,6 +485,10 @@ function normalize(obj){
   const s = merge(defaults(), obj);
   s.interactions = (Array.isArray(obj && obj.interactions) ? obj.interactions : s.interactions).map(i => newInteraction(i));
   if (!Array.isArray(s.customGifts)) s.customGifts = [];
+  // update 13: no level in the join sentence, only the number under the supporters, close cars
+  s.ini.Hype.VipJoinText = String(s.ini.Hype.VipJoinText || "").replace(/\s*\(?\s*(Lv|ليفل|level)\s*\{level\}\s*\)?/gi, "");
+  if (s.ini.Hud.DesignCoinsWord === "كوينز") s.ini.Hud.DesignCoinsWord = "";
+  s.interactions.forEach(i => { if ((i.Action === "MafiaCar" || i.Action === "MotoHitman") && +i.SpawnDistance > 35) i.SpawnDistance = i.Action === "MafiaCar" ? 28 : 26; });
   return s;
 }
 function loadState(){
@@ -808,7 +815,7 @@ function mainFields(i){
   if (t === "chars") return iField(i,"Model","🧍 السكن","model") + (it.Action === "Animals" ? "" : iField(i,"Weapon","🔫 السلاح","weapon"));
   if (t === "crew") return iField(i,"VehicleModel","🚘 الطوموبيل","vehicle") + iField(i,"Model","🧍 السكن","model") + iField(i,"Spotlight","⭐ إشعار كبير (3 ث)","b");
   if (t === "clone") return iField(i,"Weapon","🔫 السلاح","weapon");
-  if (t === "vehicle") return iField(i,"VehicleModel","🚗 الطوموبيل","vehicle");
+  if (t === "vehicle") return iField(i,"VehicleModel","🚗 الطوموبيل","vehicle") + `<div class="chips" style="margin-top:4px">${[["Random","🎲 عشوائي كل مرة"],["Cycle","🔁 كلهم بالدور"]].map(([v, n]) => `<span class="chip ${it.VehicleModel===v?"on":""}" data-vehmode="${v}" data-i="${i}">${n}</span>`).join("")}</div>`;
   if (t === "weapon") return iField(i,"Weapon","🔫 السلاح","weapon");
   if (t === "hp") return iField(i,"Amount","💖 نقاط +HP","i",{min:1});
   if (t === "timed") return durField(i,"Duration","⏱️ المدة (ثانية) · شريط فوق راسك",DUR_CHIPS,0.5);
@@ -860,7 +867,7 @@ function advFields(i){
     h += iField(i,"CombatMovement","😤 الشراسة","s",[[0,"0 · واقف"],[1,"1 · دفاعي"],[2,"2 · هجومي"],[3,"3 · انتحاري"]]);
     h += iField(i,"ShootRate","🔥 سرعة الضرب","i",{min:10,max:1000});
     h += iField(i,"Ammo","📦 الرصاص","i",{min:1});
-    if (t === "crew") h += iField(i,"SpawnDistance","📏 المسافة (متر) · الطوموبيل كتجي سايقة","f",{min:20});
+    if (t === "crew") h += iField(i,"SpawnDistance","📏 المسافة (متر) · 15 حتى 35","f",{min:15,max:35});
     else h += `<div><label>📏 المسافة</label><div class="hint" style="padding:8px 0">8 متر (ثابتة)</div></div>`;
     if (!/^(SpawnEnemy|MafiaCar|MotoHitman|Animals)$/.test(it.Action)) h += iField(i,"Blip","📍 علامة فالخريطة","b");
     else h += `<div><label>📍 علامة فالخريطة</label><div class="hint" style="padding:8px 0">🔴 ديما حمرا (كتمشي ملي يموت)</div></div>`;
@@ -868,6 +875,7 @@ function advFields(i){
   }
   if (person){ h += iField(i,"Aura","🌟 تأثير الشخصية (Aura)","s",AURAS); h += `<div><label>🎨 لون التأثير (خاوي = حسب النوع)</label><div style="display:flex;gap:4px"><input type="color" value="${esc(it.AuraColor||"#ffc828")}" data-auracolor="${i}"><input type="text" class="ltr" data-ii="${i}" data-ik="AuraColor" data-t="t" value="${esc(it.AuraColor)}" placeholder="#ff3b5c"></div></div>`; }
   h += iField(i,"Spotlight","⭐ إشعار كبير فالوسط (3 ث)","b");
+  h += `<div><label>🎵 موسيقى الحدث (music/events)</label><input type="text" class="ltr" list="musicNames" placeholder="mafia.mp3" data-ii="${i}" data-ik="Music" data-t="t" value="${esc(it.Music)}"></div>`;
   h += `<div style="grid-column:span 2">${iField(i,"SpotlightText","⭐ نص الإشعار الكبير (خاوي = جملة الإشعار) {name} {count}","t")}</div>`;
   if (t === "vehicle") h += iField(i,"WarpIntoVehicle","🪑 دخلو للسيارة","b");
   if (t === "weapon") h += iField(i,"Ammo","📦 الرصاص","i",{min:1});
@@ -914,6 +922,9 @@ function renderInteractions(){
   let dl = document.getElementById("giftNames");
   if (!dl){ dl = document.createElement("datalist"); dl.id = "giftNames"; document.body.appendChild(dl); }
   dl.innerHTML = allGifts().map(g => `<option value="${esc(g[0])}">${esc(g[1])} ≈${g[2]}</option>`).join("");
+  let ml = document.getElementById("musicNames");
+  if (!ml){ ml = document.createElement("datalist"); ml.id = "musicNames"; document.body.appendChild(ml); }
+  ml.innerHTML = [...new Set(Object.values(MUSIC_SUGGEST))].map(m => `<option value="${m}">`).join("");
 }
 const DEFAULT_MSG = {SpawnEnemy:"قام {name} بإنزال عدو",SpawnAlly:"قام {name} بإنزال مساعد",MafiaCar:"{name} صيفط سيارة المافيا",MotoHitman:"{name} صيفط قاتل بالموطور",Animals:"{name} طلق {count} ديال الحيوانات",Clone:"{name} استنسخك",
   AddHealth:"{name} زادك نقاط الدم",Heal:"{name} عالجك",GodMode:"{name} عطاك درع لا يُقهر",GiveVehicle:"قام {name} بإعطاء سيارة",GiveWeapon:"{name} عطاك سلاح",GiveAllWeapons:"{name} عطاك جميع الأسلحة",SuperSpeed:"{name} عطاك سرعة خارقة",
@@ -923,6 +934,7 @@ const DEFAULT_MSG = {SpawnEnemy:"قام {name} بإنزال عدو",SpawnAlly:"�
   Blackout:"{name} قطع الضو",SlowMotion:"{name} بطا الوقت",LowGravity:"{name} نقص الجاذبية",Teleport:"{name} نقلك لبلاصة أخرى",Weather:"{name} بدل الطقس",Random:"{name} دار حدث عشوائي"};
 // messages that were never edited by hand (defaults of any action, old defaults) follow the action automatically
 const AUTO_MSGS = new Set(Object.values(DEFAULT_MSG).concat(["قام {name} بإنزال عدو","قام {name} بإنزال مساعد","{name} زاد 250 نقطة دم","{name} صيفط المافيا","{name} طلق {count} ديال الحيوانات","{name} دار زلزال!","قام {name} بإعطاء سيارة","{name} دار حدث عشوائي","💀 {name} قتلك!",""]));
+const MUSIC_SUGGEST = {MafiaCar:"mafia.mp3",MotoHitman:"chase.mp3",Earthquake:"earthquake.mp3",Airstrike:"war.mp3",Storm:"storm.mp3",CarRain:"chaos.mp3",Blackout:"horror.mp3"};
 function onActionChange(it, prev){
   if (AUTO_MSGS.has(String(it.Message || "").trim()) && DEFAULT_MSG[it.Action]) it.Message = DEFAULT_MSG[it.Action];
   if (!it.Name || (ACT[prev] && it.Name === ACT[prev].name)) it.Name = (ACT[it.Action] || {}).name || it.Name;
@@ -932,8 +944,9 @@ function onActionChange(it, prev){
   const dm = {SpawnEnemy:["s_m_y_clown_01","WEAPON_BAT",150],SpawnAlly:["s_m_y_swat_01","WEAPON_CARBINERIFLE",300],Animals:["a_c_mtlion","None",200],MafiaCar:["g_m_m_chicold_01","WEAPON_MICROSMG",150],MotoHitman:["g_m_y_lost_01","WEAPON_MICROSMG",150],Clone:["","WEAPON_CARBINERIFLE",300]};
   if (dm[it.Action]){ const d = dm[it.Action]; it.Model = d[0]; it.Weapon = d[1]; it.Health = d[2]; }
   if (it.Action === "MafiaCar" || it.Action === "MotoHitman") it.Spotlight = true;
-  if (it.Action === "MafiaCar"){ it.VehicleModel = "schafter2"; it.SpawnDistance = 80; }
-  if (it.Action === "MotoHitman"){ it.VehicleModel = "bati"; it.SpawnDistance = 70; }
+  if (it.Action === "MafiaCar"){ it.VehicleModel = "schafter2"; it.SpawnDistance = 28; }
+  if (it.Action === "MotoHitman"){ it.VehicleModel = "bati"; it.SpawnDistance = 26; }
+  if (!it.Music || Object.values(MUSIC_SUGGEST).includes(it.Music)) it.Music = MUSIC_SUGGEST[it.Action] || "";
   if (it.Action === "GiveVehicle") it.VehicleModel = "zentorno";
   if (it.Action === "GiveWeapon") it.Weapon = "WEAPON_CARBINERIFLE";
   if (it.Action === "AddHealth") it.Amount = 250;
@@ -978,6 +991,8 @@ interBox.addEventListener("click", e => {
   if (du){ const it = state.interactions[+du.dataset.i]; it[du.dataset.k] = +du.dataset.dur;
     const box = du.closest(".dur"); box.querySelector("input").value = du.dataset.dur;
     box.querySelectorAll("[data-dur]").forEach(c => c.classList.toggle("on", c === du)); changed(); return; }
+  const vm = e.target.closest("[data-vehmode]");
+  if (vm){ const it = state.interactions[+vm.dataset.i]; it.VehicleModel = vm.dataset.vehmode; renderInteractions(); changed(); return; }
   const gm = e.target.closest("[data-gm]");
   if (gm){ const it = state.interactions[+gm.dataset.i]; it.GiftMatch = gm.dataset.gm; if (gm.dataset.gm === "Id" && !it.GiftId) it.GiftId = giftId(it.GiftName); renderInteractions(); changed(); return; }
   const fid = e.target.closest("[data-fillid]");
@@ -1136,16 +1151,28 @@ function renderAllForms(){
     {sec:"Hype", title:"🔥 كومبو", fields:[["ComboEnabled","مشعول","b"],["ComboMin","العدد ≥","i",{min:2}],["ComboText","الجملة","t",{wide:true}]]}
   ]);
   renderForm("#formCam", [
+    {sec:"Camera", title:"📱 كاميرا TikTok القريبة (زوم على الشخصية)", hint:"كاميرا قريبة من الشخصية (من فوق الكتف) باش تبان مزيان فالبث العمودي. كتبع الماوس/اليد بحال الكاميرا العادية، والهود ما كيتبدلش. ZoomOnStart = كتشعل مع زر البداية (F3). ZoomKey = تشعل/ترجع الكاميرا الأصلية. PageUp/PageDown = قرب/بعد وانت كتلعب. ملي كتنشن (Aim) كترجع الكاميرا العادية باش التنشين يبقى مضبوط.", fields:[
+      ["ZoomOnStart","▶️ كتشعل مع F3","b"],["ZoomKey","⌨️ تشعل / الأصلية","k"],["ZoomInKey","➕ قرب","k"],["ZoomOutKey","➖ بعد","k"],
+      ["ZoomDistance","📏 البعد (متر)","range",{min:0.8,max:6,step:0.05}],["ZoomHeight","↕ العلو","range",{min:-0.5,max:1.5,step:0.05}],["ZoomSide","↔ من الجنب (الكتف)","range",{min:-1.5,max:1.5,step:0.05}],
+      ["ZoomFov","🔭 الزاوية (FOV)","range",{min:25,max:80,step:1}],["ZoomVehDistance","🚗 البعد فالطوموبيل","range",{min:2,max:12,step:0.1}],["ZoomVehHeight","🚗 العلو فالطوموبيل","range",{min:0,max:3,step:0.05}],
+      ["ZoomNormalWhenAiming","🎯 الكاميرا العادية ملي كتنشن","b"]]},
     {sec:"Camera", title:"🎥 الكاميرا", fields:[["InvincibleDuringCam","🛡️ ما كتموتش وقت الكاميرا","b"],["EntryEnabled","🎬 كاميرا الدخول","b"],["EntryMinCoins","للهدايا ≥ (كوينز)","i",{min:0}],["EntrySeconds","المدة (ث)","f",{min:0.5}],
       ["KillerEnabled","🔪 كاميرا القاتل","b"],["KillerSeconds","المدة (ث)","f",{min:0.5}],["SlowMoMode","🐢 سلو موشن","s",{opts:[["Off","مطفي"],["EveryKill","كل قتلة"],["LastInWave","آخر عدو فالموجة"]]}],
       ["SlowMoScale","السرعة","range",{min:0.05,max:1,step:0.05}],["SlowMoSeconds","المدة (ث)","f",{min:0.1}],["WinEnabled","🏆 كاميرا الفوز","b"],["WinSeconds","المدة (ث)","f",{min:0.5}]]}
   ]);
   renderForm("#formGfx", [
+    {sec:"Graphics", title:"🎬 أجواء البث (Graphics Preset)", hint:"شكل احترافي للعبة كاملة: فلتر ألوان (Timecycle) + وقت + طقس. Cinematic = سينمائي، Vivid = ألوان قوية، Action = كونتراست، GoldenHour = غروب ذهبي، NeonNight = ليل ملون، ColdBlue = بارد، Dream = حالم، RainyNight = ليل وشتا، FilmNoir = أبيض وأسود، Vignette = حواشي غامقة. فاللعبة: Home = الأجواء الموالية. (أسماء الفلاتر ديال GTA، خاصها تجربة.)", fields:[
+      ["Preset","🎬 الأجواء","s",{opts:[["Off","⛔ بلا"],["Cinematic","🎞️ Cinematic"],["Vivid","🌈 Vivid"],["Action","💥 Action"],["GoldenHour","🌅 Golden Hour"],["NeonNight","🌃 Neon Night"],["ColdBlue","🧊 Cold Blue"],["Dream","✨ Dream"],["RainyNight","🌧️ Rainy Night"],["FilmNoir","🎩 Film Noir"],["Vignette","⚫ Vignette"]]}],["Key","⌨️ زر الأجواء","k"]]},
     {sec:"Graphics", title:"🕘 الوقت والطقس", fields:[["LockTime","تثبيت الوقت","b"],["Hour","الساعة","i",{min:0,max:23}],["Minute","الدقيقة","i",{min:0,max:59}],["LockWeather","تثبيت الطقس","b"],["Weather","الطقس","s",{opts:WEATHERS.slice(1).concat(["Clear"])}]]},
     {sec:"Graphics", title:"🎞️ فلتر Timecycle", fields:[["TimecycleEnabled","مشعول","b"],["Timecycle","الاسم","t",{ltr:true,hint:TC_HINT,wide:true}],["TimecycleStrength","القوة","range",{min:0,max:1,step:0.05}]]},
     {sec:"Graphics", title:"👥 الكثافة", fields:[["DensityEnabled","مشعولة","b"],["PedDensity","الناس","range",{min:0,max:3,step:0.1}],["VehicleDensity","الطوموبيلات","range",{min:0,max:3,step:0.1}]]}
   ]);
   renderForm("#formFx", [
+    {sec:"Music", title:"🎵 الموسيقى (خلفية + موسيقى الأحداث)", hint:"الملفات (mp3 / wav / wma) كتحطهم فـ: scripts/TikArena/music/background ← موسيقى الخلفية (كتدور وحدة من بعد وحدة) · scripts/TikArena/music/events ← موسيقى الأحداث (سمية الملف كتكتبها فكل تفاعل ⚙️ متقدم «🎵 موسيقى الحدث»، مثلاً mafia.mp3). ملي كيبدا حدث عندو موسيقى، الخلفية كتوقف والموسيقى ديالو كتخدم حتى يسالي (المافيا ماتو، الزلزال سالى، ولا متي نتا)، ومن بعد الخلفية كترجع. موسيقى الموت (الرقص) كتجي قبل كلشي. F4 = تشعل / تطفي الموسيقى.", fields:[
+      ["Enabled","مشعولة","b"],["Key","⌨️ تشعل / تطفي","k"],["Background","🎶 موسيقى الخلفية","b"],["Shuffle","🔀 عشوائي","b"],
+      ["Volume","🔊 الخلفية","range",{min:0,max:100}],["EventVolume","🔊 الأحداث","range",{min:0,max:100}],["DeathVolume","🔊 الموت","range",{min:0,max:100}]]},
+    {sec:"DamageFx", title:"🩸 الضربات على شريط الطاقة", hint:"كل ضربة (رصاص، بونية، انفجار...) كيبان فوق شريط الطاقة الرقم اللي نقص (-5، -12...) كيطلع ويختفي، الجزء اللي ضاع كيبقى أبيض شوية عاد كيخوا، والشريط كيضوي بالحمر. والرصاص كيدير الدم على الشخصية ديالك مع تأثير الضربة.", fields:[
+      ["Enabled","مشعول","b"],["Numbers","🔢 الأرقام (-5)","b"],["Ghost","⬜ الجزء اللي ضاع","b"],["Blood","🩸 الدم ملي كيضربك الرصاص","b"],["HitFx","💥 تأثير الضربة (asset|name)","t",{ltr:true}]]},
     {sec:"KillEffects", title:"💀 تأثير القتل", fields:[["Enabled","مشعول","b"],["Effect","التأثير","s",{opts:KILL_EFFECTS}],["SmokeColor","لون الدخان","c"],["OnlyPlayerKills","غير اللي قتلتهم أنا","b"],["SoundEnabled","🎵 صوت WAV ديالك","b"],["Sound","ملف القتل","wav",{slot:"kill"}]]},
     {sec:"Sounds", title:"🔊 أصوات اللعبة", fields:[["EnemySpawn","🦹 نزول عدو","sound"],["AllySpawn","👮 نزول مساعد","sound"],["Help","💚 المساعدة","sound"],["Kill","💀 القتل","sound"],["Hype","🔥 الحماس","sound"]]},
     {sec:"PlayerFx", title:"⚡ التأثيرات على الشخصية ديالك", hint:"ملي شي داعم كيدير ليك شي أكسيون (سلاح، سرعة، علاج، تجميد...): كتبان فوق راسك بطاقة صغيرة فيها الصورة ديالو + صورة الأكشن + الاسم (مثلاً: أحمد · إعطاء سلاح · Carbinerifle)، مع دائرة ضو كتوسع. ووقت ما التأثير خدام (سرعة خارقة، درع، قفزة...) كيبان توهج ملون وموجات تحت رجليك، والسرعة فيها حتى شرارات (particle، خاصها تجربة).", fields:[
@@ -1161,9 +1188,9 @@ function renderAllForms(){
       ["RingSize","⭕ حجم الدائرة","range",{min:0.4,max:4,step:0.1}],["MaxDistance","👁️ أقصى مسافة","i",{min:5,max:300}],["FxScale","✨ حجم الـ particles","range",{min:0.2,max:3,step:0.1}],
       ["FireFx","🔥 Fire (asset|name)","t",{ltr:true}],["SmokeFx","💨 Smoke","t",{ltr:true}],["ElectricFx","⚡ Electric","t",{ltr:true}],["SparklesFx","✨ Sparkles","t",{ltr:true}]]},
     {sec:"Death", title:"💀 شاشة الموت (بلا WASTED ديال GTA)", hint:"CustomDeath: الشخصية ديالك ما كتموتش بصح فـ GTA، داكشي علاش ما كتبانش شاشة WASTED. ملي الدم كيوصل 0: كتطيح، الوقت كيبطا، كاميرا القاتل، الاحتفال، وشاشة الموت ديال الهود (بنفس الديزاين) مع عداد الرجوع. من بعد كتنوض هنا ولا فالسبيطار.", fields:[
-      ["CustomDeath","💀 شاشة موت ديال الهود (بلا WASTED)","b"],["RespawnSeconds","⏱️ الرجوع بعد (ث)","f",{min:1,max:60}],["RespawnMode","📍 فين كتنوض","s",{opts:[["Here","🧍 فنفس البلاصة"],["Hospital","🏥 أقرب سبيطار"]]}]]},
-    {sec:"Death", title:"⚰️ الاحتفال ملي كتموت", hint:"الرقصة وحمل التابوت تقريبيين (خاصهم تجربة فاللعبة).", fields:[["CelebrationEnabled","مشعول","b"],["Seconds","المدة (ث)","f",{min:1,max:60}],["Dance","💃 الرقصة","b"],["DanceDict","Anim Dict","t",{ltr:true}],["DanceAnim","Anim","t",{ltr:true}],
-      ["Coffin","⚰️ التابوت","b"],["CoffinModel","موديل التابوت","t",{ltr:true}],["SoundEnabled","🎵 موسيقى WAV (Coffin Dance)","b"],["Sound","ملف الموسيقى","wav",{slot:"death"}]]}
+      ["CustomDeath","💀 شاشة موت ديال الهود (بلا WASTED)","b"],["Overlay","🖼️ الشاشة","s",{opts:[["Clear","✨ واضحة (بلا ظلام)"],["Dim","🌑 غامقة"]]}],["KillerBanner","💀 بطاقة القاتل فالجنب","b"],["RespawnSeconds","⏱️ الرجوع بعد (ث)","f",{min:1,max:60}],["RespawnMode","📍 فين كتنوض","s",{opts:[["Here","🧍 فنفس البلاصة"],["Hospital","🏥 أقرب سبيطار"]]}]]},
+    {sec:"Death", title:"💃 الاحتفال ملي كتموت (الأعداء كيشطحو)", hint:"الأعداء اللي حيين كيجيو حداك ويشطحو المدة اللي بغيتي مع الموسيقى ديالك. إلا ما كانوش بزاف، كيتزادو «راقصين» (بالسكن ديال العدو اللي قتلك) وكيتمسحو من بعد. التابوت اختياري (مطفي افتراضياً). الرقصة تقريبية (خاصها تجربة).", fields:[["CelebrationEnabled","مشعول","b"],["Seconds","⏱️ مدة الرقص (ث)","f",{min:1,max:60}],["Dance","💃 الرقصة","b"],["ExtraDancers","👯 أقل عدد ديال الراقصين","i",{min:0,max:6}],["DanceDict","Anim Dict","t",{ltr:true}],["DanceAnim","Anim","t",{ltr:true}],
+      ["Coffin","⚰️ التابوت","b"],["CoffinModel","موديل التابوت","t",{ltr:true}],["SoundEnabled","🎵 موسيقى الرقص","b"],["Sound","ملف الموسيقى (WAV)","wav",{slot:"death"}]]}
   ]);
   renderObsForm();
 }
@@ -1188,7 +1215,8 @@ function rgba(hex, a){ const n = parseInt(String(hex).slice(1), 16); return `rgb
 function mixHex(a, b, t){ const x = parseInt(a.slice(1),16), y = parseInt(b.slice(1),16); const c = s => Math.round(((x>>s)&255) + (((y>>s)&255) - ((x>>s)&255)) * t); return "#" + [16,8,0].map(s => c(s).toString(16).padStart(2,"0")).join(""); }
 // pro styles carry their own palette (accent, panel, text, win, loss) when Hud.StylePalette is on — same table as the engine
 const PALETTES = {Broadcast:["#e10600","#111418","#ffffff","#1fc16b","#e10600"],Cyber:["#00f0ff","#05060d","#e0fbff","#39ff14","#ff2a6d"],Royal:["#ffc828","#1a0f2e","#fff4d6","#ffd54a","#ff4d6d"],
-  Hologram:["#7df9ff","#041a24","#d9fbff","#7dffb3","#ff7d9b"],Gradient:["#ff4fd8","#1b1036","#ffffff","#4dffb5","#ff5c7a"],Stream:["#fe2c55","#000000","#ffffff","#25f4ee","#fe2c55"],Carbon:["#ff7a00","#121212","#f2f2f2","#7cff6b","#ff3b3b"]};
+  Hologram:["#7df9ff","#041a24","#d9fbff","#7dffb3","#ff7d9b"],Gradient:["#ff4fd8","#1b1036","#ffffff","#4dffb5","#ff5c7a"],Stream:["#fe2c55","#000000","#ffffff","#25f4ee","#fe2c55"],Carbon:["#ff7a00","#121212","#f2f2f2","#7cff6b","#ff3b3b"],
+  Luxury:["#d4af37","#0b0b0d","#f7f1e1","#e8c766","#c0392b"],Aurora:["#7cf5d6","#0a0f22","#eafffb","#6effa8","#ff6b9a"],Ember:["#ff5a1f","#160807","#fff1e8","#ffb347","#ff2e2e"]};
 // Hud view with the effective colors (palette applied)
 function HV(){
   const H = state.ini.Hud;
@@ -1222,6 +1250,9 @@ function bgCss(alpha, Hin){
     case "broadcast": return `background:${rgba(pan, Math.min(1, op*1.1))};border-left:6px solid ${acc};border-bottom:3px solid ${acc};box-shadow:inset 0 1px 0 rgba(255,255,255,.35)`;
     case "cyber": return `background:repeating-linear-gradient(0deg,${rgba(acc,.07)} 0 1px,transparent 1px 6px),${rgba(pan, op)};clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px);box-shadow:inset 0 0 0 1px ${rgba(acc,.55)}`;
     case "royal": return `background:${rgba(pan, op)};border:2px solid ${acc};box-shadow:inset 0 0 0 3px ${rgba(pan,op)},inset 0 0 0 4px ${rgba(acc,.45)}`;
+    case "luxury": return `background:${rgba(pan, Math.max(op,.84))};border:1px solid ${rgba(acc,.45)};border-top:2px solid ${acc};box-shadow:inset 0 5px 0 -4px ${rgba(acc,.2)}`;
+    case "aurora": return `background:linear-gradient(90deg,${rgba("#3cf0c8",.14)},${rgba("#8c5aff",.14)}),${rgba(pan, op)};box-shadow:inset 0 2px 0 ${acc}`;
+    case "ember": return `background:linear-gradient(0deg,${rgba(acc,.25)},transparent 55%),${rgba(pan, op)};border-left:3px solid ${acc};border-bottom:2px solid ${acc}`;
     case "hologram": return `background:${rgba(mixHex(pan,acc,.18), op*0.45)};border:1px solid ${rgba(acc,.35)};box-shadow:0 0 12px ${rgba(acc,.35)},inset 0 0 18px ${rgba(acc,.18)}`;
     case "gradient": return `background:linear-gradient(90deg,${rgba(mixHex(pan,acc,.45), op)},${rgba(pan, op)});box-shadow:inset 0 2px 0 ${acc}`;
     case "stream": return `background:${rgba(pan, Math.max(op,.75))};box-shadow:-2px -1px 0 ${rgba(H.WinColor,.5)},2px 1px 0 ${rgba(acc,.5)}`;
@@ -1243,7 +1274,7 @@ function header(text){
   }
   if (st === "esports" || st === "broadcast") return `<div style="background:${H.AccentColor};color:${st==="broadcast"?"#fff":H.PanelColor};${base}">${esc(text)}</div>`;
   if (st === "cyber" || st === "hologram") return `<div style="color:${H.AccentColor};${base}">[ ${esc(text)} ]</div>`;
-  if (st === "royal") return `<div style="color:${H.AccentColor};${base};display:flex;align-items:center;gap:8px;padding:0 10px"><i style="flex:1;height:1px;background:${H.AccentColor}"></i>${esc(text)}<i style="flex:1;height:1px;background:${H.AccentColor}"></i></div>`;
+  if (st === "royal" || st === "luxury") return `<div style="color:${H.AccentColor};${base};display:flex;align-items:center;gap:8px;padding:0 10px"><i style="flex:1;height:1px;background:${H.AccentColor}"></i>${esc(text)}<i style="flex:1;height:1px;background:${H.AccentColor}"></i></div>`;
   if (st === "stream") return `<div style="${base}">${esc(text)}<div style="margin:-3px auto 0;width:44px;height:2px;background:linear-gradient(90deg,${H.WinColor} 50%,${H.AccentColor} 50%)"></div></div>`;
   return `<div style="color:${H.AccentColor};${base}">${esc(text)}</div>`;
 }
@@ -1864,9 +1895,9 @@ NAV.forEach(([id]) => io.observe(document.getElementById(id)));
 <script>
 "use strict";
 // ------------------------------------------------------------- INI export
-const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest","PlayerFx","Effects","Spotlight"];
+const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest","PlayerFx","Effects","Spotlight","Music","DamageFx"];
 const INTER_KEYS = ["Enabled","Name","Action","Trigger","GiftName","GiftId","LikesCount","CommentText","OncePerUser","TestKey","Units","MultiplyByCombo","Cooldown","Effect","Message","GiftImage","ActionImage","EntryCam","ShowInGuide",
-  "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","KeepSeconds","Amount","Weather","Aura","AuraColor","GiftCoins","GiftMatch","Spotlight","SpotlightText"];
+  "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","KeepSeconds","Amount","Music","Weather","Aura","AuraColor","GiftCoins","GiftMatch","Spotlight","SpotlightText"];
 function iniVal(v){
   if (typeof v === "boolean") return v ? "true" : "false";
   if (typeof v === "number") return String(Math.round(v * 1000) / 1000);
@@ -2055,6 +2086,7 @@ function validate(){
   const out = [], G = state.ini.General;
   const gk = {};
   ["PowerKey","StartKey","HudStyleKey","HudFontKey","EmergencyKey","StopEffectsKey","PauseKey","LayoutKey","HypeTestKey"].forEach(k => { const v = G[k]; if (v && v !== "None"){ (gk[v] = gk[v] || []).push(k); } });
+  [["Music","Key"],["Graphics","Key"],["Camera","ZoomKey"],["Camera","ZoomInKey"],["Camera","ZoomOutKey"]].forEach(([s, k]) => { const v = state.ini[s][k]; if (v && v !== "None") (gk[v] = gk[v] || []).push(s + "." + k); });
   ["DesignKey","DesignColorKey"].forEach(k => { const v = state.ini.Hud[k]; if (v && v !== "None") (gk[v] = gk[v] || []).push("Hud." + k); });
   if (state.ini.LiveTest.Enabled && state.ini.LiveTest.Key !== "None") (gk[state.ini.LiveTest.Key] = gk[state.ini.LiveTest.Key] || []).push("LiveTest");
   Object.keys(gk).forEach(v => { if (gk[v].length > 1) out.push(["err", `⌨️ الزر ${v} مستعمل جوج مرات: ${gk[v].join(" · ")}`]); });

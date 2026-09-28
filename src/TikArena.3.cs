@@ -532,6 +532,7 @@ namespace TikArena
         public float KeepSeconds;
         public int Amount = 5;
         public string Weather = "Random";
+        public string Music = "";          // music/events/<file> played while this event is on
         public string Aura = "Default";
         public string AuraColor = "";
         public int GiftCoins;
@@ -585,6 +586,7 @@ namespace TikArena
             it.KeepSeconds = Math.Max(0f, ini.F(s, "KeepSeconds", 0));
             it.Amount = Math.Max(1, ini.I(s, "Amount", 5));
             it.Weather = ini.S(s, "Weather", "Random");
+            it.Music = ini.S(s, "Music", "");
             it.Aura = ini.S(s, "Aura", "Default");
             it.AuraColor = ini.S(s, "AuraColor", "");
             it.GiftCoins = Math.Max(0, ini.I(s, "GiftCoins", 0));
@@ -700,6 +702,23 @@ namespace TikArena
         public int Hour, Minute;
         public string Weather, Timecycle;
         public float TimecycleStrength, PedDensity, VehicleDensity;
+        public string GfxPreset;
+        public Keys GfxKey;
+        // [Music]
+        public bool MusicEnabled, MusicBackground, MusicShuffle;
+        public Keys MusicKey;
+        public int MusicVolume, MusicEventVolume, MusicDeathVolume;
+        // [Camera] close "TikTok" camera
+        public bool ZoomOnStart, ZoomNormalWhenAiming;
+        public Keys ZoomKey, ZoomInKey, ZoomOutKey;
+        public float ZoomDistance, ZoomHeight, ZoomSide, ZoomFov, ZoomVehDistance, ZoomVehHeight;
+        // [DamageFx]
+        public bool DmgEnabled, DmgNumbers, DmgGhost, DmgBlood;
+        public string DmgHitFx;
+        // [Death] extras
+        public string DeathOverlay;
+        public int ExtraDancers;
+        public bool KillerBanner;
         // [Texts]
         public Dictionary<string, string> T = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         // [Layout] / [LayoutVertical]
@@ -838,7 +857,7 @@ namespace TikArena
             c.HudStyle = ini.S("Hud", "Style", "Broadcast");
             c.StyleCycle = ini.L("Hud", "StyleCycle", "Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro");
             // F11 goes through complete looks (a design or a style) so every panel always matches
-            c.LookCycle = ini.L("Hud", "LookCycle", "Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro");
+            c.LookCycle = ini.L("Hud", "LookCycle", "Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Luxury,Aurora,Ember,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro");
             c.StylePalette = ini.B("Hud", "StylePalette", true);
             c.HudFont = ini.S("Hud", "Font", "ChaletLondon");
             c.FontCycle = ini.L("Hud", "FontCycle", "ChaletLondon,ChaletComprimeCologne,Pricedown");
@@ -910,7 +929,7 @@ namespace TikArena
             c.TextMode = ini.S("Hud", "TextMode", "Auto");
             c.HudDesign = ini.S("Hud", "Design", "Arena");
             c.HudDesignColor = ini.S("Hud", "DesignColor", "GOLD");
-            c.DesignCoinsWord = ini.S("Hud", "DesignCoinsWord", "كوينز");
+            c.DesignCoinsWord = ini.S("Hud", "DesignCoinsWord", "");
             c.DesignKey = ini.K("Hud", "DesignKey", "F10");
             c.DesignColorKey = ini.K("Hud", "DesignColorKey", "F5");
             c.UnicodeFont = ini.S("Hud", "UnicodeFont", "Segoe UI");
@@ -973,7 +992,7 @@ namespace TikArena
             c.VipJoinEnabled = ini.B("Hype", "VipJoinEnabled", true);
             c.VipJoinMinLevel = ini.I("Hype", "VipJoinMinLevel", 20);
             c.VipJoinMinCoins = ini.I("Hype", "VipJoinMinCoins", 100);
-            c.VipJoinText = ini.S("Hype", "VipJoinText", "⚠️ احذر! لقد دخل {name} (Lv {level})");
+            c.VipJoinText = ini.S("Hype", "VipJoinText", "⚠️ احذر! لقد دخل {name}");
             c.ComebackEnabled = ini.B("Hype", "ComebackEnabled", true);
             c.ComebackMinCoins = ini.I("Hype", "ComebackMinCoins", 100);
             c.ComebackMinutes = Math.Max(0.1f, ini.F("Hype", "ComebackMinutes", 5));
@@ -1014,6 +1033,31 @@ namespace TikArena
             c.TimecycleEnabled = ini.B("Graphics", "TimecycleEnabled", false);
             c.Timecycle = ini.S("Graphics", "Timecycle", "rply_saturation");
             c.TimecycleStrength = U.Clamp(ini.F("Graphics", "TimecycleStrength", 0.6f), 0, 1);
+            c.GfxPreset = ini.S("Graphics", "Preset", "Off");
+            c.GfxKey = ini.K("Graphics", "Key", "Home");
+            c.MusicEnabled = ini.B("Music", "Enabled", true);
+            c.MusicKey = ini.K("Music", "Key", "F4");
+            c.MusicBackground = ini.B("Music", "Background", true);
+            c.MusicShuffle = ini.B("Music", "Shuffle", true);
+            c.MusicVolume = U.Clamp(ini.I("Music", "Volume", 60), 0, 100);
+            c.MusicEventVolume = U.Clamp(ini.I("Music", "EventVolume", 90), 0, 100);
+            c.MusicDeathVolume = U.Clamp(ini.I("Music", "DeathVolume", 90), 0, 100);
+            c.ZoomKey = ini.K("Camera", "ZoomKey", "F2");
+            c.ZoomOnStart = ini.B("Camera", "ZoomOnStart", true);
+            c.ZoomInKey = ini.K("Camera", "ZoomInKey", "PageUp");
+            c.ZoomOutKey = ini.K("Camera", "ZoomOutKey", "PageDown");
+            c.ZoomDistance = U.Clamp(ini.F("Camera", "ZoomDistance", 2.3f), 0.8f, 12f);
+            c.ZoomHeight = U.Clamp(ini.F("Camera", "ZoomHeight", 0.55f), -1f, 3f);
+            c.ZoomSide = U.Clamp(ini.F("Camera", "ZoomSide", 0.45f), -3f, 3f);
+            c.ZoomFov = U.Clamp(ini.F("Camera", "ZoomFov", 50f), 20f, 90f);
+            c.ZoomVehDistance = U.Clamp(ini.F("Camera", "ZoomVehDistance", 5.5f), 1.5f, 20f);
+            c.ZoomVehHeight = U.Clamp(ini.F("Camera", "ZoomVehHeight", 1.3f), -1f, 5f);
+            c.ZoomNormalWhenAiming = ini.B("Camera", "ZoomNormalWhenAiming", true);
+            c.DmgEnabled = ini.B("DamageFx", "Enabled", true);
+            c.DmgNumbers = ini.B("DamageFx", "Numbers", true);
+            c.DmgGhost = ini.B("DamageFx", "Ghost", true);
+            c.DmgBlood = ini.B("DamageFx", "Blood", true);
+            c.DmgHitFx = ini.S("DamageFx", "HitFx", "scr_solomon3|scr_trev4_747_blood_impact");
             c.DensityEnabled = ini.B("Graphics", "DensityEnabled", false);
             c.PedDensity = U.Clamp(ini.F("Graphics", "PedDensity", 1), 0, 3);
             c.VehicleDensity = U.Clamp(ini.F("Graphics", "VehicleDensity", 1), 0, 3);
@@ -1073,7 +1117,10 @@ namespace TikArena
             c.CelebDance = ini.B("Death", "Dance", true);
             c.DanceDict = ini.S("Death", "DanceDict", "missfbi3_sniping");
             c.DanceAnim = ini.S("Death", "DanceAnim", "dance_m_default");
-            c.CelebCoffin = ini.B("Death", "Coffin", true);
+            c.CelebCoffin = ini.B("Death", "Coffin", false);
+            c.DeathOverlay = ini.S("Death", "Overlay", "Clear");        // Clear (the game stays visible) | Dim
+            c.ExtraDancers = U.Clamp(ini.I("Death", "ExtraDancers", 3), 0, 6);
+            c.KillerBanner = ini.B("Death", "KillerBanner", true);
             c.CoffinModel = ini.S("Death", "CoffinModel", "prop_coffin_02b");
             c.DeathSoundEnabled = ini.B("Death", "SoundEnabled", false);
             c.DeathSound = ini.S("Death", "Sound", "");
@@ -1939,6 +1986,39 @@ namespace TikArena
         }
     }
 
+    // Windows MCI player: mp3 / wav / wma, several tracks at the same time (alias = channel)
+    static class Mci
+    {
+        [DllImport("winmm.dll", CharSet = CharSet.Unicode)]
+        static extern int mciSendString(string command, StringBuilder ret, int retLen, IntPtr callback);
+
+        static int Send(string cmd) { try { return mciSendString(cmd, null, 0, IntPtr.Zero); } catch { return -1; } }
+
+        public static bool Play(string alias, string file, bool loop, int volume)
+        {
+            Close(alias);
+            if (Send("open \"" + file + "\" type mpegvideo alias " + alias) != 0) return false;
+            Volume(alias, volume);
+            return Send("play " + alias + (loop ? " repeat" : "")) == 0;
+        }
+
+        public static void Volume(string alias, int percent) { Send("setaudio " + alias + " volume to " + U.Clamp(percent, 0, 100) * 10); }
+        public static void Pause(string alias) { Send("pause " + alias); }
+        public static void Resume(string alias) { Send("resume " + alias); }
+        public static void Close(string alias) { Send("stop " + alias); Send("close " + alias); }
+
+        public static string Mode(string alias)
+        {
+            try
+            {
+                StringBuilder sb = new StringBuilder(64);
+                if (mciSendString("status " + alias + " mode", sb, 64, IntPtr.Zero) != 0) return "";
+                return sb.ToString().ToLowerInvariant();
+            }
+            catch { return ""; }
+        }
+    }
+
     // gift / action pictures cut to the shape of the gift guide (circle, rounded, hex), cached as PNG
     static class IconMask
     {
@@ -2408,10 +2488,12 @@ namespace TikArena
             fontName = cfg.HudFont;
             design = cfg.HudDesign;
             designColor = cfg.HudDesignColor;
+            gfxPreset = cfg.GfxPreset;
             vertical = string.Equals(cfg.LayoutMode, "Vertical", StringComparison.OrdinalIgnoreCase);
             guideOrder.Clear();
             appliedWeather = null;
             tcApplied = false;
+            tcName = null;
             clockLocked = false;
             U.Log("config loaded: " + iniPath + " interactions=" + cfg.Interactions.Count);
         }
@@ -2524,6 +2606,9 @@ namespace TikArena
             try { UpdateQueues(); } catch (Exception ex) { U.Error("Queue", ex); }
             try { UpdateTracked(); } catch (Exception ex) { U.Error("Tracked", ex); }
             try { UpdateBlips(); } catch (Exception ex) { U.Error("Blips", ex); }
+            try { UpdateMusic(); } catch (Exception ex) { U.Error("Music", ex); }
+            try { UpdateZoomCam(); } catch (Exception ex) { U.Error("ZoomCam", ex); }
+            try { WatchHealth(); } catch (Exception ex) { U.Error("DamageFx", ex); }
             try { UpdateEffects(dt); } catch (Exception ex) { U.Error("Effects", ex); }
             try { UpdateCamera(dt); } catch (Exception ex) { U.Error("Camera", ex); }
             try { UpdateAuras(); } catch (Exception ex) { U.Error("Aura", ex); }
@@ -2555,6 +2640,15 @@ namespace TikArena
                     return;
                 }
                 if (k == cfg.EmergencyKey) { Emergency(); return; }
+                if (k == cfg.MusicKey && cfg.MusicEnabled) { ToggleMusic(); return; }
+                if (k == cfg.ZoomKey) { zoomOn = !zoomOn; Status(zoomOn ? "Camera: TikTok" : "Camera: GTA"); return; }
+                if (zoomOn && (k == cfg.ZoomInKey || k == cfg.ZoomOutKey))
+                {
+                    zoomAdjust = U.Clamp(zoomAdjust + (k == cfg.ZoomInKey ? -0.25f : 0.25f), -3f, 8f);
+                    Status("Zoom: " + (cfg.ZoomDistance + zoomAdjust).ToString("0.00", U.IC) + " m");
+                    return;
+                }
+                if (k == cfg.GfxKey) { gfxPreset = Cycle(GfxPresetNames, gfxPreset); nextSecond = 0; Status("Graphics: " + gfxPreset); return; }
                 if (k == cfg.StopEffectsKey) { StopAllEffects(); Status(cfg.Tx("StopEffectsText", "Effects stopped")); return; }
                 if (k == cfg.HypeTestKey)
                 {
@@ -2577,6 +2671,7 @@ namespace TikArena
         {
             try { live.Stop(); avatars.Stop(); if (powered) Cleanup(); } catch { }
             try { ClearBlips(false); } catch { }
+            try { StopAllMusic(); StopZoomCam(); } catch { }
         }
 
         static string Cycle(List<string> list, string cur)
@@ -2615,6 +2710,8 @@ namespace TikArena
         {
             started = true;
             if (cfg.LiveEnabled) live.Start(cfg.LiveUrl, cfg.ReconnectSeconds);
+            LoadPlaylist();
+            if (cfg.ZoomOnStart) zoomOn = true;
             StartRound();
             Status(cfg.Tx("StartedText", "Started"));
         }
@@ -2696,6 +2793,8 @@ namespace TikArena
             instantQ.Clear();
             notifs.Clear(); feed.Clear(); hypes.Clear();
             ClearBlips(true);
+            StopAllMusic();
+            StopZoomCam();
             RestoreWorld();
         }
 
@@ -2737,6 +2836,7 @@ namespace TikArena
             spots.Clear();
             shaking = drunkClip = speedOn = freezeOn = gravOn = blackoutOn = false;
             radarHidden = clockLocked = tcApplied = wantedApplied = false;
+            tcName = null;
             appliedWeather = null;
             weatherOverride = "";
             killSlowEnd = 0;
@@ -2787,6 +2887,30 @@ namespace TikArena
             }
         }
 
+        // ================================================================ graphics looks for the stream
+        //  [Graphics] Preset (Key = next one). Filter names are GTA timecycle modifiers (to test in game).
+        class GfxLook { public string Name, Modifier, Weather; public float Strength; public int Hour; }
+        static readonly GfxLook[] GfxLooks = {
+            G("Cinematic", "NG_filmic01", 0.85f, -1, ""),
+            G("Vivid", "rply_saturation", 0.8f, -1, ""),
+            G("Action", "rply_contrast", 0.7f, -1, ""),
+            G("GoldenHour", "glasses_orange", 0.35f, 19, "EXTRASUNNY"),
+            G("NeonNight", "rply_saturation", 0.6f, 23, "CLEAR"),
+            G("ColdBlue", "glasses_Darkblue", 0.4f, -1, ""),
+            G("Dream", "NG_filmic13", 0.8f, -1, ""),
+            G("RainyNight", "NG_filmic04", 0.7f, 21, "RAIN"),
+            G("FilmNoir", "NG_filmnoir_BW01", 1f, -1, ""),
+            G("Vignette", "rply_vignette", 0.8f, -1, "") };
+        static GfxLook G(string n, string m, float s, int h, string w) { GfxLook g = new GfxLook(); g.Name = n; g.Modifier = m; g.Strength = s; g.Hour = h; g.Weather = w; return g; }
+        static readonly List<string> GfxPresetNames = new List<string> { "Off", "Cinematic", "Vivid", "Action", "GoldenHour", "NeonNight", "ColdBlue", "Dream", "RainyNight", "FilmNoir", "Vignette" };
+        string gfxPreset = "Off", tcName;
+
+        GfxLook CurrentGfx()
+        {
+            foreach (GfxLook g in GfxLooks) if (Is(g.Name, gfxPreset)) return g;
+            return null;
+        }
+
         void WorldRules()
         {
             Ped pl = Game.Player.Character;
@@ -2811,10 +2935,11 @@ namespace TikArena
                 }
                 ApplyRelationships();
 
+                GfxLook gl = CurrentGfx();
                 if (nightSet) { }
-                else if (cfg.LockTime)
+                else if (cfg.LockTime || (gl != null && gl.Hour >= 0))
                 {
-                    Function.Call(Hash.SET_CLOCK_TIME, cfg.Hour, cfg.Minute, 0);
+                    Function.Call(Hash.SET_CLOCK_TIME, gl != null && gl.Hour >= 0 ? gl.Hour : cfg.Hour, gl != null && gl.Hour >= 0 ? 0 : cfg.Minute, 0);
                     Function.Call(Hash.PAUSE_CLOCK, true);
                     clockLocked = true;
                 }
@@ -2823,6 +2948,7 @@ namespace TikArena
                 string want = "";
                 if (Active("Storm")) want = "THUNDER";
                 else if (Active("Weather")) want = weatherOverride;
+                else if (gl != null && gl.Weather.Length > 0) want = gl.Weather;
                 else if (cfg.LockWeather) want = cfg.Weather.ToUpperInvariant();
                 if (want != appliedWeather)
                 {
@@ -2839,16 +2965,23 @@ namespace TikArena
                     appliedWeather = want;
                 }
 
-                if (cfg.TimecycleEnabled)
+                // graphics look: a preset (filter + time + weather) or the custom timecycle
+                string tcWant = null;
+                float tcStr = 0;
+                if (gl != null) { tcWant = gl.Modifier; tcStr = gl.Strength; }
+                else if (cfg.TimecycleEnabled) { tcWant = cfg.Timecycle; tcStr = cfg.TimecycleStrength; }
+                string tcKey = tcWant == null ? null : tcWant + "|" + tcStr.ToString(U.IC);
+                if (tcKey != tcName)
                 {
-                    if (!tcApplied)
+                    if (tcWant != null)
                     {
-                        Function.Call(Hash.SET_TIMECYCLE_MODIFIER, cfg.Timecycle);
-                        Function.Call(Hash.SET_TIMECYCLE_MODIFIER_STRENGTH, cfg.TimecycleStrength);
+                        Function.Call(Hash.SET_TIMECYCLE_MODIFIER, tcWant);
+                        Function.Call(Hash.SET_TIMECYCLE_MODIFIER_STRENGTH, tcStr);
                         tcApplied = true;
                     }
+                    else if (tcApplied) { Function.Call(Hash.CLEAR_TIMECYCLE_MODIFIER); tcApplied = false; }
+                    tcName = tcKey;
                 }
-                else if (tcApplied) { Function.Call(Hash.CLEAR_TIMECYCLE_MODIFIER); tcApplied = false; }
             }
 
             if (cfg.HideRadar) { Function.Call(Hash.DISPLAY_RADAR, false); radarHidden = true; }
@@ -3406,11 +3539,11 @@ namespace TikArena
             }
             else if (action == "MafiaCar")
             {
-                r.Model = "g_m_m_chicold_01"; r.Weapon = "WEAPON_MICROSMG"; r.Health = 150; r.VehicleModel = "schafter2"; r.SpawnDistance = 80;
+                r.Model = "g_m_m_chicold_01"; r.Weapon = "WEAPON_MICROSMG"; r.Health = 150; r.VehicleModel = "schafter2"; r.SpawnDistance = 28;
             }
             else if (action == "MotoHitman")
             {
-                r.Model = "g_m_y_lost_01"; r.Weapon = "WEAPON_MICROSMG"; r.Health = 150; r.VehicleModel = "bati"; r.SpawnDistance = 70;
+                r.Model = "g_m_y_lost_01"; r.Weapon = "WEAPON_MICROSMG"; r.Health = 150; r.VehicleModel = "bati"; r.SpawnDistance = 26;
             }
             else if (action == "Clone")
             {
@@ -3694,6 +3827,7 @@ namespace TikArena
                     RunAction(j, a);
                     break;
             }
+            try { MusicForEvent(j.It, a); } catch (Exception ex) { U.Error("Music", ex); }
         }
 
         void SpawnFoot(Job j, bool enemy, bool animal)
@@ -3762,11 +3896,12 @@ namespace TikArena
         {
             Interaction it = j.It;
             Ped pl = Game.Player.Character;
-            float dist = Math.Max(40f, it.SpawnDistance);
+            // cars / motorbikes come from close (25-30 m by default) so they are seen on stream quickly
+            float dist = U.Clamp(it.SpawnDistance, 15f, 35f);
             double ang = U.Rng.NextDouble() * Math.PI * 2;
             Vector3 around = pl.Position + new Vector3((float)Math.Cos(ang) * dist, (float)Math.Sin(ang) * dist, 0);
             Vector3 road = World.GetNextPositionOnStreet(around);
-            if (road == Vector3.Zero || road.DistanceTo(pl.Position) > dist * 2.5f) road = around;
+            if (road == Vector3.Zero || road.DistanceTo(pl.Position) > dist * 1.6f || road.DistanceTo(pl.Position) < 12f) road = around;
             Model vm = LoadModel(it.VehicleModel, defVeh);
             if (!vm.IsLoaded) return;
             Vehicle v = World.CreateVehicle(vm, road, HeadingTo(road, pl.Position));
@@ -4222,7 +4357,7 @@ namespace TikArena
                 case "GodMode": StartTimed("GodMode", it.Duration); break;
                 case "GiveVehicle":
                     {
-                        Model m = LoadModel(it.VehicleModel, "zentorno");
+                        Model m = LoadModel(PickVehicle(it.VehicleModel), "zentorno");
                         if (!m.IsLoaded) break;
                         bool sky = string.Equals(it.Effect, "SkyDrop", StringComparison.OrdinalIgnoreCase);
                         Vector3 pos = pl.Position + pl.ForwardVector * (sky ? 8f : 4f) + pl.RightVector * (sky ? 0f : 3f);
@@ -4290,6 +4425,22 @@ namespace TikArena
                         break;
                     }
             }
+        }
+
+        // GiveVehicle: a model name, "Random" (a different car every time) or "Cycle" (all cars one after the other)
+        static readonly string[] GiveCars = {
+            "zentorno", "adder", "t20", "osiris", "turismor", "entityxf", "cheetah", "infernus", "vacca", "bullet", "voltic",
+            "reaper", "fmj", "pfister811", "tyrus", "vagner", "xa21", "italigtb", "nero", "tempesta", "visione", "cyclone",
+            "krieger", "emerus", "thrax", "deveste", "furia", "tezeract", "sultanrs", "elegy", "jester", "massacro", "comet2",
+            "banshee", "carbonizzare", "coquette", "feltzer2", "ninef", "rapidgt", "schafter3", "kuruma", "dominator", "gauntlet",
+            "sabregt", "dukes", "buffalo", "kamacho", "trophytruck", "sandking", "bati", "akuma", "hakuchou", "shotaro", "insurgent2" };
+        int giveCarIndex = -1;
+
+        string PickVehicle(string model)
+        {
+            if (Is(model, "Random")) return GiveCars[U.Rng.Next(GiveCars.Length)];
+            if (Is(model, "Cycle")) { giveCarIndex = (giveCarIndex + 1) % GiveCars.Length; return GiveCars[giveCarIndex]; }
+            return model;
         }
 
         bool IsTracked(Ped p)
@@ -4593,7 +4744,280 @@ namespace TikArena
                 killerCamEnd = U.Now + (long)(cfg.KillerSeconds * 1000);
             }
             else killerCamEnd = 0;
+            SetDeathKiller(killer, null);
             if (cfg.CelebEnabled) StartCelebration();
+        }
+
+        // ================================================================ damage effects on the health bar
+        //  [DamageFx] Numbers: "-5" floats up from the bar for every hit (+N for heals),
+        //  Ghost: the lost part stays white a moment then drains, Blood: blood + impact on the player
+        class DmgPop { public int Amount; public long Start; }
+        readonly List<DmgPop> dmgPops = new List<DmgPop>();
+        int lastHp = -1;
+        float ghostFrac;
+        long ghostHold, dmgFlash, lastWatch;
+
+        void WatchHealth()
+        {
+            long now = U.Now;
+            float dt = Math.Min(0.25f, Math.Max(0, (now - lastWatch) / 1000f));
+            lastWatch = now;
+            Ped pl = Game.Player.Character;
+            if (!cfg.DmgEnabled || !started || !pl.Exists() || pl.IsDead) { lastHp = -1; dmgPops.Clear(); return; }
+            int hp = PlayerHpNow(), max = PlayerHpMax();
+            float frac = U.Clamp(hp / (float)max, 0, 1);
+            if (lastHp >= 0 && hp != lastHp)
+            {
+                int diff = hp - lastHp;
+                bool show = diff < 0 || diff < max * 0.6f;   // no "+1000" when the round refills the health
+                if (show && cfg.DmgNumbers)
+                {
+                    DmgPop last = dmgPops.Count > 0 ? dmgPops[dmgPops.Count - 1] : null;
+                    if (last != null && now - last.Start < 250 && Math.Sign(last.Amount) == Math.Sign(diff)) last.Amount += diff;
+                    else { DmgPop p = new DmgPop(); p.Amount = diff; p.Start = now; dmgPops.Add(p); }
+                    while (dmgPops.Count > 6) dmgPops.RemoveAt(0);
+                }
+                if (diff < 0)
+                {
+                    float before = U.Clamp(lastHp / (float)max, 0, 1);
+                    if (ghostFrac < before) ghostFrac = before;
+                    ghostHold = now + 450;
+                    dmgFlash = now;
+                    if (cfg.DmgBlood && Function.Call<bool>(Hash.HAS_PED_BEEN_DAMAGED_BY_WEAPON, pl, 0, 2))
+                    {
+                        Function.Call(Hash.APPLY_PED_BLOOD, pl, 0, U.RandF(0, 1), U.RandF(0, 1), U.RandF(0, 1), "BulletSmall");
+                        if (!string.IsNullOrEmpty(cfg.DmgHitFx) && !Is(cfg.DmgHitFx, "None"))
+                        {
+                            string[] f = cfg.DmgHitFx.Split('|');
+                            if (f.Length > 1) try { Ptfx(f[0].Trim(), f[1].Trim(), pl.Position + new Vector3(0, 0, 0.35f), 0.7f, false); } catch { }
+                        }
+                        Function.Call(Hash.CLEAR_PED_LAST_WEAPON_DAMAGE, pl);
+                    }
+                }
+            }
+            lastHp = hp;
+            if (now > ghostHold) ghostFrac = Math.Max(frac, ghostFrac - 0.8f * dt);
+            if (ghostFrac < frac) ghostFrac = frac;
+            dmgPops.RemoveAll(delegate(DmgPop p) { return now - p.Start > 1200; });
+        }
+
+        // drawn over a health bar (bx, by, bw, bh = the bar, frac = health now)
+        void DamageFx(float bx, float by, float bw, float bh, float frac)
+        {
+            if (!cfg.DmgEnabled) return;
+            long now = U.Now;
+            if (cfg.DmgGhost && ghostFrac > frac + 0.001f)
+                Gfx.Rect(bx + bw * frac, by, bw * (ghostFrac - frac), bh, Color.FromArgb(235, 255, 236, 236));
+            if (now - dmgFlash < 260)
+                Gfx.Rect(bx, by, Math.Max(2, bw * frac), bh, Color.FromArgb((int)(170 * (1 - (now - dmgFlash) / 260f)), 255, 40, 40));
+            int i = 0;
+            foreach (DmgPop p in dmgPops)
+            {
+                float t = (now - p.Start) / 1200f;
+                int a = (int)(255 * (t < 0.75f ? 1 : (1 - t) / 0.25f));
+                float pop = t < 0.12f ? 1.35f - t * 3 : 1f;
+                string s = (p.Amount > 0 ? "+" : "") + p.Amount.ToString(U.IC);
+                Color c = p.Amount < 0 ? Color.FromArgb(a, 255, 70, 70) : Color.FromArgb(a, 80, 255, 140);
+                float x = bx + bw * frac + (i % 3) * 14 - 6;
+                Gfx.Text(s, x, by - 18 - t * 30, TXT * 1.15f * pop, c, Alignment.Center);
+                i++;
+            }
+        }
+
+        // ================================================================ close "TikTok" camera
+        //  [Camera] ZoomKey on/off (ZoomOnStart = on with the start key), closer over-the-shoulder view
+        //  that follows the normal camera rotation (mouse / stick). Only the view changes, not the HUD.
+        //  ZoomInKey / ZoomOutKey move it closer / farther while playing.
+        bool zoomOn;
+        float zoomAdjust;
+        Camera zcam;
+        bool zoomRendering;
+        float zoomSmoothDist = -1;
+
+        void StopZoomCam()
+        {
+            if (zoomRendering && camMode.Length == 0) Function.Call(Hash.RENDER_SCRIPT_CAMS, false, true, 400, true, false, 0);
+            zoomRendering = false;
+            try { if (zcam != null && zcam.Exists()) { zcam.IsActive = false; zcam.Delete(); } } catch { }
+            zcam = null;
+            zoomSmoothDist = -1;
+        }
+
+        void UpdateZoomCam()
+        {
+            Ped pl = Game.Player.Character;
+            bool aiming = cfg.ZoomNormalWhenAiming && (GameplayCamera.IsAimCamActive || GameplayCamera.IsFirstPersonAimCamActive);
+            bool want = zoomOn && started && pl.Exists() && camMode.Length == 0 && !Function.Call<bool>(Hash.IS_PAUSE_MENU_ACTIVE) && !aiming;
+            if (!want)
+            {
+                if (zcam != null && camMode.Length == 0) StopZoomCam();
+                else if (camMode.Length > 0) { zoomRendering = false; if (zcam != null && zcam.Exists()) zcam.IsActive = false; }
+                return;
+            }
+            if (zcam == null || !zcam.Exists()) zcam = World.CreateCamera(GameplayCamera.Position, GameplayCamera.Rotation, cfg.ZoomFov);
+            bool inVeh = pl.IsInVehicle();
+            float dist = Math.Max(0.6f, (inVeh ? cfg.ZoomVehDistance : cfg.ZoomDistance) + zoomAdjust);
+            float height = inVeh ? cfg.ZoomVehHeight : cfg.ZoomHeight;
+            Vector3 rot = GameplayCamera.Rotation;
+            Vector3 dir = GameplayCamera.Direction;
+            double yaw = rot.Z * Math.PI / 180.0;
+            Vector3 right = new Vector3((float)Math.Cos(yaw), (float)Math.Sin(yaw), 0);
+            Vector3 anchor = (inVeh ? pl.CurrentVehicle.Position : pl.Position) + new Vector3(0, 0, height) + right * (inVeh ? 0 : cfg.ZoomSide);
+            // keep the camera out of walls: stop in front of what is between the character and the camera
+            float d = dist;
+            RaycastResult hit = World.Raycast(anchor, anchor - dir * dist, IntersectFlags.Map, inVeh ? (Entity)pl.CurrentVehicle : pl);
+            if (hit.DidHit) d = Math.Max(0.3f, hit.HitPosition.DistanceTo(anchor) - 0.25f);
+            zoomSmoothDist = zoomSmoothDist < 0 ? d : (d < zoomSmoothDist ? d : zoomSmoothDist + (d - zoomSmoothDist) * 0.15f);
+            zcam.Position = anchor - dir * zoomSmoothDist;
+            zcam.Rotation = rot;
+            zcam.FieldOfView = cfg.ZoomFov;
+            if (!zoomRendering)
+            {
+                zcam.IsActive = true;
+                Function.Call(Hash.RENDER_SCRIPT_CAMS, true, true, 400, true, false, 0);
+                zoomRendering = true;
+            }
+        }
+
+        // ================================================================ music
+        //  [Music] background playlist (TikArena/music/background) + one track per event
+        //  (TikArena/music/events/<Interaction Music>) played while the event is on;
+        //  priority: death music > event music > background. MusicKey = on / off.
+        bool musicOn = true, bgPaused;
+        List<string> bgList = new List<string>();
+        int bgIndex = -1;
+        string evtFile;
+        Interaction evtIt;
+        string evtKey;           // timed effect key, or null for spawns
+        bool deathMusic;
+        long nextMusicCheck;
+
+        static readonly string[] MusicExt = { ".mp3", ".wav", ".wma", ".m4a" };
+
+        string MusicPath(string sub, string file)
+        {
+            if (string.IsNullOrEmpty(file)) return null;
+            string p = Path.IsPathRooted(file) ? file : Path.Combine(U.DataDir, "music", sub, file);
+            if (File.Exists(p)) return p;
+            if (Path.GetExtension(p).Length == 0) foreach (string e in MusicExt) if (File.Exists(p + e)) return p + e;
+            return null;
+        }
+
+        void LoadPlaylist()
+        {
+            bgList.Clear();
+            try
+            {
+                string dir = Path.Combine(U.DataDir, "music", "background");
+                Directory.CreateDirectory(dir);
+                Directory.CreateDirectory(Path.Combine(U.DataDir, "music", "events"));
+                foreach (string f in Directory.GetFiles(dir))
+                    if (Array.IndexOf(MusicExt, Path.GetExtension(f).ToLowerInvariant()) >= 0) bgList.Add(f);
+                bgList.Sort(StringComparer.OrdinalIgnoreCase);
+                if (cfg.MusicShuffle) for (int i = bgList.Count - 1; i > 0; i--) { int k = U.Rng.Next(i + 1); string t = bgList[i]; bgList[i] = bgList[k]; bgList[k] = t; }
+            }
+            catch (Exception ex) { U.Error("Playlist", ex); }
+            bgIndex = -1;
+        }
+
+        // an event with its own music started (called for every executed unit)
+        void MusicForEvent(Interaction it, string action)
+        {
+            if (!cfg.MusicEnabled || !musicOn || it == null || string.IsNullOrEmpty(it.Music)) return;
+            string file = MusicPath("events", it.Music);
+            if (file == null) { U.Log("music not found: " + it.Music); return; }
+            evtIt = it;
+            evtKey = IsSpawn(action) ? null : (IsKeep(action) && it.KeepSeconds > 0 ? "Keep:" + action : action);
+            if (evtFile == file && Mci.Mode("tka_evt") == "playing") return;
+            evtFile = file;
+            if (!deathMusic) StartEventTrack();
+        }
+
+        void StartEventTrack()
+        {
+            if (evtFile == null) return;
+            PauseBackground();
+            if (!Mci.Play("tka_evt", evtFile, true, cfg.MusicEventVolume)) { U.Log("music: can not play " + evtFile); evtFile = null; }
+        }
+
+        bool EventStillOn()
+        {
+            if (evtIt == null || fakeDead || phase == Phase.Ended) return false;
+            if (evtKey != null) return Active(evtKey);
+            foreach (Tracked t in tracked) if (t.It == evtIt && t.DeadAt == 0) return true;
+            foreach (Job j in spawnQ) if (j.It == evtIt) return true;
+            return false;
+        }
+
+        void StopEventMusic()
+        {
+            Mci.Close("tka_evt");
+            evtFile = null;
+            evtIt = null;
+            evtKey = null;
+        }
+
+        void PauseBackground()
+        {
+            if (bgIndex >= 0 && !bgPaused) { Mci.Pause("tka_bg"); bgPaused = true; }
+        }
+
+        void NextBackground()
+        {
+            if (bgList.Count == 0) return;
+            for (int tries = 0; tries < bgList.Count; tries++)
+            {
+                bgIndex = (bgIndex + 1) % bgList.Count;
+                if (Mci.Play("tka_bg", bgList[bgIndex], false, cfg.MusicVolume)) { bgPaused = false; return; }
+            }
+            bgIndex = -1;
+        }
+
+        // the death / celebration music (instead of the old WAV player)
+        bool PlayDeathMusic(string file)
+        {
+            if (!cfg.MusicEnabled) return false;
+            string p = Path.IsPathRooted(file) ? file : Path.Combine(U.DataDir, "sounds", file);
+            if (!File.Exists(p)) p = MusicPath("events", file);
+            if (p == null || !File.Exists(p)) return false;
+            PauseBackground();
+            if (evtFile != null) Mci.Pause("tka_evt");
+            deathMusic = Mci.Play("tka_death", p, true, cfg.MusicDeathVolume);
+            return deathMusic;
+        }
+
+        void StopDeathMusic()
+        {
+            if (!deathMusic) return;
+            Mci.Close("tka_death");
+            deathMusic = false;
+            if (evtFile != null) Mci.Resume("tka_evt");
+        }
+
+        void UpdateMusic()
+        {
+            if (!cfg.MusicEnabled || U.Now < nextMusicCheck) return;
+            nextMusicCheck = U.Now + 500;
+            if (evtFile != null && !EventStillOn()) StopEventMusic();
+            bool bgWanted = musicOn && cfg.MusicBackground && started && evtFile == null && !deathMusic;
+            if (!bgWanted) { PauseBackground(); return; }
+            if (bgIndex >= 0 && bgPaused) { Mci.Resume("tka_bg"); bgPaused = false; return; }
+            string mode = bgIndex >= 0 ? Mci.Mode("tka_bg") : "";
+            if (bgIndex < 0 || mode == "stopped" || mode.Length == 0) NextBackground();
+        }
+
+        void ToggleMusic()
+        {
+            musicOn = !musicOn;
+            if (!musicOn) { StopEventMusic(); PauseBackground(); }
+            else LoadPlaylist();
+            Status("Music: " + (musicOn ? "ON" : "OFF"));
+        }
+
+        void StopAllMusic()
+        {
+            Mci.Close("tka_evt"); Mci.Close("tka_bg"); Mci.Close("tka_death");
+            evtFile = null; evtIt = null; evtKey = null; deathMusic = false; bgIndex = -1; bgPaused = false;
         }
 
         // ================================================================ camera
@@ -4690,6 +5114,7 @@ namespace TikArena
                     Function.Call(Hash.TASK_PLAY_ANIM, p, cfg.DanceDict, cfg.DanceAnim, 8f, -8f, -1, 1, 0f, false, false, false);
                 dancers.Add(p);
             }
+            AddExtraDancers(n);
             if (cfg.CelebCoffin)
             {
                 Model m = new Model(cfg.CoffinModel);
@@ -4713,8 +5138,69 @@ namespace TikArena
                     }
                 }
             }
-            if (cfg.DeathSoundEnabled && cfg.DeathSound.Length > 0) deathPlayer = Wav(cfg.DeathSound, true);
+            if (cfg.DeathSoundEnabled && cfg.DeathSound.Length > 0 && !PlayDeathMusic(cfg.DeathSound)) deathPlayer = Wav(cfg.DeathSound, true);
             if (camMode.Length == 0) StartCam("celeb", pl, cfg.CelebSeconds);
+        }
+
+        // who killed me: shown on the side of the screen while dead, and his characters dance
+        Supporter deathKiller;
+        Interaction deathKillerIt;
+        long deathKillerAt;
+        readonly List<Ped> extraDancers = new List<Ped>();
+
+        void SetDeathKiller(Supporter s, Interaction it)
+        {
+            deathKiller = s;
+            deathKillerIt = it;
+            deathKillerAt = U.Now;
+        }
+
+        string DancerModel()
+        {
+            if (deathKillerIt != null && deathKillerIt.Model.Length > 0 && !IsAllySpawn(deathKillerIt.Action)) return deathKillerIt.Model;
+            foreach (Interaction it in cfg.Interactions) if (it.Enabled && it.Action == "SpawnEnemy" && it.Model.Length > 0) return it.Model;
+            return "s_m_y_clown_01";
+        }
+
+        // not enough enemies alive to dance: add a few (deleted after the celebration)
+        void AddExtraDancers(int have)
+        {
+            int need = Math.Min(cfg.ExtraDancers, 6) - have;
+            if (need <= 0) return;
+            Ped pl = Game.Player.Character;
+            Model m = LoadModel(DancerModel(), "s_m_y_clown_01");
+            if (!m.IsLoaded) return;
+            for (int i = 0; i < need; i++)
+            {
+                double a = (have + i) * Math.PI * 2 / Math.Max(1, have + need);
+                Vector3 pos = pl.Position + new Vector3((float)Math.Cos(a) * 2.8f, (float)Math.Sin(a) * 2.8f, 0f);
+                Ped p = World.CreatePed(m, pos, HeadingTo(pos, pl.Position));
+                if (p == null || !p.Exists()) continue;
+                p.IsInvincible = true;
+                p.BlockPermanentEvents = true;
+                if (cfg.CelebDance) Function.Call(Hash.TASK_PLAY_ANIM, p, cfg.DanceDict, cfg.DanceAnim, 8f, -8f, -1, 1, 0f, false, false, false);
+                extraDancers.Add(p);
+                dancers.Add(p);
+            }
+            m.MarkAsNoLongerNeeded();
+        }
+
+        // side banner "killed by" with the supporter picture
+        void DrawKillerBanner()
+        {
+            if (!cfg.KillerBanner || deathKiller == null || !(fakeDead || celeb)) return;
+            if (U.Now - deathKillerAt > 60000) return;
+            float t = U.Clamp((U.Now - deathKillerAt) / 350f, 0, 1);
+            float w = 230, h = 84;
+            float x0 = frameX + 14 - (1 - t) * (w + 20), y0 = frameY + (vertical ? 250 : 300);
+            Gfx.Origin(x0, y0, vertical ? Math.Min(1f, (frameW - 20) / w) : 1f);
+            DBox(0, 0, w, h);
+            Gfx.Rect(0, 0, 4, h, cLoss);
+            Gfx.Text(cfg.Tx("KilledByText", "Killed by"), 16, 6, SMALL * 1.1f, cLoss, Alignment.Left);
+            AvRing(deathKiller, 44, 52, 44, cLoss, true, false);
+            Gfx.Text(U.Trunc(deathKiller.Nick, 14), 76, 36, TXT * 1.1f, Color.White, Alignment.Left);
+            if (deathKiller.Coins > 0) Gfx.Text(U.Coins(deathKiller.Coins), 76, 58, SMALL, U.WithAlpha(cfg.HypeColor, 230), Alignment.Left);
+            Gfx.Origin(0, 0, 1);
         }
 
         void UpdateCelebration()
@@ -4729,6 +5215,7 @@ namespace TikArena
             celeb = false;
             try { if (deathPlayer != null) deathPlayer.Stop(); } catch { }
             deathPlayer = null;
+            StopDeathMusic();
             try { if (coffin != null && coffin.Exists()) coffin.Delete(); } catch { }
             coffin = null;
             foreach (Ped p in dancers)
@@ -4738,6 +5225,8 @@ namespace TikArena
                 Function.Call(Hash.CLEAR_PED_TASKS, p);
             }
             dancers.Clear();
+            foreach (Ped p in extraDancers) { try { if (p != null && p.Exists()) p.Delete(); } catch { } }
+            extraDancers.Clear();
             if (camMode == "celeb" || camMode == "killer") StopCam();
             killerCamEnd = 0;
             if (deathPaused) { Function.Call(Hash.PAUSE_DEATH_ARREST_RESTART, false); deathPaused = false; }
@@ -5032,7 +5521,13 @@ namespace TikArena
         static readonly Color Dark = Color.FromArgb(225, 12, 14, 20);
         static readonly Color Ink = Color.FromArgb(255, 28, 24, 18);
 
-        List<string> CoinParts(Supporter s) { return new List<string> { U.Coins(s.Coins), cfg.DesignCoinsWord }; }
+        // coins under the name: only the number (DesignCoinsWord adds a word when set)
+        List<string> CoinParts(Supporter s)
+        {
+            List<string> l = new List<string> { U.Coins(s.Coins) };
+            if (!string.IsNullOrEmpty(cfg.DesignCoinsWord)) l.Add(cfg.DesignCoinsWord);
+            return l;
+        }
 
         void AvRing(Supporter s, float cx, float cy, float d, Color ring, bool glow, bool hex)
         {
@@ -5184,7 +5679,7 @@ namespace TikArena
                                 Gfx.Shape("tri_down", x, y + bh - 0.5f, cw, 14, md[ix]);
                                 Gfx.Text(U.Coins(s.Coins), x + 5, y + 2, big ? 0.5f : 0.44f, Ink, Alignment.Left);
                                 Gfx.Text("#" + (ix + 1), x + cw - 5, y + 4, SMALL, Ink, Alignment.Right);
-                                Gfx.Text(cfg.DesignCoinsWord, x + 6, y + (big ? 22 : 20), SMALL * 0.75f, Ink, Alignment.Left);
+                                if (!string.IsNullOrEmpty(cfg.DesignCoinsWord)) Gfx.Text(cfg.DesignCoinsWord, x + 6, y + (big ? 22 : 20), SMALL * 0.75f, Ink, Alignment.Left);
                                 AvRing(s, x + cw / 2, y + bh * 0.55f, big ? 32 : 26, Color.White, false, false);
                                 Gfx.Text(U.Trunc(s.Nick, 9), x + cw / 2, y + bh - 17, SMALL, Ink, Alignment.Center);
                             }
@@ -5521,6 +6016,9 @@ namespace TikArena
                     if (armor) Gfx.Bar(bx, by + 15, bw, 4, af, armorC, back);
                     break;
             }
+            if (dz == "minimal") DamageFx(0, 18, w, 7, frac);
+            else if (dz == "broadcast") DamageFx(46, by, w - 52, 12, frac);
+            else DamageFx(bx, by, bw, dz == "podium" ? 13 : 12, frac);
             return new SizeF(w, h);
         }
 
@@ -6036,6 +6534,7 @@ namespace TikArena
                 if (lastDamager.Ped != null && lastDamager.Ped.Exists()) killerEnt = lastDamager.Ped;
             }
             if (phase == Phase.Running && cfg.ChallengeEnabled) EndRound(false, killer);
+            SetDeathKiller(killer, lastDamager != null && U.Now - lastDamageAt < 15000 ? lastDamager.It : null);
             endScreenUntil = Math.Max(endScreenUntil, fakeUntil);
             if (cfg.KillerEnabled && killerEnt != null && killerEnt.Exists())
             {
@@ -6078,12 +6577,15 @@ namespace TikArena
             if (!fakeDead) return;
             Gfx.Origin(0, 0, 1);
             float t = U.Clamp((U.Now - fakeStart) / 500f, 0, 1);
-            Gfx.RectAbs(0, 0, 1280, 720, Color.FromArgb((int)(110 * t), 0, 0, 0));
-            for (int i = 0; i < 6; i++)
+            if (Is(cfg.DeathOverlay, "Dim"))
             {
-                int a = (int)((90 - i * 15) * t);
-                Gfx.RectAbs(frameX, i * 8, frameW, 8, Color.FromArgb(a, 180, 0, 20));
-                Gfx.RectAbs(frameX, 720 - (i + 1) * 8, frameW, 8, Color.FromArgb(a, 180, 0, 20));
+                Gfx.RectAbs(0, 0, 1280, 720, Color.FromArgb((int)(110 * t), 0, 0, 0));
+                for (int i = 0; i < 6; i++)
+                {
+                    int a = (int)((90 - i * 15) * t);
+                    Gfx.RectAbs(frameX, i * 8, frameW, 8, Color.FromArgb(a, 180, 0, 20));
+                    Gfx.RectAbs(frameX, 720 - (i + 1) * 8, frameW, 8, Color.FromArgb(a, 180, 0, 20));
+                }
             }
             float left = Math.Max(0, (fakeUntil - U.Now) / 1000f);
             float total = Math.Max(0.1f, (fakeUntil - fakeStart) / 1000f);
@@ -6174,7 +6676,10 @@ namespace TikArena
             { "Hologram",  new string[] { "#7df9ff", "#041a24", "#d9fbff", "#7dffb3", "#ff7d9b" } },
             { "Gradient",  new string[] { "#ff4fd8", "#1b1036", "#ffffff", "#4dffb5", "#ff5c7a" } },
             { "Stream",    new string[] { "#fe2c55", "#000000", "#ffffff", "#25f4ee", "#fe2c55" } },
-            { "Carbon",    new string[] { "#ff7a00", "#121212", "#f2f2f2", "#7cff6b", "#ff3b3b" } }
+            { "Carbon",    new string[] { "#ff7a00", "#121212", "#f2f2f2", "#7cff6b", "#ff3b3b" } },
+            { "Luxury",    new string[] { "#d4af37", "#0b0b0d", "#f7f1e1", "#e8c766", "#c0392b" } },
+            { "Aurora",    new string[] { "#7cf5d6", "#0a0f22", "#eafffb", "#6effa8", "#ff6b9a" } },
+            { "Ember",     new string[] { "#ff5a1f", "#160807", "#fff1e8", "#ffb347", "#ff2e2e" } }
         };
 
         void ApplyPalette()
@@ -6303,6 +6808,41 @@ namespace TikArena
                     Gfx.Rect(x + 2, y + 1, w, h, U.WithAlpha(acc, (int)(120 * alpha)));
                     Gfx.Rect(x, y, w, h, U.WithAlpha(cPan, (int)(Math.Max(cfg.Opacity, 190) * alpha)));
                     break;
+                case "luxury":
+                    // black plate, gold hairlines and corner marks
+                    Gfx.Rect(x, y, w, h, U.WithAlpha(cPan, (int)(Math.Max(cfg.Opacity, 215) * Math.Min(1f, alpha))));
+                    Gfx.Rect(x, y, w, 2, U.WithAlpha(acc, A));
+                    Gfx.Rect(x, y + h - 1, w, 1, U.WithAlpha(acc, (int)(170 * alpha)));
+                    Gfx.Rect(x + 3, y + 5, w - 6, 1, U.WithAlpha(acc, (int)(45 * alpha)));
+                    Gfx.Rect(x, y, 1, h, U.WithAlpha(acc, (int)(110 * alpha)));
+                    Gfx.Rect(x + w - 1, y, 1, h, U.WithAlpha(acc, (int)(110 * alpha)));
+                    Gfx.Rect(x - 1, y - 1, 5, 5, U.WithAlpha(acc, A)); Gfx.Rect(x + w - 4, y - 1, 5, 5, U.WithAlpha(acc, A));
+                    break;
+                case "aurora":
+                    {
+                        // northern-lights gradient over a deep blue plate
+                        Gfx.Rect(x, y, w, h, PanelCol(alpha));
+                        const int n = 12;
+                        Color c1 = Color.FromArgb(255, 60, 240, 200), c2 = Color.FromArgb(255, 140, 90, 255);
+                        float wave = (float)(0.5 + 0.5 * Math.Sin(now / 900.0));
+                        for (int i = 0; i < n; i++)
+                        {
+                            Color c = U.Mix(c1, c2, U.Clamp(i / (float)(n - 1) * 0.8f + wave * 0.2f, 0, 1));
+                            Gfx.Rect(x + w * i / n, y, w / n + 0.6f, h, U.WithAlpha(c, (int)(34 * alpha)));
+                            Gfx.Rect(x + w * i / n, y, w / n + 0.6f, 2, U.WithAlpha(c, A));
+                        }
+                    }
+                    break;
+                case "ember":
+                    {
+                        // dark plate with a warm glow rising from the bottom
+                        Gfx.Rect(x, y, w, h, PanelCol(alpha));
+                        for (int i = 0; i < 5; i++)
+                            Gfx.Rect(x, y + h - (i + 1) * Math.Max(2, h / 10), w, Math.Max(2, h / 10), U.WithAlpha(acc, (int)((60 - i * 11) * alpha)));
+                        Gfx.Rect(x, y, 3, h, U.WithAlpha(acc, A));
+                        Gfx.Rect(x, y + h - 2, w, 2, U.WithAlpha(U.Mix(acc, Color.Yellow, 0.3f), A));
+                    }
+                    break;
                 case "carbon":
                     Gfx.Rect(x, y, w, h, PanelCol(alpha));
                     for (float sx = x + 2; sx < x + w - 2; sx += 4) Gfx.Rect(sx, y, 2, h, U.WithAlpha(Color.White, (int)(7 * alpha)));
@@ -6351,6 +6891,7 @@ namespace TikArena
                     Gfx.Rect(x, y, w, h, cAcc);
                     Gfx.Text(text, x + w / 2, y + 2, TXT, St == "broadcast" ? Color.White : cPan, Alignment.Center);
                     break;
+                case "luxury":
                 case "royal":
                     {
                         float tw = Gfx.TextW(text, TXT);
@@ -6473,6 +7014,7 @@ namespace TikArena
             }
             DrawSpotlight();
             DrawDeathOverlay();
+            DrawKillerBanner();
             EndScreen();
             LiveBadge();
             DrawToast(false);
@@ -6836,6 +7378,9 @@ namespace TikArena
                 Gfx.Bar(8, 22, w - 16, 12, frac, hc, back);
                 if (armor) Gfx.Bar(8, 37, w - 16, 5, af, armorC, back);
             }
+            if (Is(v, "Numbers")) DamageFx(10, 38, w - 20, 4, frac);
+            else if (Is(v, "Slim")) DamageFx(0, 18, w, 6, frac);
+            else DamageFx(8, 22, w - 16, 12, frac);
             return new SizeF(w, h);
         }
 
@@ -6910,8 +7455,8 @@ namespace TikArena
             if (s == "circle" || s == "square" || s == "rounded" || s == "hex") return s;
             switch (CurrentLook.ToLowerInvariant())
             {
-                case "arena": case "podium": case "minimal": case "classic": case "royal": case "neon": return "circle";
-                case "esports": case "cyber": case "hologram": return "hex";
+                case "arena": case "podium": case "minimal": case "classic": case "royal": case "neon": case "luxury": return "circle";
+                case "esports": case "cyber": case "hologram": case "ember": return "hex";
                 case "broadcast": case "carbon": case "retro": return "square";
                 default: return "rounded";
             }
@@ -6943,7 +7488,7 @@ namespace TikArena
 
         string GiftCoinsText(Interaction it)
         {
-            return cfg.GuideShowCoins && it.GiftCoins > 0 && Is(it.Trigger, "Gift") ? U.Coins(it.GiftCoins) + " " + cfg.DesignCoinsWord : "";
+            return cfg.GuideShowCoins && it.GiftCoins > 0 && Is(it.Trigger, "Gift") ? (U.Coins(it.GiftCoins) + " " + cfg.DesignCoinsWord).Trim() : "";
         }
 
         SizeF GuidePanel(bool draw)
