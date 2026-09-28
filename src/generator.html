@@ -362,7 +362,7 @@ const VEHICLES = [
 // ------------------------------------------------------------- defaults (INI mirror)
 function defaults(){
   const S = {};
-  S.General = {PowerKey:"K",StartKey:"F3",HudStyleKey:"F11",HudFontKey:"F8",EmergencyKey:"Delete",PauseKey:"Pause",LayoutKey:"F7",HypeTestKey:"F6",
+  S.General = {PowerKey:"K",StartKey:"F3",HudStyleKey:"F11",HudFontKey:"F8",EmergencyKey:"Delete",StopEffectsKey:"End",PauseKey:"Pause",LayoutKey:"F7",HypeTestKey:"F6",
     AutoReload:true,AutoImport:true,ShowLoadMessage:true,CleanupOnPowerOff:true,ShowStatusMessages:true,TestKeysEnabled:true,DebugLog:false};
   S.TikFinity = {Enabled:true,Url:"ws://localhost:21213/",ReconnectSeconds:5,LearnMode:true,TestUserName:"Test"};
   S.Challenge = {Enabled:true,DurationMinutes:10,AutoRestart:true,EndScreenEnabled:true,EndScreenSeconds:6,MvpEnabled:true};
@@ -396,7 +396,7 @@ function defaults(){
   S.Graphics = {LockTime:false,Hour:21,Minute:0,LockWeather:false,Weather:"Clear",TimecycleEnabled:false,Timecycle:"rply_saturation",TimecycleStrength:0.6,DensityEnabled:false,PedDensity:1,VehicleDensity:1};
   S.Texts = {WinText:"فوز",LossText:"خسارة",WinShort:"فوز",LossShort:"خسارة",MvpText:"MVP",MvpWinReason:"ساعدك باش تربح",MvpLossReason:"هو السبب ف الخسارة",KillFeedText:"{name} قُتل",
     WinStreakText:"انتصارات متتالية",LossStreakText:"خسارات متتالية",EnemiesShort:"أعداء",AlliesShort:"مساعدين",KillsShort:"قتلات",QueueShort:"الطابور",PausedText:"إيقاف مؤقت",RespawnText:"الرجوع بعد",ResumedText:"استئناف",
-    StartedText:"بدأ التحدي",EmergencyText:"تم مسح كل شيء",LoadedText:"جاهز. ضغط",ReloadedText:"تحدثات الإعدادات",ImportedText:"تجابو الإعدادات الجداد من Downloads"};
+    StartedText:"بدأ التحدي",EmergencyText:"تم مسح كل شيء",StopEffectsText:"تحبسو جميع التأثيرات",LoadedText:"جاهز. ضغط",ReloadedText:"تحدثات الإعدادات",ImportedText:"تجابو الإعدادات الجداد من Downloads"};
   S.Layout = layoutDefaults(false);
   S.LayoutVertical = layoutDefaults(true);
   S.KillEffects = {Enabled:true,Effect:"SoftSmoke",SmokeColor:"#33ccff",OnlyPlayerKills:false,SoundEnabled:false,Sound:""};
@@ -405,6 +405,7 @@ function defaults(){
   S.LiveTest = {Enabled:true,Key:"F9",ShowBadge:true,Names:"أحمد,سارة,Yassine,Nora,Karim,Lina,Omar,Hiba,Adam,Salma,Mehdi,Imane,Zakaria,Khadija,Anas,Rania",AvatarUrls:"",Comments:"GG,🔥,يلاه,اقتلوه,عاونوه,واو",
     MinDelayMs:700,MaxDelayMs:2200,GiftWeight:45,LikeWeight:25,CommentWeight:10,FollowWeight:8,ShareWeight:6,JoinWeight:6,ComboChance:25,MaxCombo:15};
   S.Spotlight = {Enabled:true,Seconds:3,MinCoins:1000,Sound:"CHALLENGE_UNLOCKED|HUD_AWARDS",OffsetY:0};
+  S.Effects = {MaxSeconds:300,Stack:"Extend",ShowBars:true,MaxBars:4,BlackoutNight:true,QuakeStrength:2.5,QuakeRagdollPlayer:true};
   S.PlayerFx = {Enabled:true,Popup:true,PopupSeconds:2.5,Burst:true,BuffAura:true,SpeedColor:"#29b6ff",GodColor:"#ffc828",JumpColor:"#39ff14",FreezeColor:"#bff4ff",WeaponColor:"#ff9f1c",HealColor:"#00e676",SpeedTrail:"core|ent_amb_elec_crackle"};
   S.Death = {CustomDeath:true,RespawnSeconds:6,RespawnMode:"Here",CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Coffin:true,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
   return {
@@ -433,7 +434,7 @@ function newInteraction(over){
   const it = {Enabled:true,Name:"",Action:"SpawnEnemy",Trigger:"Gift",GiftName:"Rose",GiftId:"",LikesCount:100,CommentText:"",OncePerUser:false,TestKey:"None",
     Units:1,MultiplyByCombo:true,Cooldown:0,Effect:"SoftSmoke",Message:"قام {name} بإنزال عدو",EntryCam:false,ShowInGuide:true,
     Model:"s_m_y_clown_01",Health:150,Armor:0,Weapon:"WEAPON_BAT",Ammo:9999,Accuracy:25,CombatAbility:1,CombatMovement:2,ShootRate:100,Blip:true,SpawnDistance:20,
-    VehicleModel:"zentorno",WarpIntoVehicle:true,Duration:15,Amount:5,Weather:"Random",Aura:"Default",AuraColor:"",GiftMatch:"Catalog",Spotlight:false,SpotlightText:"",
+    VehicleModel:"zentorno",WarpIntoVehicle:true,Duration:15,KeepSeconds:0,Amount:5,Weather:"Random",Aura:"Default",AuraColor:"",GiftMatch:"Catalog",Spotlight:false,SpotlightText:"",
     giftImg:null, giftEmoji:"🌹", actImg:null, actEmoji:"🦹", open:false};
   return Object.assign(it, over||{});
 }
@@ -787,6 +788,14 @@ function iField(i, k, label, type, o){
   else inner = `<input type="${type==="t"?"text":"number"}" ${d} value="${esc(v)}" ${type==="f"?'step="0.1"':""} ${o&&o.min!=null?`min="${o.min}"`:""} ${o&&o.max!=null?`max="${o.max}"`:""}>`;
   return `<div><label>${label}</label>${inner}</div>`;
 }
+// duration: quick chips (15 s, 30 s, 1 min, 2 min) or any number of seconds
+const DUR_CHIPS = [[15,"15ث"],[30,"30ث"],[60,"1 د"],[120,"2 د"]];
+const KEEP_CHIPS = [[0,"مرة وحدة"],[10,"10ث"],[30,"30ث"],[60,"1 د"]];
+const KEEP_ACTIONS = ["Fire","Ragdoll","RemoveWeapons","EjectVehicle","RemoveVehicle","BurstTires","ClearArea","Launch","Heal","BoostVehicle","ExplodeNearby","Teleport"];
+function durField(i, k, label, chips, min){
+  const v = state.interactions[i][k];
+  return `<div class="dur"><label>${label}</label><div style="display:flex;gap:5px;align-items:center"><input type="number" step="1" min="${min}" data-ii="${i}" data-ik="${k}" data-t="f" value="${esc(v)}" style="max-width:90px"><div class="chips">${chips.map(([s, n]) => `<span class="chip ${+v===s?"on":""}" data-dur="${s}" data-i="${i}" data-k="${k}">${n}</span>`).join("")}</div></div></div>`;
+}
 function mainFields(i){
   const it = state.interactions[i], t = (ACT[it.Action] || {}).type;
   if (t === "chars") return iField(i,"Model","🧍 السكن","model") + (it.Action === "Animals" ? "" : iField(i,"Weapon","🔫 السلاح","weapon"));
@@ -795,10 +804,11 @@ function mainFields(i){
   if (t === "vehicle") return iField(i,"VehicleModel","🚗 الطوموبيل","vehicle");
   if (t === "weapon") return iField(i,"Weapon","🔫 السلاح","weapon");
   if (t === "hp") return iField(i,"Amount","💖 نقاط +HP","i",{min:1});
-  if (t === "timed") return iField(i,"Duration","⏱️ المدة (ثانية)","f",{min:0.5});
-  if (t === "carrain") return iField(i,"Duration","⏱️ المدة (ثانية)","f",{min:0.5}) + iField(i,"Amount","🚗 عدد فالثانية","i",{min:1,max:20});
-  if (t === "weather") return iField(i,"Weather","🌦️ الطقس","s",WEATHERS) + iField(i,"Duration","⏱️ المدة","f",{min:0.5});
+  if (t === "timed") return durField(i,"Duration","⏱️ المدة (ثانية) · شريط فوق راسك",DUR_CHIPS,0.5);
+  if (t === "carrain") return durField(i,"Duration","⏱️ المدة (ثانية)",DUR_CHIPS,0.5) + iField(i,"Amount","🚗 عدد فالثانية","i",{min:1,max:20});
+  if (t === "weather") return iField(i,"Weather","🌦️ الطقس","s",WEATHERS) + durField(i,"Duration","⏱️ المدة (ثانية)",DUR_CHIPS,0.5);
   if (t === "random") return `<div class="hint">كيختار من لائحة 🎲 العشوائي (القسم 05)</div>`;
+  if (KEEP_ACTIONS.includes(it.Action)) return durField(i,"KeepSeconds","🔁 يتعاود طول (ثانية) · 0 = مرة وحدة",KEEP_CHIPS,0);
   return `<div class="hint">أكسيون فوري</div>`;
 }
 // gift chosen by name, by ID or from the catalog (under the interaction type)
@@ -932,6 +942,7 @@ interBox.addEventListener("input", e => {
   const it = state.interactions[+el.dataset.ii], k = el.dataset.ik;
   it[k] = el.dataset.t === "b" ? el.checked : (el.dataset.t === "i" ? (parseInt(el.value, 10) || 0) : (el.dataset.t === "f" ? (parseFloat(el.value) || 0) : el.value));
   if (k === "Units") it.Units = Math.max(1, Math.min(999, it.Units));
+  if (el.closest(".dur")) el.closest(".dur").querySelectorAll("[data-dur]").forEach(c => c.classList.toggle("on", +c.dataset.dur === it[k]));
   if (k === "Enabled") el.closest(".inter").classList.toggle("off", !it.Enabled);
   if (["model","weapon","vehicle"].includes(el.dataset.t)){ const l = document.querySelector(`[data-label-for="${el.id}"]`); if (l) l.textContent = catLabel(el.dataset.t, el.value); }
   if (k === "giftEmoji" && !it.giftImg) el.closest(".imgpick").querySelector(".thumb").textContent = it.giftEmoji;
@@ -954,6 +965,10 @@ interBox.addEventListener("change", e => {
 interBox.addEventListener("click", e => {
   const u = e.target.closest("[data-units]");
   if (u){ const it = state.interactions[+u.dataset.i]; it.Units = Math.max(1, Math.min(999, it.Units + (+u.dataset.units))); u.parentElement.querySelector("input").value = it.Units; changed(); return; }
+  const du = e.target.closest("[data-dur]");
+  if (du){ const it = state.interactions[+du.dataset.i]; it[du.dataset.k] = +du.dataset.dur;
+    const box = du.closest(".dur"); box.querySelector("input").value = du.dataset.dur;
+    box.querySelectorAll("[data-dur]").forEach(c => c.classList.toggle("on", c === du)); changed(); return; }
   const gm = e.target.closest("[data-gm]");
   if (gm){ const it = state.interactions[+gm.dataset.i]; it.GiftMatch = gm.dataset.gm; if (gm.dataset.gm === "Id" && !it.GiftId) it.GiftId = giftId(it.GiftName); renderInteractions(); changed(); return; }
   const fid = e.target.closest("[data-fillid]");
@@ -1038,7 +1053,7 @@ function renderAllForms(){
     ["DelayMs","⏱️ الوقت بين كل نزول (ms)","i",{min:0}],["MaxPerEvent","🎁 أقصى لكل هدية (0 = بلا حد)","i",{min:0}]]}]);
   renderForm("#formKeys", [
     {sec:"General", title:"⌨️ الأزرار", fields:[["PowerKey","⏻ تشغيل / إطفاء","k"],["StartKey","▶️ بدا التحدي + الاتصال","k"],["HudStyleKey","🎨 شكل الهود","k"],["HudFontKey","🔤 الخط","k"],
-      ["LayoutKey","📱 16:9 ↔ 9:16","k"],["HypeTestKey","🔥 تجربة الحماس","k"],["PauseKey","⏸️ إيقاف مؤقت","k"],["EmergencyKey","🚨 الطوارئ (مسح كلشي)","k"]]},
+      ["LayoutKey","📱 16:9 ↔ 9:16","k"],["HypeTestKey","🔥 تجربة الحماس","k"],["PauseKey","⏸️ إيقاف مؤقت","k"],["EmergencyKey","🚨 الطوارئ (مسح كلشي)","k"],["StopEffectsKey","⏹️ حبس جميع التأثيرات","k"]]},
     {sec:"General", title:"⚙️ التشغيل", fields:[["TestKeysEnabled","🎯 أزرار التجربة","b"],["AutoReload","🔄 AutoReload (قراءة INI ملي يتبدل)","b"],["AutoImport","📥 AutoImport من Downloads","b"],
       ["ShowLoadMessage","💬 رسالة «TikArena جاهز»","b"],["ShowStatusMessages","📝 رسائل الحالة","b"],["CleanupOnPowerOff","🧹 مسح كلشي ملي يتطفا","b"],["DebugLog","🐞 log.txt","b"]]},
     {sec:"LiveTest", title:"🧪 Live Test (بث تجريبي)", hint:"ضغط على الزر فاللعبة: كيبداو يدخلو مشاهدين وهميين (أحمد، سارة...) وكيصيفطو هدايا ولايكات وفولو بحال بث حقيقي، بالصور ديالهم. ضغط مرة أخرى باش توقف. AvatarUrls (اختياري): روابط صور حقيقية باش تجرب التحميل.", fields:[
@@ -1118,6 +1133,10 @@ function renderAllForms(){
     {sec:"PlayerFx", title:"⚡ التأثيرات على الشخصية ديالك", hint:"ملي شي داعم كيدير ليك شي أكسيون (سلاح، سرعة، علاج، تجميد...): كتبان فوق راسك بطاقة صغيرة فيها الصورة ديالو + صورة الأكشن + الاسم (مثلاً: أحمد · إعطاء سلاح · Carbinerifle)، مع دائرة ضو كتوسع. ووقت ما التأثير خدام (سرعة خارقة، درع، قفزة...) كيبان توهج ملون وموجات تحت رجليك، والسرعة فيها حتى شرارات (particle، خاصها تجربة).", fields:[
       ["Enabled","مشعول","b"],["Popup","🏷️ البطاقة فوق الراس","b"],["PopupSeconds","مدة البطاقة (ث)","f",{min:0.5,max:10}],["Burst","💥 دائرة الضو","b"],["BuffAura","✨ التوهج وقت التأثير","b"],
       ["SpeedColor","⚡ السرعة","c"],["GodColor","🛡️ الدرع","c"],["JumpColor","🦘 القفزة/الجاذبية","c"],["FreezeColor","❄️ التجميد","c"],["WeaponColor","🔫 السلاح","c"],["HealColor","💚 العلاج","c"],["SpeedTrail","⚡ شرارات السرعة (asset|name)","t",{ltr:true}]]},
+    {sec:"Effects", title:"⏱️ مدة التأثيرات (زلزال، صواريخ، قطع الضو...)", hint:"كل تأثير عندو مدة (كتختارها فكل تفاعل: 15ث، 30ث، دقيقة، ولا كتب الرقم). فوق راسك كيبان شريط فيه صورة الداعم + الأكشن + الوقت الباقي، كيخوا شوية بشوية وملي يسالي التأثير كيحبس بوحدو. إلا جات هدية جديدة ديال نفس التأثير: Extend = كتزاد المدة، Reset = كترجع من اللول، Max = كتبقى الأطول. MaxSeconds = أقصى مدة (0 = بلا حد). والساروت ⏹️ (End) كيحبس كلشي فالحين.", fields:[
+      ["MaxSeconds","⛔ أقصى مدة (ث، 0 = بلا حد)","f",{min:0,max:3600}],["Stack","➕ ملي تتعاود الهدية","s",{opts:[["Extend","➕ زيد المدة"],["Reset","🔄 رجع من اللول"],["Max","⬆️ خلي الأطول"]]}],
+      ["ShowBars","📊 الشريط فوق الراس","b"],["MaxBars","عدد الشرائط","i",{min:1,max:8}],
+      ["BlackoutNight","🌑 قطع الضو كيرد الوقت ليل","b"],["QuakeStrength","🌋 قوة الزلزال","range",{min:0.2,max:6,step:0.1}],["QuakeRagdollPlayer","🥴 الزلزال كيطيحك حتى نتا","b"]]},
     {sec:"Aura", title:"🌟 تأثيرات الشخصيات (Aura)", hint:"تأثير دائم حول الأعداء والمساعدين اللي نزلو (ضو، دائرة، عمود، تاج، نار...). الملك (الداعم رقم 1) كيجيه تاج ذهبي. كل تفاعل يقدر يختار التأثير ديالو فـ ⚙️ متقدم. أسماء الـ particles (asset|name) خاصها تجربة.", fields:[
       ["Enabled","مشعول","b"],["EnemyAura","🦹 تأثير الأعداء","s",{opts:AURAS.slice(1)}],["EnemyColor","لون الأعداء","c"],["AllyAura","👮 تأثير المساعدين","s",{opts:AURAS.slice(1)}],["AllyColor","لون المساعدين","c"],
       ["KingCrown","👑 تاج الملك","b"],["KingColor","لون التاج","c"],["Intensity","💡 قوة الضو","range",{min:0,max:20,step:0.5}],["Range","📏 مدى الضو","range",{min:0.5,max:10,step:0.5}],
@@ -1763,9 +1782,9 @@ NAV.forEach(([id]) => io.observe(document.getElementById(id)));
 <script>
 "use strict";
 // ------------------------------------------------------------- INI export
-const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest","PlayerFx","Spotlight"];
+const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest","PlayerFx","Effects","Spotlight"];
 const INTER_KEYS = ["Enabled","Name","Action","Trigger","GiftName","GiftId","LikesCount","CommentText","OncePerUser","TestKey","Units","MultiplyByCombo","Cooldown","Effect","Message","GiftImage","ActionImage","EntryCam","ShowInGuide",
-  "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","Amount","Weather","Aura","AuraColor","GiftCoins","GiftMatch","Spotlight","SpotlightText"];
+  "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","KeepSeconds","Amount","Weather","Aura","AuraColor","GiftCoins","GiftMatch","Spotlight","SpotlightText"];
 function iniVal(v){
   if (typeof v === "boolean") return v ? "true" : "false";
   if (typeof v === "number") return String(Math.round(v * 1000) / 1000);
@@ -1873,7 +1892,7 @@ function readme(){
 "",
 "4) فـ Story Mode: ضغط " + G.PowerKey + " (تشغيل) ومن بعد " + G.StartKey + " (بدا التحدي + الهود + الاتصال).",
 "   " + state.ini.LiveTest.Key + " = 🧪 Live Test (بث تجريبي بمشاهدين وهميين، بلا TikFinity)",
-"   " + G.HudStyleKey + " شكل الهود · " + G.HudFontKey + " الخط · " + G.LayoutKey + " 16:9/9:16 · " + G.PauseKey + " إيقاف مؤقت · " + G.EmergencyKey + " الطوارئ · " + G.HypeTestKey + " تجربة الحماس",
+"   " + G.HudStyleKey + " شكل الهود · " + G.HudFontKey + " الخط · " + G.LayoutKey + " 16:9/9:16 · " + G.PauseKey + " إيقاف مؤقت · " + G.EmergencyKey + " الطوارئ · " + G.StopEffectsKey + " حبس التأثيرات · " + G.HypeTestKey + " تجربة الحماس",
 "   أزرار التجربة: " + state.interactions.filter(i => i.TestKey && i.TestKey !== "None").map(i => i.TestKey + "=" + (i.Name || i.Action)).join(" · "),
 "",
 "5) OBS: Browser Source <- Local file <- OBS-overlay.html",
@@ -1953,7 +1972,7 @@ $("#claudeMode").onchange = e => { state.ui.claude = e.target.checked; save(); }
 function validate(){
   const out = [], G = state.ini.General;
   const gk = {};
-  ["PowerKey","StartKey","HudStyleKey","HudFontKey","EmergencyKey","PauseKey","LayoutKey","HypeTestKey"].forEach(k => { const v = G[k]; if (v && v !== "None"){ (gk[v] = gk[v] || []).push(k); } });
+  ["PowerKey","StartKey","HudStyleKey","HudFontKey","EmergencyKey","StopEffectsKey","PauseKey","LayoutKey","HypeTestKey"].forEach(k => { const v = G[k]; if (v && v !== "None"){ (gk[v] = gk[v] || []).push(k); } });
   ["DesignKey","DesignColorKey"].forEach(k => { const v = state.ini.Hud[k]; if (v && v !== "None") (gk[v] = gk[v] || []).push("Hud." + k); });
   if (state.ini.LiveTest.Enabled && state.ini.LiveTest.Key !== "None") (gk[state.ini.LiveTest.Key] = gk[state.ini.LiveTest.Key] || []).push("LiveTest");
   Object.keys(gk).forEach(v => { if (gk[v].length > 1) out.push(["err", `⌨️ الزر ${v} مستعمل جوج مرات: ${gk[v].join(" · ")}`]); });

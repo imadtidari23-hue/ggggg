@@ -529,6 +529,7 @@ namespace TikArena
         public string VehicleModel = "";
         public bool WarpIntoVehicle = true;
         public float Duration = 15;
+        public float KeepSeconds;
         public int Amount = 5;
         public string Weather = "Random";
         public string Aura = "Default";
@@ -581,6 +582,7 @@ namespace TikArena
             it.VehicleModel = ini.S(s, "VehicleModel", "");
             it.WarpIntoVehicle = ini.B(s, "WarpIntoVehicle", true);
             it.Duration = Math.Max(0.5f, ini.F(s, "Duration", 15));
+            it.KeepSeconds = Math.Max(0f, ini.F(s, "KeepSeconds", 0));
             it.Amount = Math.Max(1, ini.I(s, "Amount", 5));
             it.Weather = ini.S(s, "Weather", "Random");
             it.Aura = ini.S(s, "Aura", "Default");
@@ -704,6 +706,12 @@ namespace TikArena
         public string SpotSound;
         public bool FxEnabled, FxPopup, FxBurst, FxBuffAura;
         public float FxPopupSeconds;
+        // [Effects] duration control of timed effects
+        public float FxMaxSeconds, QuakeStrength;
+        public string FxStack;
+        public bool FxBars, BlackoutNight, QuakeRagdollPlayer;
+        public int FxBarsMax;
+        public Keys StopEffectsKey;
         public Color FxSpeedColor, FxGodColor, FxJumpColor, FxFreezeColor, FxWeaponColor, FxHealColor;
         public string FxSpeedTrail;
         public bool VAutoArrange;
@@ -743,6 +751,14 @@ namespace TikArena
             c.HudStyleKey = ini.K("General", "HudStyleKey", "F11");
             c.HudFontKey = ini.K("General", "HudFontKey", "F8");
             c.EmergencyKey = ini.K("General", "EmergencyKey", "Delete");
+            c.StopEffectsKey = ini.K("General", "StopEffectsKey", "End");
+            c.FxMaxSeconds = Math.Max(0f, ini.F("Effects", "MaxSeconds", 300));
+            c.FxStack = ini.S("Effects", "Stack", "Extend");
+            c.FxBars = ini.B("Effects", "ShowBars", true);
+            c.FxBarsMax = U.Clamp(ini.I("Effects", "MaxBars", 4), 1, 8);
+            c.BlackoutNight = ini.B("Effects", "BlackoutNight", true);
+            c.QuakeStrength = U.Clamp(ini.F("Effects", "QuakeStrength", 2.5f), 0.2f, 6f);
+            c.QuakeRagdollPlayer = ini.B("Effects", "QuakeRagdollPlayer", true);
             c.PauseKey = ini.K("General", "PauseKey", "Pause");
             c.LayoutKey = ini.K("General", "LayoutKey", "F7");
             c.HypeTestKey = ini.K("General", "HypeTestKey", "F6");
@@ -2202,7 +2218,8 @@ namespace TikArena
         long killSlowEnd;
         float lastTimeScale = 1;
         bool shaking;
-        bool drunkClip, speedOn, freezeOn, gravOn, blackoutOn;
+        bool drunkClip, speedOn, freezeOn, gravOn, blackoutOn, nightSet;
+        int savedHour, savedMinute;
         bool radarHidden, clockLocked, tcApplied, wantedApplied;
 
         // camera
@@ -2437,6 +2454,7 @@ namespace TikArena
                     return;
                 }
                 if (k == cfg.EmergencyKey) { Emergency(); return; }
+                if (k == cfg.StopEffectsKey) { StopAllEffects(); Status(cfg.Tx("StopEffectsText", "Effects stopped")); return; }
                 if (k == cfg.HypeTestKey)
                 {
                     Supporter t = GetSup("test:" + cfg.TestUserName, cfg.TestUserName, null, 25);
@@ -2534,6 +2552,7 @@ namespace TikArena
             tempVehicles.Clear();
             spawnQ.Clear();
             instantQ.Clear();
+            StopAllEffects();
             Status(cfg.Tx("EmergencyText", "Cleared"));
         }
 
@@ -2555,6 +2574,9 @@ namespace TikArena
         {
             Ped pl = Game.Player.Character;
             fxEnd.Clear();
+            fxInfo.Clear();
+            keepNext.Clear();
+            nightSet = false;
             Function.Call(Hash.SET_TIME_SCALE, 1f);
             lastTimeScale = 1;
             Function.Call(Hash.SET_GRAVITY_LEVEL, 0);
@@ -2660,7 +2682,8 @@ namespace TikArena
                 }
                 ApplyRelationships();
 
-                if (cfg.LockTime)
+                if (nightSet) { }
+                else if (cfg.LockTime)
                 {
                     Function.Call(Hash.SET_CLOCK_TIME, cfg.Hour, cfg.Minute, 0);
                     Function.Call(Hash.PAUSE_CLOCK, true);
@@ -3147,7 +3170,7 @@ namespace TikArena
                         if (ally) allyBlocked = true; else enemyBlocked = true;
                         continue;
                     }
-                    ExecuteUnit(j);
+                    RunJob(j);
                     j.It.LastFire = now;
                     j.Left--;
                     if (j.Left <= 0) spawnQ.RemoveAt(i);
@@ -3162,7 +3185,7 @@ namespace TikArena
                 {
                     Job j = instantQ[i];
                     if (!CooldownReady(j.It)) continue;
-                    ExecuteUnit(j);
+                    RunJob(j);
                     j.It.LastFire = now;
                     j.Left--;
                     if (j.Left <= 0) instantQ.Remove(j);
@@ -3230,6 +3253,15 @@ namespace TikArena
                 r -= e.Weight;
             }
             return null;
+        }
+
+        // runs one unit of a job. A failing action is logged and counted as done,
+        // so it can never stay at the head of the queue and block every next command.
+        void RunJob(Job j)
+        {
+            try { ExecuteUnit(j); }
+            catch (Exception ex) { U.Error("Action " + ActionOf(j), ex); }
+            finally { curJob = null; }
         }
 
         void ExecuteUnit(Job j)
@@ -3767,13 +3799,148 @@ namespace TikArena
             return fxEnd.TryGetValue(key, out end) && U.Now < end;
         }
 
+        // [Effects] Stack: Extend (add the time), Reset (restart the time), Max (keep the longest)
+        //           MaxSeconds: an effect can never last longer than this (0 = no limit)
+        class FxInfo { public Supporter Sup; public string Action, Icon, Title; public long Start; public int Hits; }
+        readonly Dictionary<string, FxInfo> fxInfo = new Dictionary<string, FxInfo>();
+        readonly Dictionary<string, long> keepNext = new Dictionary<string, long>();
+        Job curJob;
+
         void StartTimed(string key, float seconds)
         {
             long now = U.Now;
             long end;
             long add = (long)(Math.Max(0.5f, seconds) * 1000);
-            if (fxEnd.TryGetValue(key, out end) && end > now) fxEnd[key] = end + add;
-            else fxEnd[key] = now + add;
+            bool running = fxEnd.TryGetValue(key, out end) && end > now;
+            string mode = cfg.FxStack ?? "";
+            long ne;
+            if (!running || mode.Equals("Reset", StringComparison.OrdinalIgnoreCase)) ne = now + add;
+            else if (mode.Equals("Max", StringComparison.OrdinalIgnoreCase)) ne = Math.Max(end, now + add);
+            else ne = end + add;
+            if (cfg.FxMaxSeconds > 0) ne = Math.Min(ne, now + (long)(cfg.FxMaxSeconds * 1000));
+            fxEnd[key] = ne;
+            FxInfo fi;
+            if (!running || !fxInfo.TryGetValue(key, out fi)) { fi = new FxInfo(); fxInfo[key] = fi; }
+            fi.Start = now;   // the bar refills on every new gift
+            fi.Hits++;
+            fi.Action = key.StartsWith("Keep:") ? key.Substring(5) : key;
+            if (curJob != null)
+            {
+                fi.Sup = curJob.Sup;
+                fi.Icon = ImgPath(curJob.It.ActionImage);
+                fi.Title = curJob.It.Title;
+            }
+            if (string.IsNullOrEmpty(fi.Title)) fi.Title = fi.Action;
+        }
+
+        // ends every running effect now (Emergency key, StopEffectsKey)
+        void StopAllEffects()
+        {
+            bool fire = Active("Keep:Fire");
+            fxEnd.Clear();
+            fxInfo.Clear();
+            keepNext.Clear();
+            carRainAcc = 0;
+            nextSecond = 0;
+            popups.Clear();
+            Ped pl = Game.Player.Character;
+            if (fire && pl.Exists()) Function.Call(Hash.STOP_ENTITY_FIRE, pl);
+        }
+
+        // instant actions that can be repeated for KeepSeconds (0 = once)
+        static readonly string[] KeepActions = { "Fire", "Ragdoll", "RemoveWeapons", "EjectVehicle", "RemoveVehicle", "BurstTires",
+            "ClearArea", "Launch", "Heal", "BoostVehicle", "ExplodeNearby", "Teleport" };
+
+        static bool IsKeep(string a) { return Array.IndexOf(KeepActions, a) >= 0; }
+
+        static int KeepInterval(string a)
+        {
+            switch (a)
+            {
+                case "Fire": return 2500;
+                case "Ragdoll": return 2800;
+                case "RemoveWeapons": return 400;
+                case "EjectVehicle": return 600;
+                case "RemoveVehicle": return 700;
+                case "BurstTires": return 1000;
+                case "ClearArea": return 2000;
+                case "Launch": return 3500;
+                case "Heal": return 1000;
+                case "BoostVehicle": return 1500;
+                case "ExplodeNearby": return 2500;
+                case "Teleport": return 6000;
+            }
+            return 1000;
+        }
+
+        // one shot of an instant action (also used by the KeepSeconds repeat)
+        void Instant(string a)
+        {
+            Ped pl = Game.Player.Character;
+            if (!pl.Exists()) return;
+            Vehicle pv = PlayerVehicle();
+            switch (a)
+            {
+                case "Heal":
+                    Function.Call(Hash.SET_ENTITY_HEALTH, pl, Function.Call<int>(Hash.GET_ENTITY_MAX_HEALTH, pl), 0);
+                    pl.Armor = 100;
+                    if (pv != null) { pv.Repair(); }
+                    break;
+                case "BoostVehicle":
+                    if (pv != null) Function.Call(Hash.SET_VEHICLE_FORWARD_SPEED, pv, pv.Speed + 40f);
+                    break;
+                case "ClearArea":
+                    foreach (Ped p in World.GetNearbyPeds(pl, 80f))
+                    {
+                        if (p == null || !p.Exists() || p.IsPlayer || IsTracked(p)) continue;
+                        if (pv != null && p.IsInVehicle() && p.CurrentVehicle.Handle == pv.Handle) continue;
+                        p.Delete();
+                    }
+                    break;
+                case "Fire": if (!fakeDead) Function.Call(Hash.START_ENTITY_FIRE, pl); break;
+                case "RemoveWeapons": Function.Call(Hash.REMOVE_ALL_PED_WEAPONS, pl, true); break;
+                case "RemoveVehicle":
+                    if (pv != null)
+                    {
+                        Vector3 at = pv.Position + new Vector3(0, 0, 1.5f);
+                        Function.Call(Hash.SET_ENTITY_COORDS, pl, at.X, at.Y, at.Z, false, false, false, false);
+                        pv.Delete();
+                    }
+                    break;
+                case "EjectVehicle":
+                    if (pv != null) Function.Call(Hash.TASK_LEAVE_VEHICLE, pl, pv, 4160);
+                    break;
+                case "BurstTires":
+                    if (pv != null) for (int w = 0; w < 8; w++) Function.Call(Hash.SET_VEHICLE_TYRE_BURST, pv, w, true, 1000f);
+                    break;
+                case "Launch":
+                    if (pv != null) pv.Velocity = pv.Velocity + new Vector3(0, 0, 35f);
+                    else
+                    {
+                        Function.Call(Hash.SET_PED_TO_RAGDOLL, pl, 4000, 5000, 0, false, false, false);
+                        pl.Velocity = new Vector3(U.RandF(-3, 3), U.RandF(-3, 3), 40f);
+                    }
+                    break;
+                case "Ragdoll": if (!fakeDead) Function.Call(Hash.SET_PED_TO_RAGDOLL, pl, 3000, 3000, 0, false, false, false); break;
+                case "ExplodeNearby":
+                    {
+                        int n = 0;
+                        foreach (Vehicle v in World.GetNearbyVehicles(pl, 60f))
+                        {
+                            if (v == null || !v.Exists() || (pv != null && v.Handle == pv.Handle)) continue;
+                            Function.Call(Hash.EXPLODE_VEHICLE, v, true, false);
+                            if (++n >= 12) break;
+                        }
+                        break;
+                    }
+                case "Teleport":
+                    {
+                        float[] s = TeleportSpots[U.Rng.Next(TeleportSpots.Length)];
+                        Entity e = pv != null ? (Entity)pv : pl;
+                        Function.Call(Hash.SET_ENTITY_COORDS, e, s[0], s[1], s[2], false, false, false, false);
+                        break;
+                    }
+            }
         }
 
         Vehicle PlayerVehicle()
@@ -3785,10 +3952,21 @@ namespace TikArena
 
         void RunAction(Job j, string a)
         {
+            curJob = j;
             try { PlayerFx(j, a); } catch (Exception ex) { U.Error("PlayerFx", ex); }
             Interaction it = j.It;
             Ped pl = Game.Player.Character;
             Vehicle pv = PlayerVehicle();
+            if (IsKeep(a))
+            {
+                Instant(a);
+                if (it.KeepSeconds > 0)
+                {
+                    StartTimed("Keep:" + a, it.KeepSeconds);
+                    keepNext[a] = U.Now + KeepInterval(a);
+                }
+                return;
+            }
             switch (a)
             {
                 case "AddHealth":
@@ -3800,11 +3978,6 @@ namespace TikArena
                         Function.Call(Hash.SET_ENTITY_HEALTH, pl, Math.Min(cur, max), 0);
                         break;
                     }
-                case "Heal":
-                    Function.Call(Hash.SET_ENTITY_HEALTH, pl, Function.Call<int>(Hash.GET_ENTITY_MAX_HEALTH, pl), 0);
-                    pl.Armor = 100;
-                    if (pv != null) { pv.Repair(); }
-                    break;
                 case "GodMode": StartTimed("GodMode", it.Duration); break;
                 case "GiveVehicle":
                     {
@@ -3835,17 +4008,6 @@ namespace TikArena
                     break;
                 case "SuperSpeed": StartTimed("SuperSpeed", it.Duration); break;
                 case "SuperJump": StartTimed("SuperJump", it.Duration); break;
-                case "BoostVehicle":
-                    if (pv != null) Function.Call(Hash.SET_VEHICLE_FORWARD_SPEED, pv, pv.Speed + 40f);
-                    break;
-                case "ClearArea":
-                    foreach (Ped p in World.GetNearbyPeds(pl, 80f))
-                    {
-                        if (p == null || !p.Exists() || p.IsPlayer || IsTracked(p)) continue;
-                        if (pv != null && p.IsInVehicle() && p.CurrentVehicle.Handle == pv.Handle) continue;
-                        p.Delete();
-                    }
-                    break;
                 case "KillPlayer":
                     fxEnd.Remove("GodMode");
                     StopCam();
@@ -3856,33 +4018,9 @@ namespace TikArena
                     Function.Call(Hash.SET_ENTITY_HEALTH, pl, 0, 0);
                     break;
                 case "Airstrike": StartTimed("Airstrike", it.Duration); break;
-                case "Fire": Function.Call(Hash.START_ENTITY_FIRE, pl); break;
                 case "Freeze": StartTimed("Freeze", it.Duration); break;
-                case "RemoveWeapons": Function.Call(Hash.REMOVE_ALL_PED_WEAPONS, pl, true); break;
-                case "RemoveVehicle":
-                    if (pv != null)
-                    {
-                        Vector3 at = pv.Position + new Vector3(0, 0, 1.5f);
-                        Function.Call(Hash.SET_ENTITY_COORDS, pl, at.X, at.Y, at.Z, false, false, false, false);
-                        pv.Delete();
-                    }
-                    break;
-                case "EjectVehicle":
-                    if (pv != null) Function.Call(Hash.TASK_LEAVE_VEHICLE, pl, pv, 4160);
-                    break;
                 case "ExplodeVehicle":
                     if (pv != null) Function.Call(Hash.EXPLODE_VEHICLE, pv, true, false);
-                    break;
-                case "BurstTires":
-                    if (pv != null) for (int w = 0; w < 8; w++) Function.Call(Hash.SET_VEHICLE_TYRE_BURST, pv, w, true, 1000f);
-                    break;
-                case "Launch":
-                    if (pv != null) pv.Velocity = pv.Velocity + new Vector3(0, 0, 35f);
-                    else
-                    {
-                        Function.Call(Hash.SET_PED_TO_RAGDOLL, pl, 4000, 5000, 0, false, false, false);
-                        pl.Velocity = new Vector3(U.RandF(-3, 3), U.RandF(-3, 3), 40f);
-                    }
                     break;
                 case "Skyfall":
                     {
@@ -3891,35 +4029,16 @@ namespace TikArena
                         Function.Call(Hash.SET_ENTITY_COORDS, pl, p.X, p.Y, p.Z + 350f, false, false, false, false);
                         break;
                     }
-                case "Ragdoll": Function.Call(Hash.SET_PED_TO_RAGDOLL, pl, 3000, 3000, 0, false, false, false); break;
                 case "Drunk": StartTimed("Drunk", it.Duration); break;
                 case "Earthquake": StartTimed("Earthquake", it.Duration); break;
                 case "CarRain":
                     carRainPerSec = Math.Max(0.2f, Math.Min(20f, it.Amount));
                     StartTimed("CarRain", it.Duration);
                     break;
-                case "ExplodeNearby":
-                    {
-                        int n = 0;
-                        foreach (Vehicle v in World.GetNearbyVehicles(pl, 60f))
-                        {
-                            if (v == null || !v.Exists() || (pv != null && v.Handle == pv.Handle)) continue;
-                            Function.Call(Hash.EXPLODE_VEHICLE, v, true, false);
-                            if (++n >= 12) break;
-                        }
-                        break;
-                    }
                 case "Storm": StartTimed("Storm", it.Duration); break;
                 case "Blackout": StartTimed("Blackout", it.Duration); break;
                 case "SlowMotion": StartTimed("SlowMotion", it.Duration); break;
                 case "LowGravity": StartTimed("LowGravity", it.Duration); break;
-                case "Teleport":
-                    {
-                        float[] s = TeleportSpots[U.Rng.Next(TeleportSpots.Length)];
-                        Entity e = pv != null ? (Entity)pv : pl;
-                        Function.Call(Hash.SET_ENTITY_COORDS, e, s[0], s[1], s[2], false, false, false, false);
-                        break;
-                    }
                 case "Weather":
                     {
                         string w = it.Weather;
@@ -3964,8 +4083,30 @@ namespace TikArena
             bool grav = Active("LowGravity");
             if (grav != gravOn) { Function.Call(Hash.SET_GRAVITY_LEVEL, grav ? 2 : 0); gravOn = grav; }
 
+            // blackout: city lights off; BlackoutNight makes it night so it is visible in daytime too
             bool black = Active("Blackout");
-            if (black != blackoutOn) { Function.Call(Hash.SET_ARTIFICIAL_LIGHTS_STATE, black); blackoutOn = black; }
+            if (black != blackoutOn)
+            {
+                Function.Call(Hash.SET_ARTIFICIAL_LIGHTS_STATE, black);
+                if (black && cfg.BlackoutNight && !nightSet)
+                {
+                    savedHour = Function.Call<int>(Hash.GET_CLOCK_HOURS);
+                    savedMinute = Function.Call<int>(Hash.GET_CLOCK_MINUTES);
+                    nightSet = true;
+                }
+                else if (!black && nightSet)
+                {
+                    Function.Call(Hash.SET_CLOCK_TIME, savedHour, savedMinute, 0);
+                    Function.Call(Hash.PAUSE_CLOCK, cfg.LockTime);
+                    nightSet = false;
+                }
+                blackoutOn = black;
+            }
+            if (black)
+            {
+                Function.Call(Hash.SET_ARTIFICIAL_LIGHTS_STATE, true);
+                if (nightSet) { Function.Call(Hash.SET_CLOCK_TIME, 0, 30, 0); Function.Call(Hash.PAUSE_CLOCK, true); }
+            }
 
             if (Active("SuperJump")) { Function.Call(Hash.SET_SUPER_JUMP_THIS_FRAME, Game.Player); }
 
@@ -4007,14 +4148,15 @@ namespace TikArena
 
             bool quake = Active("Earthquake");
             bool shake = quake || drunk;
-            if (shake && !shaking)
+            if (shake && (!shaking || (now >= nextQuake && !Function.Call<bool>(Hash.IS_GAMEPLAY_CAM_SHAKING))))
             {
-                Function.Call(Hash.SHAKE_GAMEPLAY_CAM, quake ? "ROAD_VIBRATION_SHAKE" : "DRUNK_SHAKE", quake ? 2.5f : 1.5f);
+                Function.Call(Hash.SHAKE_GAMEPLAY_CAM, quake ? "ROAD_VIBRATION_SHAKE" : "DRUNK_SHAKE", quake ? cfg.QuakeStrength : 1.5f);
                 shaking = true;
             }
             else if (!shake && shaking) { Function.Call(Hash.STOP_GAMEPLAY_CAM_SHAKING, true); shaking = false; }
 
             if (quake && now >= nextQuake)
+            try
             {
                 nextQuake = now + 1200;
                 foreach (Ped p in World.GetNearbyPeds(pl, 45f))
@@ -4027,10 +4169,12 @@ namespace TikArena
                     if (v == null || !v.Exists()) continue;
                     v.Velocity = v.Velocity + new Vector3(U.RandF(-3, 3), U.RandF(-3, 3), U.RandF(1, 3.5f));
                 }
-                if (!pl.IsInVehicle() && U.Rng.Next(4) == 0) Function.Call(Hash.SET_PED_TO_RAGDOLL, pl, 1000, 1500, 0, false, false, false);
+                if (cfg.QuakeRagdollPlayer && !fakeDead && !pl.IsInVehicle() && U.Rng.Next(4) == 0) Function.Call(Hash.SET_PED_TO_RAGDOLL, pl, 1000, 1500, 0, false, false, false);
             }
+            catch (Exception ex) { U.Error("Earthquake", ex); }
 
-            if (Active("CarRain"))
+            if (!Active("CarRain")) carRainAcc = 0;
+            else try
             {
                 carRainAcc += dt / 1000f * carRainPerSec;
                 int spawned = 0;
@@ -4058,7 +4202,7 @@ namespace TikArena
                     tempVehicles.RemoveAt(0);
                 }
             }
-            else carRainAcc = 0;
+            catch (Exception ex) { U.Error("CarRain", ex); }
 
             if (Active("Airstrike") && now >= nextStrike)
             {
@@ -4075,10 +4219,27 @@ namespace TikArena
                 Function.Call(Hash.ADD_EXPLOSION, t.X, t.Y, t.Z, 0, 0f, true, false, 0.3f, true);
             }
 
-            // tidy finished timers
+            // repeating instant actions (KeepSeconds)
+            foreach (string ka in KeepActions)
+            {
+                if (!Active("Keep:" + ka)) continue;
+                long nx;
+                if (keepNext.TryGetValue(ka, out nx) && now < nx) continue;
+                keepNext[ka] = now + KeepInterval(ka);
+                try { Instant(ka); } catch (Exception ex) { U.Error("Keep " + ka, ex); }
+            }
+
+            // tidy finished timers (the bar above the player is empty -> the effect stops)
             List<string> done = null;
             foreach (KeyValuePair<string, long> kv in fxEnd) if (kv.Value <= now) { if (done == null) done = new List<string>(); done.Add(kv.Key); }
-            if (done != null) foreach (string k in done) { fxEnd.Remove(k); if (k == "Weather" || k == "Storm") nextSecond = 0; }
+            if (done != null) foreach (string k in done)
+            {
+                fxEnd.Remove(k);
+                fxInfo.Remove(k);
+                if (k == "Weather" || k == "Storm") nextSecond = 0;
+                if (k == "Keep:Fire") Function.Call(Hash.STOP_ENTITY_FIRE, pl);
+                if (k.StartsWith("Keep:")) keepNext.Remove(k.Substring(5));
+            }
         }
 
         // ================================================================ round / challenge
@@ -5323,6 +5484,8 @@ namespace TikArena
                     SpawnFx(action == "GiveWeapon" || action == "GiveAllWeapons" ? "Flash" : "SoftSmoke", pl.Position - new Vector3(0, 0, 0.6f));
             }
             if (!cfg.FxPopup) return;
+            // timed effects get a live bar above the player instead (DrawFxBars)
+            if (cfg.FxBars && (IsTimed(action) || (it.KeepSeconds > 0 && IsKeep(action)))) return;
             string detail;
             switch (action)
             {
@@ -5410,6 +5573,52 @@ namespace TikArena
             speedFx = 0;
         }
 
+        // live bars above the player's head: one per running timed effect.
+        // The bar drains with the remaining time; when it is empty the effect stops.
+        int fxBarsShown;
+
+        void DrawFxBars()
+        {
+            fxBarsShown = 0;
+            if (!cfg.FxEnabled || !cfg.FxBars || fxEnd.Count == 0) return;
+            Ped pl = Game.Player.Character;
+            if (!pl.Exists()) return;
+            long now = U.Now;
+            List<KeyValuePair<string, long>> list = new List<KeyValuePair<string, long>>();
+            foreach (KeyValuePair<string, long> kv in fxEnd) if (kv.Value > now && fxInfo.ContainsKey(kv.Key)) list.Add(kv);
+            if (list.Count == 0) return;
+            list.Sort(delegate(KeyValuePair<string, long> x, KeyValuePair<string, long> y) { return x.Value.CompareTo(y.Value); });
+            Vector3 head = (pl.IsInVehicle() ? pl.CurrentVehicle.Position + new Vector3(0, 0, 1.4f) : pl.Position + new Vector3(0, 0, 1.15f));
+            PointF sp = Screen.WorldToScreen(head + new Vector3(0, 0, 0.35f));
+            if (sp.X == 0 && sp.Y == 0) return;
+            int count = Math.Min(list.Count, cfg.FxBarsMax);
+            const float w = 210, h = 30;
+            for (int i = 0; i < count; i++)
+            {
+                FxInfo fi = fxInfo[list[i].Key];
+                float total = Math.Max(1, list[i].Value - fi.Start);
+                float left = Math.Max(0, list[i].Value - now);
+                float ratio = U.Clamp(left / total, 0, 1);
+                float tin = U.Clamp((now - fi.Start) / 200f, 0, 1);
+                int a = (int)(255 * Math.Min(1f, Math.Min(tin + 0.3f, left / 400f)));
+                Color col = FxColor(fi.Action);
+                Gfx.Origin(sp.X - w / 2, sp.Y - 15 - i * 34, 1);
+                DBox(0, 0, w, h);
+                Gfx.Rect(0, h - 4, w, 4, Color.FromArgb(a / 3, 0, 0, 0));
+                Gfx.Rect(0, h - 4, w * ratio, 4, U.WithAlpha(col, a));
+                Gfx.Image(Avatar(fi.Sup), 4, 3, 22, 22, a);
+                float x = 30;
+                if (Gfx.FileOk(fi.Icon)) { Gfx.Image(fi.Icon, x, 3, 22, 22, a); x += 26; }
+                string sec = (left >= 60000 ? ((int)(left / 60000)) + ":" + ((int)(left / 1000) % 60).ToString("00", U.IC) : Math.Ceiling(left / 1000f).ToString(U.IC) + "s");
+                Gfx.Text(sec, w - 6, 5, SMALL * 1.1f, U.WithAlpha(col, a), Alignment.Right);
+                List<string> parts = new List<string> { Txt.Prep(U.Trunc(fi.Title, 16)) };
+                if (fi.Hits > 1) parts.Add("x" + fi.Hits);
+                Gfx.Parts(parts, x + 2, 6, SMALL * 1.05f, U.WithAlpha(Color.White, a));
+            }
+            fxBarsShown = count;
+            Gfx.Origin(0, 0, 1);
+        }
+
         // popups above the player's head (world -> screen), rising and fading
         void DrawPopups()
         {
@@ -5420,7 +5629,7 @@ namespace TikArena
             if (!pl.Exists()) return;
             Vector3 head = (pl.IsInVehicle() ? pl.CurrentVehicle.Position + new Vector3(0, 0, 1.4f) : pl.Position + new Vector3(0, 0, 1.15f));
             Gfx.Origin(0, 0, 1);
-            int n = 0;
+            int n = fxBarsShown;
             for (int i = popups.Count - 1; i >= 0; i--, n++)
             {
                 Popup pp = popups[i];
@@ -5936,6 +6145,7 @@ namespace TikArena
 
             PruneFeeds();
             Overheads();
+            DrawFxBars();
             DrawPopups();
             if (VAuto)
             {
