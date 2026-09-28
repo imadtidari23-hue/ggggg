@@ -118,6 +118,7 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
 .valid li.ok{background:rgba(0,230,118,.07);border-color:rgba(0,230,118,.3)}
 .valid li.warn{background:rgba(255,200,40,.07);border-color:rgba(255,200,40,.35)}
 .obsprev{border-radius:12px;min-height:220px;overflow:auto;position:sticky;top:70px;max-height:80vh}
+.hudprof{display:flex;gap:6px}.hudprof input{flex:1}
 .obsbar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 .obslink{max-width:860px;margin:10px auto 0;padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,rgba(0,230,118,.06),transparent);display:grid;gap:10px}
 .obslinkrow{display:flex;gap:8px}.obslinkrow input{flex:1;font-size:14px;padding:12px;direction:ltr}
@@ -369,6 +370,11 @@ function obsPageHTML(rt){
         <div style="margin-top:8px"><button class="btn sm" id="btnSpotDemo">⭐ معاينة الإشعار الكبير (3 ث)</button></div>
         <h3>🏅 ألوان الميداليات (ديال الأشكال 🏟️)</h3>
         <div class="chips" id="kitChips"></div>
+        <h3>🏷️ اسم الهود <span class="hint">كتب سمية ← 💾 حفظ: الهود (الشكل، الألوان، البلايص، اللوحات) كيتحفظ فملف بهاد السمية وكيتربط أوتوماتيكياً مع الملفات اللي كتصدر</span></h3>
+        <div class="hudprof"><input type="text" id="hudName" list="hudNames" placeholder="مثلاً: BlueRed"><button class="btn pri sm" id="hudSave">💾 حفظ</button><button class="btn sm" id="hudDl">⬇️ الملف</button><button class="btn sm" id="hudDel">🗑️</button></div>
+        <datalist id="hudNames"></datalist>
+        <div class="chips" id="hudChips" style="margin-top:6px"></div>
+        <p class="hint" id="hudInfo"></p>
       </div>
       <div id="hudSide"></div>
     </div>
@@ -492,7 +498,7 @@ const TRIGGERS = [["Gift","🎁 هدية"],["Likes","❤️ لايكات"],["Sha
 const WEATHERS = ["Random","CLEAR","EXTRASUNNY","CLOUDS","OVERCAST","RAIN","CLEARING","THUNDER","SMOG","FOGGY","XMAS","SNOWLIGHT","BLIZZARD","HALLOWEEN"];
 const STYLES = ["Broadcast","Cyber","Royal","Hologram","Gradient","Stream","Carbon","Classic","Glass","Neon","Minimal","Esports","Retro","Luxury","Aurora","Ember"];
 // a look = a design (whole HUD in one design) or a style without design. F11 goes through LookCycle.
-const LOOK_DESIGNS = ["Arena","Broadcast","Podium","Cards","Esports","Minimal","Classic"];
+const LOOK_DESIGNS = ["Duo","Arena","Broadcast","Podium","Cards","Esports","Minimal","Classic"];
 const LOOKS = [...LOOK_DESIGNS, "Luxury","Aurora","Ember","Cyber","Royal","Hologram","Gradient","Stream","Carbon","Glass","Neon","Retro"];
 const AURAS = [["Default","↩️ حسب النوع (عدو/مساعد)"],["None","بلا"],["Glow","💡 توهج"],["Ring","⭕ دائرة تحت الرجلين"],["Pulse","📡 موجات"],["Beam","🔦 عمود ضو"],["Crown","👑 تاج"],["Rainbow","🌈 قوس قزح"],["Fire","🔥 نار"],["Smoke","💨 دخان ملون"],["Electric","⚡ كهرباء"],["Sparkles","✨ شرارات"]];
 const FONTS = ["ChaletLondon","ChaletComprimeCologne","Pricedown","HouseScript","Monospace"];
@@ -558,7 +564,7 @@ function defaults(){
   S.Random = {Duration:15,Effect:"SoftSmoke",EnemyModel:"s_m_y_clown_01",EnemyWeapon:"WEAPON_BAT",EnemyHealth:150,AllyModel:"s_m_y_swat_01",AllyWeapon:"WEAPON_CARBINERIFLE",AllyHealth:300,
     AnimalsAmount:3,HealthAmount:250,VehicleModel:"zentorno",GiveWeapon:"WEAPON_CARBINERIFLE"};
   RANDOM_ACTIONS.forEach(a => { S.Random[a+"Enabled"] = !(a==="KillPlayer"||a==="Airstrike"); S.Random[a+"Weight"] = 10; });
-  S.Hud = {Enabled:true,Style:"Broadcast",StylePalette:true,StyleCycle:"Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro",LookCycle:"Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Luxury,Aurora,Ember,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
+  S.Hud = {Profile:"",Enabled:true,Style:"Broadcast",StylePalette:true,StyleCycle:"Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro",LookCycle:"Duo,Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Luxury,Aurora,Ember,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
     AccentColor:"#00e676",TextColor:"#ffffff",PanelColor:"#0a0e16",WinColor:"#00e676",LossColor:"#ff3b5c",LayoutMode:"Normal",
     ScoreEnabled:true,ScoreOrder:"Title,Score,Streak",TitleEnabled:true,Title:"حاول تقتلني",ShowScore:true,ShowTimer:true,ShowStreak:true,
     Top3Enabled:true,Top3Order:"Top3,Status",ShowTop3:true,TopCount:3,Top3Title:"أفضل الداعمين",ShowCoins:true,ShowCounters:true,ShowStatus:true,
@@ -602,7 +608,7 @@ function defaults(){
     sounds:{kill:null, death:null},             // {name, data(dataURL)}
     obs:Object.assign({}, OBS_DEFAULTS),
     ui:{sound:true, preview:"Normal", selPanel:"Score", claude:null, mig15:false, mig16:false, obsLinkMode:"quick"},
-    customGifts:[], giftDb:{}
+    customGifts:[], giftDb:{}, hudProfiles:{}
   };
 }
 const PANELS = [["Score","🏆 الفوز والخسارة"],["Top3","👑 لوحة الداعمين"],["Health","❤️ شريط الطاقة"],["Guide","📡 الأحداث الجارية"],["Notif","🔔 الإشعارات"],["Feed","☠️ Kill Feed"],["Hype","🔥 رسائل الحماس"]];
@@ -664,6 +670,7 @@ function normalize(obj){
   const s = merge(defaults(), obj);
   s.interactions = (Array.isArray(obj && obj.interactions) ? obj.interactions : s.interactions).map(i => newInteraction(i));
   if (!Array.isArray(s.customGifts)) s.customGifts = [];
+  s.hudProfiles = obj && obj.hudProfiles && typeof obj.hudProfiles === "object" ? obj.hudProfiles : {};
   // update 13: no level in the join sentence, only the number under the supporters, close cars
   s.ini.Hype.VipJoinText = String(s.ini.Hype.VipJoinText || "").replace(/\s*\(?\s*(Lv|ليفل|level)\s*\{level\}\s*\)?/gi, "");
   if (s.ini.Hud.DesignCoinsWord === "كوينز") s.ini.Hud.DesignCoinsWord = "";
@@ -712,7 +719,45 @@ function save(){
     refreshLive();
   }, 250);
 }
-function changed(){ save(); }
+// the HUD that has a name follows every change (so the saved file is always what you see)
+function changed(){ syncHudProfile(); save(); }
+
+// ------------------------------------------------------------- HUD profiles ([Hud] Profile -> scripts/TikArena/huds/<name>.ini)
+const HUD_SECTIONS = ["Hud","Layout","LayoutVertical","Events"];
+const hudFile = n => String(n || "").trim().replace(/[\\/:*?"<>|\x00-\x1f]/g, "_").replace(/^[. ]+|[. ]+$/g, "");
+function hudSnapshot(){ const o = {}; HUD_SECTIONS.forEach(s => { o[s] = JSON.parse(JSON.stringify(state.ini[s])); }); delete o.Hud.Profile; return o; }
+function syncHudProfile(){ const p = state.ini.Hud.Profile; if (p && state.hudProfiles && state.hudProfiles[p]) state.hudProfiles[p] = hudSnapshot(); }
+function hudProfileIni(name){
+  const P = state.hudProfiles[name], out = [`; TikArena HUD «${name}» · ${stamp()}`, "; loaded over TikArena.ini when [Hud] Profile=" + name, ""];
+  HUD_SECTIONS.forEach(sec => { if (!P[sec]) return; out.push(`[${sec}]`); Object.keys(P[sec]).forEach(k => out.push(`${k}=${iniVal(P[sec][k])}`)); out.push(""); });
+  return out.join("\r\n");
+}
+function hudProfileFiles(prefix){ return Object.keys(state.hudProfiles || {}).filter(n => hudFile(n)).map(n => ({name:`${prefix}huds/${hudFile(n)}.ini`, data:withBom(hudProfileIni(n))})); }
+function renderHudProfiles(){
+  const names = Object.keys(state.hudProfiles || {}), cur = state.ini.Hud.Profile;
+  $("#hudNames").innerHTML = names.map(n => `<option value="${esc(n)}">`).join("");
+  $("#hudChips").innerHTML = `<span class="chip ${!cur?"on":""}" data-hudp="">⛔ بلا</span>` + names.map(n => `<span class="chip ${n===cur?"on":""}" data-hudp="${esc(n)}">🏷️ ${esc(n)}</span>`).join("");
+  if (document.activeElement !== $("#hudName")) $("#hudName").value = cur || "";
+  $("#hudInfo").innerHTML = cur ? `✅ الهود «<b>${esc(cur)}</b>» مربوط: فالتصدير كيتزاد الملف <b class="ltr">scripts/TikArena/huds/${esc(hudFile(cur))}.ini</b> و <b class="ltr">[Hud] Profile=${esc(cur)}</b> فالـ INI، والسكريبت كيحملو بوحدو. أي تعديل فالهود كيتحفظ فيه.` : "بلا سمية: الهود كيتحفظ غير فـ TikArena.ini.";
+}
+$("#hudSave").onclick = () => {
+  const n = $("#hudName").value.trim(); if (!hudFile(n)) { toast("⚠️ كتب سمية للهود"); return; }
+  state.hudProfiles[n] = hudSnapshot(); state.ini.Hud.Profile = n;
+  renderHudProfiles(); renderAllForms(); changed(); toast("💾 " + n);
+};
+$("#hudChips").onclick = e => {
+  const c = e.target.closest("[data-hudp]"); if (!c) return;
+  const n = c.dataset.hudp, P = state.hudProfiles[n];
+  if (P) HUD_SECTIONS.forEach(s => { if (P[s]) Object.assign(state.ini[s], JSON.parse(JSON.stringify(P[s]))); });
+  state.ini.Hud.Profile = n;
+  renderHudProfiles(); renderAllForms(); renderHudSide(); changed(); toast(n ? "📂 " + n : "⛔");
+};
+$("#hudDel").onclick = () => {
+  const n = $("#hudName").value.trim(); if (!state.hudProfiles[n]) return;
+  delete state.hudProfiles[n]; if (state.ini.Hud.Profile === n) state.ini.Hud.Profile = "";
+  renderHudProfiles(); changed(); toast("🗑️ " + n);
+};
+$("#hudDl").onclick = () => { const n = state.ini.Hud.Profile; if (!n || !state.hudProfiles[n]) { toast("⚠️ حفظ الهود بسمية أولاً"); return; } download(hudFile(n) + ".ini", withBom(hudProfileIni(n)), "text/plain"); };
 
 // ------------------------------------------------------------- ui sound / toast
 let actx = null;
@@ -1399,7 +1444,7 @@ const PALETTES = {Broadcast:["#e10600","#111418","#ffffff","#1fc16b","#e10600"],
 // Hud view with the effective colors (palette applied)
 function HV(){
   const H = state.ini.Hud;
-  if (designOn()) return Object.assign({}, H, {AccentColor:dAcc(), PanelColor:"#0e1018"});
+  if (designOn()) return Object.assign({}, H, {AccentColor:dAcc(), PanelColor:"#0e1018"}, dz() === "duo" ? {PanelColor:"#0b1228", WinColor:DUO.blue, LossColor:DUO.red, HealthColor:DUO.blue} : {});
   const p = H.StylePalette && PALETTES[H.Style];
   if (!p) return H;
   return Object.assign({}, H, {AccentColor:p[0], PanelColor:p[1], TextColor:p[2], WinColor:p[3], LossColor:p[4]});
@@ -1408,6 +1453,7 @@ function HV(){
 function dPlateCss(d, a){
   a = Math.min(1, a == null ? 1 : a); const acc = dAcc(), bg = `rgba(14,16,24,${(.94*a).toFixed(2)})`;
   switch (d){
+    case "duo": return `background:linear-gradient(90deg,${DUO.blue} 50%,${DUO.red} 50%) 50% 0/calc(100% - 28px) 2px no-repeat,${DUO.bg((.93*a).toFixed(2))};border-radius:14px`;
     case "arena": case "classic": return `background:${bg};border-radius:12px;box-shadow:inset 0 2px 0 ${acc}`;
     case "broadcast": return `background:${bg};border-left:5px solid ${acc}`;
     case "podium": return `background:rgba(34,38,52,${(.88*a).toFixed(2)});border-radius:16px;box-shadow:inset 0 2px 0 rgba(255,255,255,.6)`;
@@ -1447,6 +1493,7 @@ function header(text){
     const acc = dAcc(), d = dz();
     if (d === "broadcast") return `<div style="${base}"><span style="display:inline-block;background:${acc};color:#1c1812;padding:0 14px;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 100%,0 100%)">${esc(text)}</span></div>`;
     if (d === "esports") return `<div style="color:${acc};${base}">// ${esc(text)} //</div>`;
+    if (d === "duo") return `<div style="color:#fff;${base}">${esc(text)}<div style="margin:-3px auto 0;width:52px;height:2px;background:linear-gradient(90deg,${DUO.blue} 50%,${DUO.red} 50%)"></div></div>`;
     if (d === "podium" || d === "minimal") return `<div style="color:#fff;${base}">${esc(text)}</div>`;
     if (d === "cards") return `<div style="color:${acc};${base}">${esc(text)}<div style="margin:-3px auto 0;width:40px;height:2px;background:${acc}"></div></div>`;
     return `<div style="color:${acc};${base}">${esc(text)}</div>`;
@@ -1569,7 +1616,8 @@ function pvEvents(){
   let html = th ? abs(0, 0, w, th - 2, bgCss(), header(E.Title)) : "";
   rows.forEach((r, n) => {
     const it = find(r[0]), y = th + n * 48, S = sup[r[1]];
-    html += abs(0, y, w, 42, `${bgCss(1.3)};border-left:4px solid ${r[3]}`, `
+    if (dz() === "duo") r[3] = r[0] === "GiveWeapon" ? DUO.blue : DUO.red;
+    html += abs(0, y, w, 42, bgCss(1.3), `<div style="position:absolute;left:4px;top:6px;width:4px;height:30px;border-radius:2px;background:${r[3]}"></div>
       <div style="position:absolute;left:8px;top:5px">${avatarHTML(S, 28)}</div>
       <div style="position:absolute;left:42px;top:5px">${thumbSmall(it.actImg, it.actEmoji, 28)}</div>
       <div style="position:absolute;left:76px;top:3px;color:#fff;font-size:${fpx(.3)};white-space:nowrap">${esc(it.Name || "")}</div>
@@ -1712,15 +1760,16 @@ function actionSubject(it){
 }
 
 // ------------------------------------------------------------- designs over the original panels (same sizes as the engine)
-const DESIGNS = [["None","⛔ بلا (الستايل العادي)"],["Arena","🏟️ Arena"],["Broadcast","📺 Broadcast"],["Podium","🏆 Podium"],["Cards","🃏 Cards"],["Esports","🎮 Esports"],["Minimal","✨ Minimal"],["Classic","📋 Classic"]];
+const DESIGNS = [["None","⛔ بلا (الستايل العادي)"],["Duo","🔵🔴 Duo"],["Arena","🏟️ Arena"],["Broadcast","📺 Broadcast"],["Podium","🏆 Podium"],["Cards","🃏 Cards"],["Esports","🎮 Esports"],["Minimal","✨ Minimal"],["Classic","📋 Classic"]];
 const DESIGN_COLORS = [["GOLD","🥇 Gold"],["NEON","💜 Neon"],["FIRE","🔥 Fire"],["ICE","❄️ Ice"],["CLASSIC","🎖️ Classic"]];
 const D_MEDALS = {GOLD:["#f5be28","#c0c6ce","#cd7f32"],NEON:["#d73cff","#00d7ff","#28e178"],FIRE:["#ff8c00","#f05f1e","#d72828"],ICE:["#96d7ff","#afe4f2","#7da5e1"],CLASSIC:["#f5be28","#c0c6ce","#cd7f32"]};
 function dz(){ return String(state.ini.Hud.Design || "None").toLowerCase(); }
 function designOn(){ const d = dz(); return d && d !== "none"; }
-function dAcc(){ const H = state.ini.Hud; return {NEON:"#00e5ff",FIRE:"#ff6a00",ICE:"#7fd8ff",CLASSIC:H.AccentColor}[H.DesignColor] || "#f5b301"; }
+const DUO = {blue:"#2f7dff", red:"#ff3355", cyan:"#6fd3ff", bg:a => `rgba(11,18,40,${a})`};
+function dAcc(){ const H = state.ini.Hud; if (dz() === "duo") return DUO.blue; return {NEON:"#00e5ff",FIRE:"#ff6a00",ICE:"#7fd8ff",CLASSIC:H.AccentColor}[H.DesignColor] || "#f5b301"; }
 function curLook(){ const H = state.ini.Hud; return designOn() ? H.Design : H.Style; }
 function setLook(l){ const H = state.ini.Hud; if (LOOK_DESIGNS.includes(l)) H.Design = l; else { H.Design = "None"; H.Style = l; } }
-function dMed(){ return D_MEDALS[state.ini.Hud.DesignColor] || D_MEDALS.GOLD; }
+function dMed(){ if (dz() === "duo") return [DUO.blue, DUO.red, DUO.cyan]; return D_MEDALS[state.ini.Hud.DesignColor] || D_MEDALS.GOLD; }
 function dAv(s, d, ring, glow, hex){
   const clip = hex ? "clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);" : "border-radius:50%;";
   const inner = `<span style="display:inline-grid;place-items:center;width:${d}px;height:${d}px;${clip}background:${s[2]};font-size:${d*0.6}px">${s[1]}</span>`;
@@ -1734,14 +1783,14 @@ function pvDesignTop(){
   const showTop = rows.includes("top3");
   const n = d === "classic" ? Math.max(1, Math.min(10, H.TopCount)) : Math.max(1, Math.min(3, H.TopCount));
   const sups = SAMPLE_SUPS.slice(0, n), word = H.DesignCoinsWord, cn = c => (c >= 10000 ? (c/1000).toFixed(1)+"K" : c) + " " + esc(word);
-  const size = {arena:[300,120],esports:[300,140],broadcast:[Math.min(3,n)*147,58],podium:[272,152],cards:[234,116],minimal:[36+Math.min(3,n)*104,40]}[d] || [240, 30 + n*28 + 4];
+  const size = {duo:[300,120],arena:[300,120],esports:[300,140],broadcast:[Math.min(3,n)*147,58],podium:[272,152],cards:[234,116],minimal:[36+Math.min(3,n)*104,40]}[d] || [240, 30 + n*28 + 4];
   let [w, h] = showTop ? size : [236, 0];
   const extra = (rows.length - (showTop ? 1 : 0)) * 20, total = h + (extra > 0 ? extra + 4 : 0);
   const order = [1,0,2], s28 = fpx(.28), s34 = fpx(.34);
   let html = "";
   const tag = (name, cx, y, bg, slant) => abs(cx - 60, y, 120, 16, "text-align:center", `<span style="display:inline-block;padding:0 7px;height:16px;line-height:16px;font-size:${s28};background:${bg};${slant?"transform:skewX(-14deg)":"border-radius:8px"};color:#fff">${esc(name)}</span>`);
   if (showTop) switch (d){
-    case "arena": case "esports": {
+    case "duo": case "arena": case "esports": {
       const es = d === "esports", oy = es ? 20 : 0;
       if (es) html += abs(0, 0, w, 18, `text-align:center;color:${acc};font-size:${s34};font-style:italic;font-weight:900`, `// ${esc(H.Top3Title)} //`);
       order.forEach((ix, c) => { const s = sups[ix]; if (!s) return; const big = ix === 0, dd = big ? 56 : 44, cx = 50 + c*100, cy = oy + (big ? 50 : 56);
@@ -1785,6 +1834,7 @@ function pvDesignTop(){
 function dRowCss(i, newest, rowH){
   const acc = dAcc();
   switch (dz()){
+    case "duo": return {css:`background:${DUO.bg(.88)};border-radius:${rowH/2}px;box-shadow:inset 5px 0 0 ${newest?DUO.red:DUO.blue}${newest?`,inset 0 -2px 0 ${DUO.red}`:""};padding-left:10px`, lead:""};
     case "arena": return {css:`background:rgba(14,16,24,.84);border-radius:8px;${newest?`background:linear-gradient(90deg,${rgba(acc,.35)},rgba(14,16,24,.84) 60%);border-left:3px solid ${acc}`:""}`, lead:""};
     case "broadcast": return {css:`background:rgba(0,0,0,.9);padding-left:0;${newest?`border-bottom:2px solid ${acc}`:""}`, lead:`<b style="background:#fff;color:#1c1812;width:${rowH-4}px;height:${rowH}px;line-height:${rowH}px;text-align:center">${i}</b>`};
     case "podium": return {css:`background:rgba(255,255,255,.31);border-radius:10px;${newest?`border-bottom:2px solid ${acc}`:""}`, lead:""};
@@ -1805,8 +1855,9 @@ function pvDesignScore(){
   let html = "", y = th;
   const titleHtml = (css) => title ? abs(0, 0, w, 18, `text-align:center;font-size:${s28};${css}`, esc(H.Title)) : "";
   switch (d){
+    case "duo":
     case "arena":
-      html += abs(0,0,w,h,`background:rgba(14,16,24,${Math.max(190,H.Opacity)/255});border-radius:12px`) + titleHtml(`color:${acc}`);
+      html += abs(0,0,w,h,d === "duo" ? dPlateCss("duo", Math.max(190,H.Opacity)/255) : `background:rgba(14,16,24,${Math.max(190,H.Opacity)/255});border-radius:12px`) + titleHtml(`color:${d === "duo" ? "#fff" : acc}`);
       if (score) html += abs(10,y+4,62,32,`background:${W};border-radius:10px;text-align:center;${tm(.5)}`,"3") + abs(w-72,y+4,62,32,`background:${Lc};border-radius:10px;text-align:center;${tm(.5)}`,"1");
       if (timer) html += abs(0,y+4,w,30,`text-align:center;${tm(.56)}`,"09:41"); break;
     case "broadcast":
@@ -1844,7 +1895,8 @@ function pvDesignHealth(L){
   const arm = (x, y, bw, bh, r) => armor ? abs(x, y, bw*0.6, bh, `background:#5aaaff;border-radius:${r}px`) : "";
   let html = "";
   switch (d){
-    case "arena": html = abs(0,0,w,h,`background:rgba(14,16,24,${Math.max(190,H.Opacity)/255});border-radius:12px`) + lab(12) + bar(10,22,w-20,12,6) + arm(10,37,w-20,5,3); break;
+    case "duo":
+    case "arena": html = abs(0,0,w,h,d === "duo" ? dPlateCss("duo", Math.max(190,H.Opacity)/255) : `background:rgba(14,16,24,${Math.max(190,H.Opacity)/255});border-radius:12px`) + lab(12) + bar(10,22,w-20,12,6) + arm(10,37,w-20,5,3); break;
     case "broadcast": html = abs(0,0,w,h,`background:rgba(12,14,20,.9);transform:skewX(-10deg);transform-origin:bottom`) + abs(0,0,38,h,`background:${acc};text-align:center;line-height:${h}px;font-weight:900;color:#1c1812;font-size:${fpx(.34)}`,"HP") + lab(46) + bar(46,22,w-52,12,0) + arm(46,37,w-52,4,0); break;
     case "podium": html = abs(0,0,w,h,`background:rgba(255,255,255,.31);border-radius:14px`) + lab(14) + bar(10,22,w-20,13,7,"rgba(0,0,0,.35)") + arm(10,38,w-20,5,3); break;
     case "cards": html = abs(0,0,w,h,`background:linear-gradient(#fff,#c8ccd4);border-left:4px solid ${hc}`) + lab(12,"#1c1812") + bar(10,22,w-20,12,0,"rgba(0,0,0,.45)") + arm(10,37,w-20,4,0); break;
@@ -1860,8 +1912,8 @@ function pvScoreWrap(P){
   const H = HV(), T = state.ini.Texts;
   if (!H.ShowCounters) return P;
   const w = Math.max(P ? P.w : 0, 220), top = P ? P.h + 3 : 0;
-  const d = designOn() ? dz() : "", r = {arena:11,classic:11,podium:11,minimal:11,cards:6}[d] || 0;
-  const bg = d === "podium" ? "rgba(34,38,52,.9)" : "rgba(14,16,24,.94)";
+  const d = designOn() ? dz() : "", r = {duo:11,arena:11,classic:11,podium:11,minimal:11,cards:6}[d] || 0;
+  const bg = d === "podium" ? "rgba(34,38,52,.9)" : (d === "duo" ? DUO.bg(.94) : "rgba(14,16,24,.94)");
   const strip = abs(0, top, w, 22, `background:${bg};border-radius:${r}px;${d==="broadcast"?`border-left:5px solid ${dAcc()};`:""}${d==="esports"?"transform:skewX(-12deg);":""}display:flex;align-items:center;justify-content:center;gap:10px;font-size:${fpx(.28)};color:#fff`,
     `<span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${H.LossColor};margin:0 5px"></i>${esc(T.EnemiesShort)} 4</span><span style="opacity:.4">|</span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${H.WinColor};margin:0 5px"></i>${esc(T.AlliesShort)} 2</span>`);
   return {w, h: top + 22, html: (P ? `<div style="position:absolute;left:${(w - P.w)/2}px;top:0;width:${P.w}px;height:${P.h}px">${P.html}</div>` : "") + strip};
@@ -1963,6 +2015,7 @@ function renderHudSide(){
     return `<div class="stylebtn ${curLook()===l?"on":""}" data-style="${l}"><div class="sw8" style="${css};display:grid;place-items:center;color:${acc};font-weight:700;font-size:11px">${LOOK_DESIGNS.includes(l)?"🏟️":"🎨"} W 3 · 1 L</div>${l}<label class="incyc" title="F11"><input type="checkbox" data-incyc="${l}" ${cyc.includes(l)?"checked":""}> F11</label></div>`; }).join("");
   $("#kitChips").innerHTML = DESIGN_COLORS.map(([v, n]) => `<span class="chip ${H.DesignColor===v?"on":""}" data-kitstyle="${v}">${n}</span>`).join("");
   $("#pvNormal").classList.toggle("pri", !vert); $("#pvVertical").classList.toggle("pri", vert);
+  renderHudProfiles();
 }
 function orderList(key, all, names){
   const cur = state.ini.Hud[key].split(",").map(x => x.trim()).filter(x => all.includes(x));
@@ -2254,6 +2307,7 @@ function assetFiles(prefix){
   });
   if (state.sounds.kill) files.push({name:`${prefix}sounds/kill.wav`, data:dataUrlBytes(state.sounds.kill.data)});
   if (state.sounds.death) files.push({name:`${prefix}sounds/death.wav`, data:dataUrlBytes(state.sounds.death.data)});
+  files.push(...hudProfileFiles(prefix));
   return files;
 }
 function readme(){

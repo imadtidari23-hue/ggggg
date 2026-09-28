@@ -196,6 +196,17 @@ namespace TikArena
 
         public bool Has(string sec) { return data.ContainsKey(sec); }
 
+        // values of another file win (HUD profile over the main INI)
+        public void Merge(Ini other)
+        {
+            foreach (KeyValuePair<string, Dictionary<string, string>> sec in other.data)
+            {
+                Dictionary<string, string> d;
+                if (!data.TryGetValue(sec.Key, out d)) { d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); data[sec.Key] = d; }
+                foreach (KeyValuePair<string, string> kv in sec.Value) d[kv.Key] = kv.Value;
+            }
+        }
+
         public string S(string sec, string key, string def)
         {
             Dictionary<string, string> d;
@@ -864,7 +875,7 @@ namespace TikArena
             c.HudStyle = ini.S("Hud", "Style", "Broadcast");
             c.StyleCycle = ini.L("Hud", "StyleCycle", "Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro");
             // F11 goes through complete looks (a design or a style) so every panel always matches
-            c.LookCycle = ini.L("Hud", "LookCycle", "Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Luxury,Aurora,Ember,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro");
+            c.LookCycle = ini.L("Hud", "LookCycle", "Duo,Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Luxury,Aurora,Ember,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro");
             c.StylePalette = ini.B("Hud", "StylePalette", true);
             c.HudFont = ini.S("Hud", "Font", "ChaletLondon");
             c.FontCycle = ini.L("Hud", "FontCycle", "ChaletLondon,ChaletComprimeCologne,Pricedown");
@@ -2385,6 +2396,14 @@ namespace TikArena
         {
             iniPath = FindIni();
             Ini ini = Ini.Load(iniPath);
+            // [Hud] Profile = name of a saved HUD: TikArena/huds/<name>.ini is loaded over the main INI
+            string prof = HudFile(ini.S("Hud", "Profile", ""));
+            if (prof.Length > 0)
+            {
+                string pp = Path.Combine(U.DataDir, "huds", prof + ".ini");
+                if (File.Exists(pp)) { ini.Merge(Ini.Load(pp)); U.Log("hud profile: " + pp); }
+                else U.Log("hud profile not found: " + pp);
+            }
             cfg = Cfg.Load(ini);
             try { iniTime = File.Exists(iniPath) ? File.GetLastWriteTime(iniPath) : DateTime.MinValue; } catch { }
             U.DebugLog = cfg.DebugLog;
@@ -2406,6 +2425,16 @@ namespace TikArena
             tcName = null;
             clockLocked = false;
             U.Log("config loaded: " + iniPath + " interactions=" + cfg.Interactions.Count);
+        }
+
+        // file name of a HUD profile (same rule as the page): only the characters Windows does not allow are replaced
+        static string HudFile(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "";
+            StringBuilder sb = new StringBuilder();
+            foreach (char ch in name.Trim())
+                sb.Append(ch < 32 || "\\/:*?\"<>|".IndexOf(ch) >= 0 ? '_' : ch);
+            return sb.ToString().Trim('.', ' ');
         }
 
         void FileWatch()
@@ -5401,7 +5430,11 @@ namespace TikArena
         //  [Hud] DesignColor = GOLD | NEON | FIRE | ICE | CLASSIC  (medal colours)
         //  Restyles the supporters panel (Top3) and the right lists (notifications / kill feed).
         string design = "None", designColor = "GOLD";
-        static readonly List<string> DesignCycle = new List<string> { "None", "Arena", "Broadcast", "Podium", "Cards", "Esports", "Minimal", "Classic" };
+        static readonly List<string> DesignCycle = new List<string> { "None", "Arena", "Broadcast", "Podium", "Cards", "Esports", "Minimal", "Classic", "Duo" };
+        // Duo: navy panels with soft round corners, blue (you / allies / wins) against red (enemies / losses)
+        static readonly Color DuoBlue = Color.FromArgb(255, 47, 125, 255), DuoRed = Color.FromArgb(255, 255, 51, 85), DuoCyan = Color.FromArgb(255, 111, 211, 255);
+        bool IsDuo { get { return Dz == "duo"; } }
+        Color DBg(int a) { return IsDuo ? Color.FromArgb(a, 11, 18, 40) : Color.FromArgb(a, 14, 16, 24); }
         static readonly List<string> DesignColors = new List<string> { "GOLD", "NEON", "FIRE", "ICE", "CLASSIC" };
 
         string Dz { get { return (design ?? "None").ToLowerInvariant(); } }
@@ -5427,6 +5460,7 @@ namespace TikArena
         {
             get
             {
+                if (IsDuo) return new Color[] { DuoBlue, DuoRed, DuoCyan };
                 switch ((designColor ?? "GOLD").ToUpperInvariant())
                 {
                     case "NEON": return new Color[] { Color.FromArgb(255, 215, 60, 255), Color.FromArgb(255, 0, 215, 255), Color.FromArgb(255, 40, 225, 120) };
@@ -5441,6 +5475,7 @@ namespace TikArena
         {
             get
             {
+                if (IsDuo) return DuoBlue;
                 switch ((designColor ?? "GOLD").ToUpperInvariant())
                 {
                     case "NEON": return Color.FromArgb(255, 0, 229, 255);
@@ -5503,7 +5538,7 @@ namespace TikArena
             float w, h;
             switch (dz)
             {
-                case "arena": w = 300; h = 120; break;
+                case "arena": case "duo": w = 300; h = 120; break;
                 case "esports": w = 300; h = 140; break;
                 case "broadcast": w = Math.Max(1, Math.Min(3, n)) * 147; h = 58; break;
                 case "podium": w = 272; h = 152; break;
@@ -5525,6 +5560,7 @@ namespace TikArena
                 if (top.Count == 0 && dz != "classic") Gfx.Text("—", w / 2, h / 2 - 8, TXT, TextCol(160), Alignment.Center);
                 switch (dz)
                 {
+                    case "duo":
                     case "arena":
                     case "esports":
                         {
@@ -5684,6 +5720,16 @@ namespace TikArena
             int A = (int)(255 * a);
             switch (Dz)
             {
+                case "duo":
+                    {
+                        // pill row, blue accent (red for the newest one)
+                        float r = Math.Min(12, h / 2);
+                        Gfx.RRect(x, y, w, h, r, DBg((int)(225 * a)));
+                        Color side = newest ? DuoRed : DuoBlue;
+                        Gfx.RRect(x + 3, y + 4, 4, h - 8, 2, U.WithAlpha(side, A));
+                        if (newest) Gfx.Rect(x + r, y + h - 2, w - r * 2, 2, U.WithAlpha(DuoRed, (int)(170 * a)));
+                        return 4;
+                    }
                 case "arena":
                     Gfx.RRect(x, y, w, h, 8, Color.FromArgb((int)(215 * a), 14, 16, 24));
                     if (newest)
@@ -5742,8 +5788,10 @@ namespace TikArena
             float y = 0;
             switch (dz)
             {
+                case "duo":
                 case "arena":
-                    Gfx.RRect(0, 0, w, h, 12, Color.FromArgb(242, 14, 16, 24));
+                    Gfx.RRect(0, 0, w, h, 14, DBg(242));
+                    if (IsDuo) DuoLine(14, 0, w - 28);
                     if (title) { Gfx.Text(cfg.Title, w / 2, 2, SMALL, acc, Alignment.Center); y = th; }
                     if (score)
                     {
@@ -5873,7 +5921,7 @@ namespace TikArena
                 frac = U.Clamp(hpNow / (float)hpMax, 0, 1);
                 af = U.Clamp(pl.Armor / 100f, 0, 1);
             }
-            Color hc = frac < 0.25f ? cLoss : cfg.HealthColor;
+            Color hc = frac < 0.25f ? cLoss : (IsDuo ? DuoBlue : cfg.HealthColor);
             if (frac < 0.25f && (U.Now / 300) % 2 == 0) hc = U.Mix(hc, Color.White, 0.35f);
             Color acc = DAcc, back = Color.FromArgb(150, 0, 0, 0), armorC = Color.FromArgb(255, 90, 170, 255);
             string pct = (frac * 100).ToString("0.0", U.IC) + "%";
@@ -5882,8 +5930,10 @@ namespace TikArena
             float bx = 10, bw = w - 20, by = 22;
             switch (dz)
             {
+                case "duo":
                 case "arena":
-                    Gfx.RRect(0, 0, w, h, 12, Color.FromArgb(Math.Max(190, cfg.Opacity), 14, 16, 24));
+                    Gfx.RRect(0, 0, w, h, 14, DBg(Math.Max(190, cfg.Opacity)));
+                    if (IsDuo) DuoLine(14, 0, w - 28);
                     Gfx.Parts(label, 12, 3, SMALL, Color.White);
                     if (cfg.ShowHealthPoints) Gfx.Text(pts, w - 12, 3, SMALL, Color.FromArgb(200, 255, 255, 255), Alignment.Right);
                     Gfx.RRect(bx, by, bw, 12, 6, back);
@@ -6017,6 +6067,14 @@ namespace TikArena
         // ================================================================ solid design box (score counters, end screen)
         void DBox(float x, float y, float w, float h) { DPlate(x, y, w, h, 1f); }
 
+        // Duo top line: blue half + red half
+        void DuoLine(float x, float y, float w)
+        {
+            if (w <= 0) return;
+            Gfx.Rect(x, y, w / 2, 2, DuoBlue);
+            Gfx.Rect(x + w / 2, y, w / 2, 2, DuoRed);
+        }
+
         // plate of the current look (every panel uses it, so everything matches)
         void DPlate(float x, float y, float w, float h, float alpha)
         {
@@ -6024,6 +6082,13 @@ namespace TikArena
             Color bg = Color.FromArgb((int)(240 * alpha), 14, 16, 24);
             switch (DesignOn ? Dz : "")
             {
+                case "duo":
+                    {
+                        float r = Math.Min(14, h / 2);
+                        Gfx.RRect(x, y, w, h, r, DBg((int)(238 * alpha)));
+                        DuoLine(x + r, y, w - r * 2);
+                        break;
+                    }
                 case "arena":
                 case "classic":
                     Gfx.RRect(x, y, w, h, Math.Min(14, h / 2), bg);
@@ -6447,8 +6512,9 @@ namespace TikArena
             float left = e.End > 0 ? Math.Max(0, e.End - now) : 0;
             int a = (int)(255 * (e.End > 0 ? Math.Min(1f, Math.Min(tin + 0.2f, left / 400f)) : Math.Min(1f, tin + 0.2f)));
             Color col = e.Live ? cLoss : FxColor(e.Action);
+            if (IsDuo) col = e.Live || !IsHelp(e.Action) ? DuoRed : DuoBlue;   // attacks red, help blue
             DBox(0, y, EvW, EvH);
-            Gfx.Rect(0, y, 4, EvH, U.WithAlpha(col, a));
+            Gfx.RRect(4, y + 6, 4, EvH - 12, 2, U.WithAlpha(col, a));   // rounded accent, inside the round corners
             Gfx.Image(Avatar(e.Sup), 10, y + 5, 28, 28, a);
             float x = 44;
             if (Gfx.FileOk(e.Icon)) { Gfx.Image(e.Icon, x, y + 5, 28, 28, a); x += 32; }
@@ -6835,7 +6901,8 @@ namespace TikArena
             {
                 // a design owns the whole HUD: its accent everywhere, no palette of another style mixed in
                 cAcc = DAcc;
-                cPan = Color.FromArgb(255, 14, 16, 24);
+                cPan = DBg(255);
+                if (IsDuo) { cWin = DuoBlue; cLoss = DuoRed; }
                 return;
             }
             if (cfg.StylePalette && Palettes.TryGetValue(style ?? "", out p))
@@ -7009,6 +7076,10 @@ namespace TikArena
                 Color acc = DAcc;
                 switch (Dz)
                 {
+                    case "duo":
+                        Gfx.Text(text, x + w / 2, y + 2, TXT, Color.White, Alignment.Center);
+                        DuoLine(x + w / 2 - 26, y + h - 2, 52);
+                        break;
                     case "broadcast":
                         {
                             float tw = Math.Min(w - 16, Gfx.TextW(text, TXT) + 26);
