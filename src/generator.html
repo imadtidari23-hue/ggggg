@@ -498,7 +498,7 @@ const TRIGGERS = [["Gift","🎁 هدية"],["Likes","❤️ لايكات"],["Sha
 const WEATHERS = ["Random","CLEAR","EXTRASUNNY","CLOUDS","OVERCAST","RAIN","CLEARING","THUNDER","SMOG","FOGGY","XMAS","SNOWLIGHT","BLIZZARD","HALLOWEEN"];
 const STYLES = ["Broadcast","Cyber","Royal","Hologram","Gradient","Stream","Carbon","Classic","Glass","Neon","Minimal","Esports","Retro","Luxury","Aurora","Ember"];
 // a look = a design (whole HUD in one design) or a style without design. F11 goes through LookCycle.
-const LOOK_DESIGNS = ["Duo","Arena","Broadcast","Podium","Cards","Esports","Minimal","Classic"];
+const LOOK_DESIGNS = ["Crest","Duo","Arena","Broadcast","Podium","Cards","Esports","Minimal","Classic"];
 const LOOKS = [...LOOK_DESIGNS, "Luxury","Aurora","Ember","Cyber","Royal","Hologram","Gradient","Stream","Carbon","Glass","Neon","Retro"];
 const AURAS = [["Default","↩️ حسب النوع (عدو/مساعد)"],["None","بلا"],["Glow","💡 توهج"],["Ring","⭕ دائرة تحت الرجلين"],["Pulse","📡 موجات"],["Beam","🔦 عمود ضو"],["Crown","👑 تاج"],["Rainbow","🌈 قوس قزح"],["Fire","🔥 نار"],["Smoke","💨 دخان ملون"],["Electric","⚡ كهرباء"],["Sparkles","✨ شرارات"]];
 const FONTS = ["ChaletLondon","ChaletComprimeCologne","Pricedown","HouseScript","Monospace"];
@@ -564,7 +564,7 @@ function defaults(){
   S.Random = {Duration:15,Effect:"SoftSmoke",EnemyModel:"s_m_y_clown_01",EnemyWeapon:"WEAPON_BAT",EnemyHealth:150,AllyModel:"s_m_y_swat_01",AllyWeapon:"WEAPON_CARBINERIFLE",AllyHealth:300,
     AnimalsAmount:3,HealthAmount:250,VehicleModel:"zentorno",GiveWeapon:"WEAPON_CARBINERIFLE"};
   RANDOM_ACTIONS.forEach(a => { S.Random[a+"Enabled"] = !(a==="KillPlayer"||a==="Airstrike"); S.Random[a+"Weight"] = 10; });
-  S.Hud = {Profile:"",Enabled:true,Style:"Broadcast",StylePalette:true,StyleCycle:"Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro",LookCycle:"Duo,Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Luxury,Aurora,Ember,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
+  S.Hud = {Profile:"",Enabled:true,Style:"Broadcast",StylePalette:true,StyleCycle:"Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro",LookCycle:"Crest,Duo,Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Luxury,Aurora,Ember,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
     AccentColor:"#00e676",TextColor:"#ffffff",PanelColor:"#0a0e16",WinColor:"#00e676",LossColor:"#ff3b5c",LayoutMode:"Normal",
     ScoreEnabled:true,ScoreOrder:"Title,Score,Streak",TitleEnabled:true,Title:"حاول تقتلني",ShowScore:true,ShowTimer:true,ShowStreak:true,
     Top3Enabled:true,Top3Order:"Top3,Status",ShowTop3:true,TopCount:3,Top3Title:"أفضل الداعمين",ShowCoins:true,ShowCounters:true,ShowStatus:true,
@@ -1444,7 +1444,7 @@ const PALETTES = {Broadcast:["#e10600","#111418","#ffffff","#1fc16b","#e10600"],
 // Hud view with the effective colors (palette applied)
 function HV(){
   const H = state.ini.Hud;
-  if (designOn()) return Object.assign({}, H, {AccentColor:dAcc(), PanelColor:"#0e1018"}, dz() === "duo" ? {PanelColor:"#0b1228", WinColor:DUO.blue, LossColor:DUO.red, HealthColor:DUO.blue} : {});
+  if (designOn()) return Object.assign({}, H, {AccentColor:dAcc(), PanelColor:"#0e1018"}, dz() === "duo" ? {PanelColor:"#0b1228", WinColor:DUO.blue, LossColor:DUO.red, HealthColor:DUO.blue} : {}, dz() === "crest" ? {PanelColor:"#0b1030", WinColor:CREST.blue, LossColor:CREST.red, HealthColor:CREST.blue} : {});
   const p = H.StylePalette && PALETTES[H.Style];
   if (!p) return H;
   return Object.assign({}, H, {AccentColor:p[0], PanelColor:p[1], TextColor:p[2], WinColor:p[3], LossColor:p[4]});
@@ -1453,6 +1453,7 @@ function HV(){
 function dPlateCss(d, a){
   a = Math.min(1, a == null ? 1 : a); const acc = dAcc(), bg = `rgba(14,16,24,${(.94*a).toFixed(2)})`;
   switch (d){
+    case "crest": return CREST.plate(Math.min(1, a).toFixed(2));
     case "duo": return `background:linear-gradient(90deg,${DUO.blue} 50%,${DUO.red} 50%) 50% 0/calc(100% - 28px) 2px no-repeat,${DUO.bg((.93*a).toFixed(2))};border-radius:14px`;
     case "arena": case "classic": return `background:${bg};border-radius:12px;box-shadow:inset 0 2px 0 ${acc}`;
     case "broadcast": return `background:${bg};border-left:5px solid ${acc}`;
@@ -1493,6 +1494,7 @@ function header(text){
     const acc = dAcc(), d = dz();
     if (d === "broadcast") return `<div style="${base}"><span style="display:inline-block;background:${acc};color:#1c1812;padding:0 14px;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 100%,0 100%)">${esc(text)}</span></div>`;
     if (d === "esports") return `<div style="color:${acc};${base}">// ${esc(text)} //</div>`;
+    if (d === "crest") return `<div style="color:${CREST.gold};${base};display:flex;align-items:center;gap:8px;padding:0 12px"><i style="flex:1;height:1px;background:${CREST.gold};opacity:.7"></i>${esc(text)}<i style="flex:1;height:1px;background:${CREST.gold};opacity:.7"></i></div>`;
     if (d === "duo") return `<div style="color:#fff;${base}">${esc(text)}<div style="margin:-3px auto 0;width:52px;height:2px;background:linear-gradient(90deg,${DUO.blue} 50%,${DUO.red} 50%)"></div></div>`;
     if (d === "podium" || d === "minimal") return `<div style="color:#fff;${base}">${esc(text)}</div>`;
     if (d === "cards") return `<div style="color:${acc};${base}">${esc(text)}<div style="margin:-3px auto 0;width:40px;height:2px;background:${acc}"></div></div>`;
@@ -1617,6 +1619,7 @@ function pvEvents(){
   rows.forEach((r, n) => {
     const it = find(r[0]), y = th + n * 48, S = sup[r[1]];
     if (dz() === "duo") r[3] = r[0] === "GiveWeapon" ? DUO.blue : DUO.red;
+    if (dz() === "crest") r[3] = r[0] === "GiveWeapon" ? CREST.blue : CREST.red;
     html += abs(0, y, w, 42, bgCss(1.3), `<div style="position:absolute;left:4px;top:6px;width:4px;height:30px;border-radius:2px;background:${r[3]}"></div>
       <div style="position:absolute;left:8px;top:5px">${avatarHTML(S, 28)}</div>
       <div style="position:absolute;left:42px;top:5px">${thumbSmall(it.actImg, it.actEmoji, 28)}</div>
@@ -1760,16 +1763,19 @@ function actionSubject(it){
 }
 
 // ------------------------------------------------------------- designs over the original panels (same sizes as the engine)
-const DESIGNS = [["None","⛔ بلا (الستايل العادي)"],["Duo","🔵🔴 Duo"],["Arena","🏟️ Arena"],["Broadcast","📺 Broadcast"],["Podium","🏆 Podium"],["Cards","🃏 Cards"],["Esports","🎮 Esports"],["Minimal","✨ Minimal"],["Classic","📋 Classic"]];
+const DESIGNS = [["None","⛔ بلا (الستايل العادي)"],["Crest","🏅 Crest"],["Duo","🔵🔴 Duo"],["Arena","🏟️ Arena"],["Broadcast","📺 Broadcast"],["Podium","🏆 Podium"],["Cards","🃏 Cards"],["Esports","🎮 Esports"],["Minimal","✨ Minimal"],["Classic","📋 Classic"]];
 const DESIGN_COLORS = [["GOLD","🥇 Gold"],["NEON","💜 Neon"],["FIRE","🔥 Fire"],["ICE","❄️ Ice"],["CLASSIC","🎖️ Classic"]];
 const D_MEDALS = {GOLD:["#f5be28","#c0c6ce","#cd7f32"],NEON:["#d73cff","#00d7ff","#28e178"],FIRE:["#ff8c00","#f05f1e","#d72828"],ICE:["#96d7ff","#afe4f2","#7da5e1"],CLASSIC:["#f5be28","#c0c6ce","#cd7f32"]};
 function dz(){ return String(state.ini.Hud.Design || "None").toLowerCase(); }
 function designOn(){ const d = dz(); return d && d !== "none"; }
 const DUO = {blue:"#2f7dff", red:"#ff3355", cyan:"#6fd3ff", bg:a => `rgba(11,18,40,${a})`};
-function dAcc(){ const H = state.ini.Hud; if (dz() === "duo") return DUO.blue; return {NEON:"#00e5ff",FIRE:"#ff6a00",ICE:"#7fd8ff",CLASSIC:H.AccentColor}[H.DesignColor] || "#f5b301"; }
+// Crest: glossy navy plate, thin gold frame, soft round corners, inner highlight
+const CREST = {gold:"#d8b04c", blue:"#3d7bff", red:"#e83a46",
+  plate:a => `background:linear-gradient(180deg,rgba(44,60,124,${a}) 0%,rgba(22,32,86,${a}) 45%,rgba(11,16,48,${a}) 100%);border:1.5px solid #d8b04c;border-radius:10px;box-shadow:inset 0 3px 0 -2px rgba(255,255,255,.25),0 3px 10px rgba(0,0,0,.45)`};
+function dAcc(){ const H = state.ini.Hud; if (dz() === "duo") return DUO.blue; if (dz() === "crest") return CREST.gold; return {NEON:"#00e5ff",FIRE:"#ff6a00",ICE:"#7fd8ff",CLASSIC:H.AccentColor}[H.DesignColor] || "#f5b301"; }
 function curLook(){ const H = state.ini.Hud; return designOn() ? H.Design : H.Style; }
 function setLook(l){ const H = state.ini.Hud; if (LOOK_DESIGNS.includes(l)) H.Design = l; else { H.Design = "None"; H.Style = l; } }
-function dMed(){ if (dz() === "duo") return [DUO.blue, DUO.red, DUO.cyan]; return D_MEDALS[state.ini.Hud.DesignColor] || D_MEDALS.GOLD; }
+function dMed(){ if (dz() === "duo") return [DUO.blue, DUO.red, DUO.cyan]; if (dz() === "crest") return [CREST.gold, "#c8d0de", "#cd7f32"]; return D_MEDALS[state.ini.Hud.DesignColor] || D_MEDALS.GOLD; }
 function dAv(s, d, ring, glow, hex){
   const clip = hex ? "clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);" : "border-radius:50%;";
   const inner = `<span style="display:inline-grid;place-items:center;width:${d}px;height:${d}px;${clip}background:${s[2]};font-size:${d*0.6}px">${s[1]}</span>`;
@@ -1781,15 +1787,22 @@ function pvDesignTop(){
   const rows = H.Top3Order.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="top3" && H.ShowTop3) || (r==="status" && H.ShowStatus && state.ini.TikFinity.Enabled));
   if (!rows.length) return null;
   const showTop = rows.includes("top3");
-  const n = d === "classic" ? Math.max(1, Math.min(10, H.TopCount)) : Math.max(1, Math.min(3, H.TopCount));
+  const n = d === "classic" || d === "crest" ? Math.max(1, Math.min(10, H.TopCount)) : Math.max(1, Math.min(3, H.TopCount));
   const sups = SAMPLE_SUPS.slice(0, n), word = H.DesignCoinsWord, cn = c => (c >= 10000 ? (c/1000).toFixed(1)+"K" : c) + " " + esc(word);
-  const size = {duo:[300,120],arena:[300,120],esports:[300,140],broadcast:[Math.min(3,n)*147,58],podium:[272,152],cards:[234,116],minimal:[36+Math.min(3,n)*104,40]}[d] || [240, 30 + n*28 + 4];
+  const size = {crest:[250, n*46-6],duo:[300,120],arena:[300,120],esports:[300,140],broadcast:[Math.min(3,n)*147,58],podium:[272,152],cards:[234,116],minimal:[36+Math.min(3,n)*104,40]}[d] || [240, 30 + n*28 + 4];
   let [w, h] = showTop ? size : [236, 0];
   const extra = (rows.length - (showTop ? 1 : 0)) * 20, total = h + (extra > 0 ? extra + 4 : 0);
   const order = [1,0,2], s28 = fpx(.28), s34 = fpx(.34);
   let html = "";
   const tag = (name, cx, y, bg, slant) => abs(cx - 60, y, 120, 16, "text-align:center", `<span style="display:inline-block;padding:0 7px;height:16px;line-height:16px;font-size:${s28};background:${bg};${slant?"transform:skewX(-14deg)":"border-radius:8px"};color:#fff">${esc(name)}</span>`);
   if (showTop) switch (d){
+    case "crest":
+      sups.forEach((s, i) => { const y = i * 46;
+        html += abs(0, y, w, 40, CREST.plate(1), `${i === 0 ? `<span style="position:absolute;left:9px;top:9px;color:${CREST.gold};font-size:18px">♛</span>` : `<b style="position:absolute;left:8px;top:11px;width:22px;text-align:center;color:${CREST.gold};font-size:${s28}">#${i+1}</b>`}
+          <span style="position:absolute;left:35px;top:5px">${dAv(s, 28, md[Math.min(i,2)], false, false)}</span>
+          <span style="position:absolute;left:72px;top:2px;color:#fff;font-size:${s34};white-space:nowrap">${esc(s[0])}</span>
+          ${H.ShowCoins ? `<span style="position:absolute;left:72px;top:21px;color:${CREST.gold};font-size:${s28}">${cn(s[3])}</span>` : ""}`); });
+      break;
     case "duo": case "arena": case "esports": {
       const es = d === "esports", oy = es ? 20 : 0;
       if (es) html += abs(0, 0, w, 18, `text-align:center;color:${acc};font-size:${s34};font-style:italic;font-weight:900`, `// ${esc(H.Top3Title)} //`);
@@ -1834,6 +1847,7 @@ function pvDesignTop(){
 function dRowCss(i, newest, rowH){
   const acc = dAcc();
   switch (dz()){
+    case "crest": return {css:`${CREST.plate(.96)};padding-left:0`, lead:`<i style="flex:none;width:4px;height:${rowH-12}px;border-radius:2px;margin:0 4px 0 5px;background:${newest?CREST.red:CREST.blue}"></i>`};
     case "duo": return {css:`background:${DUO.bg(.88)};border-radius:${rowH/2}px;box-shadow:inset 5px 0 0 ${newest?DUO.red:DUO.blue}${newest?`,inset 0 -2px 0 ${DUO.red}`:""};padding-left:10px`, lead:""};
     case "arena": return {css:`background:rgba(14,16,24,.84);border-radius:8px;${newest?`background:linear-gradient(90deg,${rgba(acc,.35)},rgba(14,16,24,.84) 60%);border-left:3px solid ${acc}`:""}`, lead:""};
     case "broadcast": return {css:`background:rgba(0,0,0,.9);padding-left:0;${newest?`border-bottom:2px solid ${acc}`:""}`, lead:`<b style="background:#fff;color:#1c1812;width:${rowH-4}px;height:${rowH}px;line-height:${rowH}px;text-align:center">${i}</b>`};
@@ -1855,9 +1869,10 @@ function pvDesignScore(){
   let html = "", y = th;
   const titleHtml = (css) => title ? abs(0, 0, w, 18, `text-align:center;font-size:${s28};${css}`, esc(H.Title)) : "";
   switch (d){
+    case "crest":
     case "duo":
     case "arena":
-      html += abs(0,0,w,h,d === "duo" ? dPlateCss("duo", Math.max(190,H.Opacity)/255) : `background:rgba(14,16,24,${Math.max(190,H.Opacity)/255});border-radius:12px`) + titleHtml(`color:${d === "duo" ? "#fff" : acc}`);
+      html += abs(0,0,w,h,d === "duo" || d === "crest" ? dPlateCss(d, Math.max(190,H.Opacity)/255) : `background:rgba(14,16,24,${Math.max(190,H.Opacity)/255});border-radius:12px`) + titleHtml(`color:${d === "duo" ? "#fff" : acc}`);
       if (score) html += abs(10,y+4,62,32,`background:${W};border-radius:10px;text-align:center;${tm(.5)}`,"3") + abs(w-72,y+4,62,32,`background:${Lc};border-radius:10px;text-align:center;${tm(.5)}`,"1");
       if (timer) html += abs(0,y+4,w,30,`text-align:center;${tm(.56)}`,"09:41"); break;
     case "broadcast":
@@ -1895,8 +1910,9 @@ function pvDesignHealth(L){
   const arm = (x, y, bw, bh, r) => armor ? abs(x, y, bw*0.6, bh, `background:#5aaaff;border-radius:${r}px`) : "";
   let html = "";
   switch (d){
+    case "crest":
     case "duo":
-    case "arena": html = abs(0,0,w,h,d === "duo" ? dPlateCss("duo", Math.max(190,H.Opacity)/255) : `background:rgba(14,16,24,${Math.max(190,H.Opacity)/255});border-radius:12px`) + lab(12) + bar(10,22,w-20,12,6) + arm(10,37,w-20,5,3); break;
+    case "arena": html = abs(0,0,w,h,d === "duo" || d === "crest" ? dPlateCss(d, Math.max(190,H.Opacity)/255) : `background:rgba(14,16,24,${Math.max(190,H.Opacity)/255});border-radius:12px`) + lab(12) + bar(10,22,w-20,12,6) + arm(10,37,w-20,5,3); break;
     case "broadcast": html = abs(0,0,w,h,`background:rgba(12,14,20,.9);transform:skewX(-10deg);transform-origin:bottom`) + abs(0,0,38,h,`background:${acc};text-align:center;line-height:${h}px;font-weight:900;color:#1c1812;font-size:${fpx(.34)}`,"HP") + lab(46) + bar(46,22,w-52,12,0) + arm(46,37,w-52,4,0); break;
     case "podium": html = abs(0,0,w,h,`background:rgba(255,255,255,.31);border-radius:14px`) + lab(14) + bar(10,22,w-20,13,7,"rgba(0,0,0,.35)") + arm(10,38,w-20,5,3); break;
     case "cards": html = abs(0,0,w,h,`background:linear-gradient(#fff,#c8ccd4);border-left:4px solid ${hc}`) + lab(12,"#1c1812") + bar(10,22,w-20,12,0,"rgba(0,0,0,.45)") + arm(10,37,w-20,4,0); break;
@@ -1912,9 +1928,10 @@ function pvScoreWrap(P){
   const H = HV(), T = state.ini.Texts;
   if (!H.ShowCounters) return P;
   const w = Math.max(P ? P.w : 0, 220), top = P ? P.h + 3 : 0;
-  const d = designOn() ? dz() : "", r = {duo:11,arena:11,classic:11,podium:11,minimal:11,cards:6}[d] || 0;
+  const d = designOn() ? dz() : "", r = {crest:10,duo:11,arena:11,classic:11,podium:11,minimal:11,cards:6}[d] || 0;
   const bg = d === "podium" ? "rgba(34,38,52,.9)" : (d === "duo" ? DUO.bg(.94) : "rgba(14,16,24,.94)");
-  const strip = abs(0, top, w, 22, `background:${bg};border-radius:${r}px;${d==="broadcast"?`border-left:5px solid ${dAcc()};`:""}${d==="esports"?"transform:skewX(-12deg);":""}display:flex;align-items:center;justify-content:center;gap:10px;font-size:${fpx(.28)};color:#fff`,
+  const stripCss = d === "crest" ? CREST.plate(.96) + ";" : `background:${bg};border-radius:${r}px;`;
+  const strip = abs(0, top, w, 22, `${stripCss}${d==="broadcast"?`border-left:5px solid ${dAcc()};`:""}${d==="esports"?"transform:skewX(-12deg);":""}display:flex;align-items:center;justify-content:center;gap:10px;font-size:${fpx(.28)};color:#fff`,
     `<span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${H.LossColor};margin:0 5px"></i>${esc(T.EnemiesShort)} 4</span><span style="opacity:.4">|</span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${H.WinColor};margin:0 5px"></i>${esc(T.AlliesShort)} 2</span>`);
   return {w, h: top + 22, html: (P ? `<div style="position:absolute;left:${(w - P.w)/2}px;top:0;width:${P.w}px;height:${P.h}px">${P.html}</div>` : "") + strip};
 }
@@ -1923,7 +1940,7 @@ function pvSpot(frame, vert){
   const it = state.interactions.find(x => x.Spotlight) || state.interactions[0] || newInteraction({});
   const acc = designOn() ? dAcc() : HV().AccentColor, w = 480, h = 118, s = vert ? Math.min(1, (frame.w - 16) / w) : 1;
   const x = frame.x + (frame.w - w*s)/2, y = (vert ? 300 : 150) + (+state.ini.Spotlight.OffsetY || 0), sup = SAMPLE_SUPS[0];
-  return `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:scale(${s});transform-origin:0 0;background:rgba(14,16,24,.95);border-radius:14px;border-top:3px solid ${acc};box-shadow:0 10px 40px rgba(0,0,0,.6);${txtCss()}animation:spotpop .3s ease-out">
+  return `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:scale(${s});transform-origin:0 0;${designOn() ? dPlateCss(dz(), 1) + ";" : `background:rgba(14,16,24,.95);border-radius:14px;border-top:3px solid ${acc};`}box-shadow:0 10px 40px rgba(0,0,0,.6);${txtCss()}animation:spotpop .3s ease-out">
     <div style="position:absolute;left:17px;top:17px;width:84px;height:84px;display:grid;place-items:center;font-size:64px;filter:drop-shadow(0 0 18px ${acc})">${it.actImg ? `<img src="${it.actImg}" style="width:84px">` : esc(it.actEmoji)}</div>
     <div style="position:absolute;left:118px;top:8px;color:${acc};font-size:${fpx(.56)};font-weight:700">${esc(it.Name || (ACT[it.Action]||{}).name || "")}</div>
     <div style="position:absolute;left:118px;top:46px;font-size:${fpx(.36)}">${esc(fill(it.SpotlightText || it.Message, sup[0]))}</div>

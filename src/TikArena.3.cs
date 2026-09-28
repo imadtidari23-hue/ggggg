@@ -875,7 +875,7 @@ namespace TikArena
             c.HudStyle = ini.S("Hud", "Style", "Broadcast");
             c.StyleCycle = ini.L("Hud", "StyleCycle", "Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro");
             // F11 goes through complete looks (a design or a style) so every panel always matches
-            c.LookCycle = ini.L("Hud", "LookCycle", "Duo,Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Luxury,Aurora,Ember,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro");
+            c.LookCycle = ini.L("Hud", "LookCycle", "Crest,Duo,Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Luxury,Aurora,Ember,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro");
             c.StylePalette = ini.B("Hud", "StylePalette", true);
             c.HudFont = ini.S("Hud", "Font", "ChaletLondon");
             c.FontCycle = ini.L("Hud", "FontCycle", "ChaletLondon,ChaletComprimeCologne,Pricedown");
@@ -5430,10 +5430,32 @@ namespace TikArena
         //  [Hud] DesignColor = GOLD | NEON | FIRE | ICE | CLASSIC  (medal colours)
         //  Restyles the supporters panel (Top3) and the right lists (notifications / kill feed).
         string design = "None", designColor = "GOLD";
-        static readonly List<string> DesignCycle = new List<string> { "None", "Arena", "Broadcast", "Podium", "Cards", "Esports", "Minimal", "Classic", "Duo" };
+        static readonly List<string> DesignCycle = new List<string> { "None", "Arena", "Broadcast", "Podium", "Cards", "Esports", "Minimal", "Classic", "Duo", "Crest" };
+        // Crest: glossy navy plates in a thin gold frame with soft round corners (TV game-show look)
+        static readonly Color CrestGold = Color.FromArgb(255, 216, 176, 76), CrestTop = Color.FromArgb(255, 44, 60, 124), CrestBot = Color.FromArgb(255, 11, 16, 48);
+        static readonly Color CrestBlue = Color.FromArgb(255, 61, 123, 255), CrestRed = Color.FromArgb(255, 232, 58, 70);
+        bool IsCrest { get { return Dz == "crest"; } }
+
+        // gold frame + navy gradient + inner highlight (+ optional accent pill on the left)
+        void CrestPlate(float x, float y, float w, float h, float alpha, Color? pill = null)
+        {
+            float r = Math.Min(10, h / 2);
+            int a = (int)(255 * alpha);
+            Gfx.RRect(x - 1.5f, y - 1.5f, w + 3, h + 3, r + 1.5f, U.WithAlpha(CrestGold, (int)(235 * alpha)));
+            Gfx.RRect(x, y, w, h, r, U.WithAlpha(CrestBot, (int)(245 * alpha)));
+            // gloss: lighter navy at the top, fading down to the middle
+            const int n = 6;
+            float gh = (h / 2 - r) / n;
+            Gfx.Rect(x + r, y + 1, w - r * 2, r - 1, U.WithAlpha(CrestTop, (int)(200 * alpha)));
+            for (int i = 0; i < n && gh > 0; i++)
+                Gfx.Rect(x + 1, y + r + i * gh, w - 2, gh + 0.5f, U.WithAlpha(CrestTop, (int)(200 * alpha * (1 - (i + 1) / (float)(n + 1)))));
+            Gfx.Rect(x + r, y + 3, w - r * 2, 1, Color.FromArgb((int)(60 * alpha), 255, 255, 255));
+            if (pill.HasValue) Gfx.RRect(x + 5, y + 6, 4, Math.Max(4, h - 12), 2, U.WithAlpha(pill.Value, a));
+        }
         // Duo: navy panels with soft round corners, blue (you / allies / wins) against red (enemies / losses)
         static readonly Color DuoBlue = Color.FromArgb(255, 47, 125, 255), DuoRed = Color.FromArgb(255, 255, 51, 85), DuoCyan = Color.FromArgb(255, 111, 211, 255);
         bool IsDuo { get { return Dz == "duo"; } }
+        bool RoundDesign { get { string d = Dz; return d == "duo" || d == "crest"; } }
         Color DBg(int a) { return IsDuo ? Color.FromArgb(a, 11, 18, 40) : Color.FromArgb(a, 14, 16, 24); }
         static readonly List<string> DesignColors = new List<string> { "GOLD", "NEON", "FIRE", "ICE", "CLASSIC" };
 
@@ -5461,6 +5483,7 @@ namespace TikArena
             get
             {
                 if (IsDuo) return new Color[] { DuoBlue, DuoRed, DuoCyan };
+                if (IsCrest) return new Color[] { CrestGold, Color.FromArgb(255, 200, 208, 222), Color.FromArgb(255, 205, 127, 50) };
                 switch ((designColor ?? "GOLD").ToUpperInvariant())
                 {
                     case "NEON": return new Color[] { Color.FromArgb(255, 215, 60, 255), Color.FromArgb(255, 0, 215, 255), Color.FromArgb(255, 40, 225, 120) };
@@ -5476,6 +5499,7 @@ namespace TikArena
             get
             {
                 if (IsDuo) return DuoBlue;
+                if (IsCrest) return CrestGold;
                 switch ((designColor ?? "GOLD").ToUpperInvariant())
                 {
                     case "NEON": return Color.FromArgb(255, 0, 229, 255);
@@ -5533,12 +5557,13 @@ namespace TikArena
             string dz = Dz;
             List<string> rows = TopRows();
             bool showTop = rows.Contains("top3");
-            List<Supporter> top = TopList(dz == "classic" ? cfg.TopCount : Math.Min(3, cfg.TopCount));
+            List<Supporter> top = TopList(dz == "classic" || dz == "crest" ? cfg.TopCount : Math.Min(3, cfg.TopCount));
             int n = Math.Max(1, top.Count);
             float w, h;
             switch (dz)
             {
                 case "arena": case "duo": w = 300; h = 120; break;
+                case "crest": w = 250; h = n * 46 - 6; break;
                 case "esports": w = 300; h = 140; break;
                 case "broadcast": w = Math.Max(1, Math.Min(3, n)) * 147; h = 58; break;
                 case "podium": w = 272; h = 152; break;
@@ -5560,6 +5585,20 @@ namespace TikArena
                 if (top.Count == 0 && dz != "classic") Gfx.Text("—", w / 2, h / 2 - 8, TXT, TextCol(160), Alignment.Center);
                 switch (dz)
                 {
+                    case "crest":
+                        // one framed card per supporter: crown / rank, picture, name, coins
+                        for (int i = 0; i < top.Count; i++)
+                        {
+                            Supporter s = top[i];
+                            float y = i * 46;
+                            CrestPlate(0, y, w, 40, 1f);
+                            if (i == 0) Gfx.Shape("crown", 9, y + 13, 20, 15, CrestGold);
+                            else Gfx.Text("#" + (i + 1), 19, y + 11, SMALL, CrestGold, Alignment.Center);
+                            AvRing(s, 50, y + 20, 28, md[Math.Min(i, 2)], false, false);
+                            Gfx.Text(U.Trunc(s.Nick, 16), 72, y + 3, TXT, Color.White, Alignment.Left);
+                            if (cfg.ShowCoins) Gfx.Parts(CoinParts(s), 72, y + 21, SMALL, CrestGold);
+                        }
+                        break;
                     case "duo":
                     case "arena":
                     case "esports":
@@ -5720,6 +5759,10 @@ namespace TikArena
             int A = (int)(255 * a);
             switch (Dz)
             {
+                case "crest":
+                    // framed row, blue accent (red for the newest one)
+                    CrestPlate(x, y, w, h, a, newest ? CrestRed : CrestBlue);
+                    return 10;
                 case "duo":
                     {
                         // pill row, blue accent (red for the newest one)
@@ -5789,8 +5832,10 @@ namespace TikArena
             switch (dz)
             {
                 case "duo":
+                case "crest":
                 case "arena":
-                    Gfx.RRect(0, 0, w, h, 14, DBg(242));
+                    if (IsCrest) CrestPlate(0, 0, w, h, 1f);
+                    else Gfx.RRect(0, 0, w, h, 14, DBg(242));
                     if (IsDuo) DuoLine(14, 0, w - 28);
                     if (title) { Gfx.Text(cfg.Title, w / 2, 2, SMALL, acc, Alignment.Center); y = th; }
                     if (score)
@@ -5921,7 +5966,7 @@ namespace TikArena
                 frac = U.Clamp(hpNow / (float)hpMax, 0, 1);
                 af = U.Clamp(pl.Armor / 100f, 0, 1);
             }
-            Color hc = frac < 0.25f ? cLoss : (IsDuo ? DuoBlue : cfg.HealthColor);
+            Color hc = frac < 0.25f ? cLoss : (IsDuo ? DuoBlue : (IsCrest ? CrestBlue : cfg.HealthColor));
             if (frac < 0.25f && (U.Now / 300) % 2 == 0) hc = U.Mix(hc, Color.White, 0.35f);
             Color acc = DAcc, back = Color.FromArgb(150, 0, 0, 0), armorC = Color.FromArgb(255, 90, 170, 255);
             string pct = (frac * 100).ToString("0.0", U.IC) + "%";
@@ -5931,8 +5976,10 @@ namespace TikArena
             switch (dz)
             {
                 case "duo":
+                case "crest":
                 case "arena":
-                    Gfx.RRect(0, 0, w, h, 14, DBg(Math.Max(190, cfg.Opacity)));
+                    if (IsCrest) CrestPlate(0, 0, w, h, 1f);
+                    else Gfx.RRect(0, 0, w, h, 14, DBg(Math.Max(190, cfg.Opacity)));
                     if (IsDuo) DuoLine(14, 0, w - 28);
                     Gfx.Parts(label, 12, 3, SMALL, Color.White);
                     if (cfg.ShowHealthPoints) Gfx.Text(pts, w - 12, 3, SMALL, Color.FromArgb(200, 255, 255, 255), Alignment.Right);
@@ -6082,6 +6129,9 @@ namespace TikArena
             Color bg = Color.FromArgb((int)(240 * alpha), 14, 16, 24);
             switch (DesignOn ? Dz : "")
             {
+                case "crest":
+                    CrestPlate(x, y, w, h, alpha);
+                    break;
                 case "duo":
                     {
                         float r = Math.Min(14, h / 2);
@@ -6513,6 +6563,7 @@ namespace TikArena
             int a = (int)(255 * (e.End > 0 ? Math.Min(1f, Math.Min(tin + 0.2f, left / 400f)) : Math.Min(1f, tin + 0.2f)));
             Color col = e.Live ? cLoss : FxColor(e.Action);
             if (IsDuo) col = e.Live || !IsHelp(e.Action) ? DuoRed : DuoBlue;   // attacks red, help blue
+            if (IsCrest) col = e.Live || !IsHelp(e.Action) ? CrestRed : CrestBlue;
             DBox(0, y, EvW, EvH);
             Gfx.RRect(4, y + 6, 4, EvH - 12, 2, U.WithAlpha(col, a));   // rounded accent, inside the round corners
             Gfx.Image(Avatar(e.Sup), 10, y + 5, 28, 28, a);
@@ -6903,6 +6954,7 @@ namespace TikArena
                 cAcc = DAcc;
                 cPan = DBg(255);
                 if (IsDuo) { cWin = DuoBlue; cLoss = DuoRed; }
+                if (IsCrest) { cWin = CrestBlue; cLoss = CrestRed; cPan = CrestBot; }
                 return;
             }
             if (cfg.StylePalette && Palettes.TryGetValue(style ?? "", out p))
@@ -7076,6 +7128,14 @@ namespace TikArena
                 Color acc = DAcc;
                 switch (Dz)
                 {
+                    case "crest":
+                        {
+                            float tw = Gfx.TextW(text, TXT);
+                            Gfx.Text(text, x + w / 2, y + 2, TXT, CrestGold, Alignment.Center);
+                            Gfx.Rect(x + 12, y + h / 2, Math.Max(0, (w - tw) / 2 - 20), 1, U.WithAlpha(CrestGold, 170));
+                            Gfx.Rect(x + (w + tw) / 2 + 8, y + h / 2, Math.Max(0, (w - tw) / 2 - 20), 1, U.WithAlpha(CrestGold, 170));
+                            break;
+                        }
                     case "duo":
                         Gfx.Text(text, x + w / 2, y + 2, TXT, Color.White, Alignment.Center);
                         DuoLine(x + w / 2 - 26, y + h - 2, 52);
