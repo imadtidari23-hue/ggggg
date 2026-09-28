@@ -105,6 +105,8 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
 .stylebtn{border:1px solid var(--line2);border-radius:10px;padding:6px;cursor:pointer;background:#0a1019;text-align:center;font-size:12px}
 .stylebtn .sw8{height:34px;border-radius:7px;margin-bottom:4px}
 .stylebtn.on{border-color:var(--acc);box-shadow:0 0 10px rgba(0,230,118,.25)}
+.stylebtn .incyc{display:flex;align-items:center;justify-content:center;gap:4px;font-size:11px;color:var(--mut);margin-top:3px;cursor:pointer}
+.stylebtn .incyc input{width:13px;height:13px;margin:0}
 .orderlist{display:flex;flex-direction:column;gap:4px}
 .orderlist div{display:flex;align-items:center;gap:6px;background:#0a1019;border:1px solid var(--line2);border-radius:8px;padding:3px 8px;font-size:12px}
 .orderlist div span{flex:1}
@@ -195,12 +197,12 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
           <span class="hint">الضغط على لوحة كيديك للإعدادات ديالها</span>
         </div>
         <div class="stage" id="stage"><div class="scene"></div><div class="vp" id="vp"></div></div>
-        <h3>🎨 الشكل</h3>
+        <h3>🎨 الشكل <span class="hint">كل شكل كيبدل الهود كامل (الفوز والخسارة، الداعمين، الطاقة، الدليل، الإشعارات). F11 فاللعبة كيدوز على اللي مشعول فيهم ☑ F11</span></h3>
         <div class="styles" id="styleBtns"></div>
         <h3>🧩 تخطيطات جاهزة</h3>
         <div class="chips" id="presets"></div>
         <div style="margin-top:8px"><button class="btn sm" id="btnSpotDemo">⭐ معاينة الإشعار الكبير (3 ث)</button></div>
-        <h3>🏟️ الديزاين (على اللوحات الأصلية)</h3>
+        <h3>🏅 ألوان الميداليات (ديال الأشكال 🏟️)</h3>
         <div class="chips" id="kitChips"></div>
       </div>
       <div id="hudSide"></div>
@@ -309,6 +311,9 @@ const KILL_EFFECTS = EFFECTS.filter(e => e[0] !== "SkyDrop");
 const TRIGGERS = [["Gift","🎁 هدية"],["Likes","❤️ لايكات"],["Share","🔁 بارتاج"],["Follow","➕ فولو"],["Comment","💬 تعليق"],["Subscribe","⭐ اشتراك"],["Key","⌨️ زر فقط"]];
 const WEATHERS = ["Random","CLEAR","EXTRASUNNY","CLOUDS","OVERCAST","RAIN","CLEARING","THUNDER","SMOG","FOGGY","XMAS","SNOWLIGHT","BLIZZARD","HALLOWEEN"];
 const STYLES = ["Broadcast","Cyber","Royal","Hologram","Gradient","Stream","Carbon","Classic","Glass","Neon","Minimal","Esports","Retro"];
+// a look = a design (whole HUD in one design) or a style without design. F11 goes through LookCycle.
+const LOOK_DESIGNS = ["Arena","Broadcast","Podium","Cards","Esports","Minimal","Classic"];
+const LOOKS = [...LOOK_DESIGNS, "Cyber","Royal","Hologram","Gradient","Stream","Carbon","Glass","Neon","Retro"];
 const AURAS = [["Default","↩️ حسب النوع (عدو/مساعد)"],["None","بلا"],["Glow","💡 توهج"],["Ring","⭕ دائرة تحت الرجلين"],["Pulse","📡 موجات"],["Beam","🔦 عمود ضو"],["Crown","👑 تاج"],["Rainbow","🌈 قوس قزح"],["Fire","🔥 نار"],["Smoke","💨 دخان ملون"],["Electric","⚡ كهرباء"],["Sparkles","✨ شرارات"]];
 const FONTS = ["ChaletLondon","ChaletComprimeCologne","Pricedown","HouseScript","Monospace"];
 const POSITIONS = ["TopLeft","TopCenter","TopRight","MiddleLeft","MiddleCenter","MiddleRight","BottomLeft","BottomCenter","BottomRight"];
@@ -373,12 +378,13 @@ function defaults(){
   S.Random = {Duration:15,Effect:"SoftSmoke",EnemyModel:"s_m_y_clown_01",EnemyWeapon:"WEAPON_BAT",EnemyHealth:150,AllyModel:"s_m_y_swat_01",AllyWeapon:"WEAPON_CARBINERIFLE",AllyHealth:300,
     AnimalsAmount:3,HealthAmount:250,VehicleModel:"zentorno",GiveWeapon:"WEAPON_CARBINERIFLE"};
   RANDOM_ACTIONS.forEach(a => { S.Random[a+"Enabled"] = !(a==="KillPlayer"||a==="Airstrike"); S.Random[a+"Weight"] = 10; });
-  S.Hud = {Enabled:true,Style:"Broadcast",StylePalette:true,StyleCycle:"Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
+  S.Hud = {Enabled:true,Style:"Broadcast",StylePalette:true,StyleCycle:"Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro",LookCycle:"Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro",Font:"ChaletLondon",FontCycle:"ChaletLondon,ChaletComprimeCologne,Pricedown",FontScale:1,TextOutline:true,TextShadow:true,Opacity:200,
     AccentColor:"#00e676",TextColor:"#ffffff",PanelColor:"#0a0e16",WinColor:"#00e676",LossColor:"#ff3b5c",LayoutMode:"Normal",
     ScoreEnabled:true,ScoreOrder:"Title,Score,Streak",TitleEnabled:true,Title:"حاول تقتلني",ShowScore:true,ShowTimer:true,ShowStreak:true,
     Top3Enabled:true,Top3Order:"Top3,Status",ShowTop3:true,TopCount:3,Top3Title:"أفضل الداعمين",ShowCoins:true,ShowCounters:true,ShowStatus:true,
     HealthEnabled:true,HealthLabel:"health",HealthColor:"#1ed760",ShowArmor:true,ShowHealthPoints:false,HideRadar:false,
     GuideEnabled:true,GuideMax:8,GuideMode:"Cards",GuideRotateCount:3,GuideRotateSeconds:5,GuideRandom:true,GuideShowGiftImage:true,GuideShowActionImage:true,GuideTitleEnabled:false,GuideTitle:"🎁 الهدايا",GuideGiftColor:"#2979ff",GuideActionColor:"#00e676",
+    GuideLayout:"Vertical",GuideColumns:3,GuideIconShape:"Auto",GuideIconSize:30,GuideColors:"Hud",GuideShowNames:true,GuideShowCoins:false,GuideArrow:true,
     OverheadEnabled:true,OverheadAvatar:true,OverheadName:true,OverheadHealth:true,OverheadHeight:1.2,AvatarShape:"Circle",OverheadStyle:"Classic",OverheadRing:true,OverheadLevel:true,
     ScoreVariant:"Classic",Top3Variant:"List",HealthVariant:"Bar",NotifVariant:"Card",FeedAnimation:"Slide",
     Design:"Arena",DesignColor:"GOLD",DesignCoinsWord:"كوينز",DesignKey:"F10",DesignColorKey:"F5",
@@ -1080,11 +1086,11 @@ function renderAllForms(){
   renderRandom();
   renderForm("#formHud", [
     {sec:"Hud", title:"🖥️ عام", fields:[["Enabled","الهود","b"],["LayoutMode","📐 الوضع فالبداية","s",{opts:[["Normal","16:9 عادي"],["Vertical","9:16 TikTok"]]}],["Style","🎨 الشكل","s",{opts:STYLES}],
-      ["StyleCycle","F11 كيدور على","list",{opts:STYLES,wide:true}],["Font","🔤 الخط","s",{opts:FONTS}],["FontCycle","F8 كيدور على","list",{opts:FONTS,wide:true}],
+      ["LookCycle","F11 كيدور على (الأشكال الكاملة)","list",{opts:LOOKS,wide:true}],["Font","🔤 الخط","s",{opts:FONTS}],["FontCycle","F8 كيدور على","list",{opts:FONTS,wide:true}],
       ["FontScale","حجم الكتابة","range",{min:0.5,max:2,step:0.05}],["Opacity","الشفافية","range",{min:0,max:255}],["TextOutline","الحواشي","b"],["TextShadow","الظل","b"],
       ["AccentColor","اللون الرئيسي","c"],["TextColor","لون الكتابة","c"],["PanelColor","لون الخلفية","c"],["WinColor","لون الفوز","c"],["LossColor","لون الخسارة","c"],
       ["AvatarShape","شكل الصور","s",{opts:[["Circle","⚪ دائرة"],["Square","⬜ مربع"]]}],["HideRadar","🗺️ إخفاء الرادار","b"]]},
-    {sec:"Hud", title:"🏟️ الديزاين (Arena · Broadcast · Podium · Cards · Esports · Minimal · Classic)", hint:"كيبدل الشكل ديال اللوحات الأصلية: لوحة الداعمين (فوق يسار) واللائحات ديال اليمين (الإشعارات و Kill Feed)، بلا ما يزيد حتى لوحة جديدة. None = الستايل العادي. فاللعبة: F10 = الديزاين الموالي، F5 = اللون الموالي.", fields:[
+    {sec:"Hud", title:"🏟️ الديزاين (Arena · Broadcast · Podium · Cards · Esports · Minimal · Classic)", hint:"كيبدل الشكل ديال اللوحات الأصلية: لوحة الداعمين (فوق يسار) واللائحات ديال اليمين (الإشعارات و Kill Feed)، بلا ما يزيد حتى لوحة جديدة. None = الستايل العادي. فاللعبة: F11 = الشكل الموالي (ديزاين ولا ستايل، الهود كامل كيتبدل)، F10 = غير الديزاينات، F5 = اللون الموالي.", fields:[
       ["Design","🏟️ الديزاين","s",{opts:DESIGNS}],["DesignColor","🎨 ألوان الميداليات","s",{opts:DESIGN_COLORS}],["DesignCoinsWord","كلمة الكوينز","t"],["DesignKey","⌨️ زر الديزاين","k"],["DesignColorKey","⌨️ زر اللون","k"]]},
     {sec:"Hud", title:"🔤 العربية وأسماء الداعمين", hint:"الخطوط ديال GTA ما فيهاش الحروف العربية. Auto: أي كتابة عربية (أسماء، جمل، عناوين) كتترسم كصورة بخط ديال Windows (الحروف مربوطة ومن اليمين لليسار) وكتبان فالهود. Latin: كتتحول لحروف لاتينية (أحمد → Ahmd). Always: كلشي كصورة. الأسماء المزخرفة (𝓐𝓶𝓲𝓷𝓮) كتولي عادية.", fields:[
       ["TextMode","🔤 طريقة الكتابة","s",{opts:[["Auto","✅ Auto (العربية كصورة)"],["Always","🖼️ كلشي كصورة"],["Latin","🔠 تحويل للاتيني"],["Off","⛔ بلا (GTA فقط)"]]}],
@@ -1102,9 +1108,14 @@ function renderAllForms(){
     {sec:"Hud", title:"🏆 الفوز والخسارة", fields:[["ScoreEnabled","اللوحة","b"],["TitleEnabled","العنوان","b"],["Title","العنوان","t"],["ShowScore","الفوز والخسارة","b"],["ShowTimer","العداد","b"],["ShowStreak","السلسلة","b"],["ShowCounters","🦹👮 عدد الأعداء والمساعدين (تحت)","b"]]},
     {sec:"Hud", title:"👑 لوحة الداعمين", fields:[["Top3Enabled","اللوحة","b"],["ShowTop3","الداعمين","b"],["TopCount","عدد الداعمين","range",{min:1,max:10}],["Top3Title","العنوان","t"],["ShowCoins","الكوينز","b"],["ShowStatus","حالة TikFinity","b"]]},
     {sec:"Hud", title:"❤️ شريط الطاقة", fields:[["HealthEnabled","الشريط","b"],["HealthLabel","الكلمة","t"],["HealthColor","اللون","c"],["ShowArmor","شريط الدرع","b"],["ShowHealthPoints","النقاط (722 / 1000)","b"]]},
-    {sec:"Hud", title:"🎁 دليل الهدايا", fields:[["GuideEnabled","الدليل","b"],["GuideMode","الشكل","s",{opts:[["Cards","🃏 كروت"],["List","📋 لائحة"],["Rotate","🔄 كيتبدلو"]]}],["GuideMax","أقصى عدد","i",{min:1,max:30}],
-      ["GuideRotateCount","Rotate: شحال فمرة","i",{min:1}],["GuideRotateSeconds","Rotate: كل (ث)","f",{min:1}],["GuideRandom","Rotate: عشوائي","b"],["GuideShowGiftImage","صورة الهدية","b"],["GuideShowActionImage","صورة الأكشن","b"],
-      ["GuideTitleEnabled","العنوان","b"],["GuideTitle","العنوان","t"],["GuideGiftColor","لون الهدية","c"],["GuideActionColor","لون الأكشن","c"]]},
+    {sec:"Hud", title:"🎁 دليل الهدايا", hint:"الدليل كيتبع الشكل ديال الهود (F11): نفس الخلفية، نفس اللون، والأيقونات كيتبدل شكلها بوحدها (Auto): دائرية فـ Arena/Podium/Minimal/Classic/Royal/Neon، مسدسة فـ Esports/Cyber/Hologram، مربعة فـ Broadcast/Carbon/Retro، مربعة بزوايا مدورة فالباقي. ولا اختار الشكل بيدك.", fields:[
+      ["GuideEnabled","الدليل","b"],["GuideLayout","📐 الترتيب","s",{opts:[["Vertical","⬇️ عمودي (سطور)"],["Horizontal","➡️ أفقي (مربعات فسطر)"],["Grid","▦ شبكة (أعمدة)"]]}],["GuideColumns","▦ عدد الأعمدة (الشبكة)","i",{min:1,max:10}],
+      ["GuideIconShape","🔷 شكل الأيقونات","s",{opts:[["Auto","✨ Auto (كيتبع الهود)"],["Circle","⚪ دائرية"],["Square","⬜ مربعة"],["Rounded","▢ زوايا مدورة"],["Hex","⬡ مسدسة"]]}],["GuideIconSize","📏 حجم الأيقونات","range",{min:16,max:80,step:1}],
+      ["GuideColors","🎨 الألوان","s",{opts:[["Hud","✨ ديال الهود"],["Custom","🖌️ بيدي"]]}],["GuideGiftColor","لون الهدية (بيدي)","c"],["GuideActionColor","لون الأكشن (بيدي)","c"],
+      ["GuideShowGiftImage","🎁 صورة الهدية","b"],["GuideShowActionImage","🎬 صورة الأكشن","b"],["GuideShowNames","🔤 الأسماء","b"],["GuideArrow","➜ السهم","b"],["GuideShowCoins","💰 ثمن الهدية (كوينز)","b"],
+      ["GuideMode","🃏 النوع","s",{opts:[["Cards","🃏 كروت"],["List","📋 لائحة مدمجة"],["Rotate","🔄 كيتبدلو"]]}],["GuideMax","أقصى عدد","i",{min:1,max:30}],
+      ["GuideRotateCount","Rotate: شحال فمرة","i",{min:1}],["GuideRotateSeconds","Rotate: كل (ث)","f",{min:1}],["GuideRandom","Rotate: عشوائي","b"],
+      ["GuideTitleEnabled","العنوان","b"],["GuideTitle","العنوان","t"]]},
     {sec:"Hud", title:"🧍 فوق راس الشخصيات", fields:[["OverheadEnabled","مشعول","b"],["OverheadAvatar","الصورة","b"],["OverheadName","الاسم","b"],["OverheadHealth","شريط الدم","b"],["OverheadHeight","العلو","f",{min:0,step:0.1}]]},
     {sec:"Notifications", title:"🔔 الإشعارات", fields:[["Enabled","مشعولة","b"],["Seconds","المدة (ث)","f",{min:1}],["MaxVisible","أقصى عدد","i",{min:1,max:20}],["ShowAvatar","صورة البروفايل","b"],["ShowGiftIcon","صورة الهدية","b"]]},
     {sec:"Spotlight", title:"⭐ الإشعار الكبير (Spotlight)", hint:"كارطة كبيرة فوسط الشاشة لمدة 3 ثواني: صورة الأكشن، العنوان ديال التفاعل، الجملة، والصورة ديال الداعم. كتبان للتفاعلات اللي مشعول فيهم «⭐ إشعار كبير» (سيارة المافيا والموطور افتراضياً)، ولا أوتوماتيكياً لأي هدية ≥ الكوينز (0 = بلا).", fields:[
@@ -1177,11 +1188,27 @@ const PALETTES = {Broadcast:["#e10600","#111418","#ffffff","#1fc16b","#e10600"],
   Hologram:["#7df9ff","#041a24","#d9fbff","#7dffb3","#ff7d9b"],Gradient:["#ff4fd8","#1b1036","#ffffff","#4dffb5","#ff5c7a"],Stream:["#fe2c55","#000000","#ffffff","#25f4ee","#fe2c55"],Carbon:["#ff7a00","#121212","#f2f2f2","#7cff6b","#ff3b3b"]};
 // Hud view with the effective colors (palette applied)
 function HV(){
-  const H = state.ini.Hud, p = H.StylePalette && PALETTES[H.Style];
+  const H = state.ini.Hud;
+  if (designOn()) return Object.assign({}, H, {AccentColor:dAcc(), PanelColor:"#0e1018"});
+  const p = H.StylePalette && PALETTES[H.Style];
   if (!p) return H;
   return Object.assign({}, H, {AccentColor:p[0], PanelColor:p[1], TextColor:p[2], WinColor:p[3], LossColor:p[4]});
 }
+// plate of a design (mirror of DPlate in the engine)
+function dPlateCss(d, a){
+  a = Math.min(1, a == null ? 1 : a); const acc = dAcc(), bg = `rgba(14,16,24,${(.94*a).toFixed(2)})`;
+  switch (d){
+    case "arena": case "classic": return `background:${bg};border-radius:12px;box-shadow:inset 0 2px 0 ${acc}`;
+    case "broadcast": return `background:${bg};border-left:5px solid ${acc}`;
+    case "podium": return `background:rgba(34,38,52,${(.88*a).toFixed(2)});border-radius:16px;box-shadow:inset 0 2px 0 rgba(255,255,255,.6)`;
+    case "cards": return `background:${bg};border-radius:8px;border-bottom:3px solid ${acc}`;
+    case "esports": return `background:${bg};clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);box-shadow:inset 0 2px 0 ${acc}`;
+    case "minimal": return `background:rgba(10,12,18,${(.84*a).toFixed(2)});border-radius:18px`;
+    default: return `background:${bg};border-radius:10px;box-shadow:inset 0 2px 0 ${acc}`;
+  }
+}
 function bgCss(alpha, Hin){
+  if (!Hin && designOn()) return dPlateCss(dz(), alpha);
   const H = Hin || HV(), op = H.Opacity / 255 * (alpha == null ? 1 : alpha), acc = H.AccentColor, pan = H.PanelColor;
   switch (String(H.Style).toLowerCase()){
     case "glass": return `background:${rgba(mixHex(pan,"#ffffff",0.12), op*0.55)};border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px)`;
@@ -1203,6 +1230,14 @@ function fpx(scale){ return (scale * 38 * state.ini.Hud.FontScale).toFixed(1) + 
 function txtCss(){ const H = HV(); return `font-family:${FONT_CSS[H.Font]||FONT_CSS.ChaletLondon};color:${H.TextColor};${H.TextOutline?"-webkit-text-stroke:.3px #000;":""}${H.TextShadow?"text-shadow:1px 1px 1px #000;":""}`; }
 function header(text){
   const H = HV(), st = String(H.Style).toLowerCase(), base = `text-align:center;font-size:${fpx(.34)};height:22px;line-height:22px;font-weight:700`;
+  if (designOn()){
+    const acc = dAcc(), d = dz();
+    if (d === "broadcast") return `<div style="${base}"><span style="display:inline-block;background:${acc};color:#1c1812;padding:0 14px;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 100%,0 100%)">${esc(text)}</span></div>`;
+    if (d === "esports") return `<div style="color:${acc};${base}">// ${esc(text)} //</div>`;
+    if (d === "podium" || d === "minimal") return `<div style="color:#fff;${base}">${esc(text)}</div>`;
+    if (d === "cards") return `<div style="color:${acc};${base}">${esc(text)}<div style="margin:-3px auto 0;width:40px;height:2px;background:${acc}"></div></div>`;
+    return `<div style="color:${acc};${base}">${esc(text)}</div>`;
+  }
   if (st === "esports" || st === "broadcast") return `<div style="background:${H.AccentColor};color:${st==="broadcast"?"#fff":H.PanelColor};${base}">${esc(text)}</div>`;
   if (st === "cyber" || st === "hologram") return `<div style="color:${H.AccentColor};${base}">[ ${esc(text)} ]</div>`;
   if (st === "royal") return `<div style="color:${H.AccentColor};${base};display:flex;align-items:center;gap:8px;padding:0 10px"><i style="flex:1;height:1px;background:${H.AccentColor}"></i>${esc(text)}<i style="flex:1;height:1px;background:${H.AccentColor}"></i></div>`;
@@ -1309,28 +1344,62 @@ function pvHealth(L){
 function triggerLabel(it){
   switch (it.Trigger){ case "Gift": return it.GiftName || ("#" + it.GiftId); case "Likes": return it.LikesCount + " Likes"; case "Comment": return it.CommentText ? `"${it.CommentText}"` : "Comment"; default: return it.Trigger; }
 }
+// gift guide preview (mirror of GuidePanel / GuideRows / GuideTiles in the engine)
+function guideShape(){
+  const s = String(state.ini.Hud.GuideIconShape || "Auto").toLowerCase();
+  if (["circle","square","rounded","hex"].includes(s)) return s;
+  const l = String(curLook()).toLowerCase();
+  if (["arena","podium","minimal","classic","royal","neon"].includes(l)) return "circle";
+  if (["esports","cyber","hologram"].includes(l)) return "hex";
+  if (["broadcast","carbon","retro"].includes(l)) return "square";
+  return "rounded";
+}
+function shapeCss(sh){ return sh === "circle" ? "border-radius:50%;" : sh === "rounded" ? "border-radius:28%;" : sh === "hex" ? "clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);" : ""; }
+function iconFrame(img, emoji, d, ring, sh){
+  const t = Math.max(1.5, d * 0.07), ins = d * (sh === "hex" ? 0.14 : 0.08), inner = d - ins * 2;
+  const pic = img ? `<img src="${img}" style="width:${inner}px;height:${inner}px;object-fit:contain;${shapeCss(sh)}">` : `<span style="font-size:${inner*0.82}px;line-height:${inner}px">${esc(emoji||"")}</span>`;
+  return `<span style="display:inline-grid;place-items:center;flex:none;width:${d+t*2}px;height:${d+t*2}px;background:${ring};${shapeCss(sh)}"><span style="display:grid;place-items:center;width:${d}px;height:${d}px;background:#12141c;${shapeCss(sh)}">${pic}</span></span>`;
+}
+function guideArrow(c){ return `<span style="flex:none;color:${c};font-weight:900;font-size:14px;width:14px;text-align:center">➜</span>`; }
 function pvGuide(){
   const H = HV();
   let items = state.interactions.filter(i => i.Enabled && i.ShowInGuide && i.Trigger !== "Key");
   items = items.slice(0, H.GuideMode === "Rotate" ? H.GuideRotateCount : H.GuideMax);
   if (!items.length) return null;
-  const list = H.GuideMode === "List", w = list ? 270 : 290, rowH = list ? 26 : 36;
+  const custom = H.GuideColors === "Custom", gc = custom ? H.GuideGiftColor : H.AccentColor, ac = custom ? H.GuideActionColor : H.WinColor;
+  const sh = guideShape(), names = H.GuideShowNames, gI = H.GuideShowGiftImage, aI = H.GuideShowActionImage;
   const titleH = H.GuideTitleEnabled && H.GuideTitle ? 26 : 0;
-  const h = titleH + items.length * (rowH + (list ? 0 : 4)) + (list ? 10 : 2);
+  const coins = it => H.GuideShowCoins && it.Trigger === "Gift" && (it.GiftCoins || giftCoins(it.GiftName)) ? coinsTxt(it.GiftCoins || giftCoins(it.GiftName)) + " " + esc(H.DesignCoinsWord) : "";
+  const act = it => it.Name || (ACT[it.Action]||{}).name || it.Action;
+  const lay = H.GuideLayout || "Vertical";
+  if (lay === "Horizontal" || lay === "Grid"){
+    const d = +H.GuideIconSize || 30, icons = (gI?1:0) + (aI?1:0), cols = Math.max(1, Math.min(lay === "Grid" ? +H.GuideColumns || 3 : items.length, items.length));
+    const tw = Math.max(names ? 104 : 0, 16 + icons * d + (icons === 2 ? 22 : 0)), cRow = items.some(coins);
+    const th = 10 + (icons ? d + 6 : 0) + (names ? 34 : 0) + (cRow ? 14 : 0), rows = Math.ceil(items.length / cols), gap = 6;
+    const w = cols * tw + (cols - 1) * gap, h = titleH + rows * th + (rows - 1) * gap;
+    let html = titleH ? abs(0, 0, w, titleH - 2, bgCss(), header(H.GuideTitle)) : "";
+    items.forEach((it, i) => {
+      const x = (i % cols) * (tw + gap), y = titleH + Math.floor(i / cols) * (th + gap);
+      const ic = [gI && iconFrame(it.giftImg, it.giftEmoji, d, gc, sh), icons === 2 && H.GuideArrow && guideArrow(ac), aI && iconFrame(it.actImg, it.actEmoji, d, ac, sh)].filter(Boolean).join("");
+      html += abs(x, y, tw, th, `${bgCss()};box-shadow:inset 0 2px 0 ${gc};display:flex;flex-direction:column;align-items:center;padding-top:6px;gap:4px;font-size:${fpx(.28)};overflow:hidden`,
+        `${icons ? `<div style="display:flex;align-items:center;gap:4px">${ic}</div>` : ""}${names ? `<div style="color:${gc};white-space:nowrap;max-width:${tw-6}px;overflow:hidden">${esc(triggerLabel(it))}</div><div style="white-space:nowrap;max-width:${tw-6}px;overflow:hidden">${esc(act(it))}</div>` : ""}${coins(it) ? `<div style="opacity:.65;font-size:${fpx(.25)}">${coins(it)}</div>` : ""}`);
+    });
+    return {w, h, html};
+  }
+  const list = H.GuideMode === "List", d = list ? Math.max(16, (+H.GuideIconSize || 30) * .75) : (+H.GuideIconSize || 30);
+  const rowH = d + (list ? 6 : 10), gap = list ? 0 : 4;
+  const est = it => 20 + (gI ? d + 8 : 0) + (names ? (triggerLabel(it).length + act(it).length) * 7.5 + 10 : 0) + (H.GuideArrow ? 18 : 0) + (aI ? d + 8 : 0) + (coins(it) ? 60 : 0);
+  const w = Math.min(460, Math.max(titleH ? 200 : 120, ...items.map(est)));
+  const h = titleH + items.length * (rowH + gap) + (list ? 10 : 0);
   let y = 0, html = list ? `<div class="hbg" style="${bgCss()}"></div>` : "";
   if (titleH){ html += abs(0, 0, w, titleH - 2, list ? "" : bgCss(), header(H.GuideTitle)); y += titleH; }
   if (list) y += 5;
-  items.forEach(it => {
-    const act = it.Name || (ACT[it.Action]||{}).name || it.Action;
-    if (list){
-      html += abs(8, y, null, rowH, `display:flex;align-items:center;gap:5px;font-size:${fpx(.34)}`, `${H.GuideShowGiftImage?thumbSmall(it.giftImg,it.giftEmoji,22):""}<span style="color:${H.GuideGiftColor}">${esc(triggerLabel(it))}</span><span style="opacity:.6">&gt;</span>${H.GuideShowActionImage?thumbSmall(it.actImg,it.actEmoji,22):""}<span>${esc(act)}</span>`);
-      y += rowH;
-    } else {
-      const gw = w * 0.42;
-      html += abs(0, y, gw, rowH, `background:${rgba(H.GuideGiftColor,H.Opacity/255*0.9)};display:flex;align-items:center;gap:4px;padding-left:6px;font-size:${fpx(.34)};color:#fff`, `${H.GuideShowGiftImage?thumbSmall(it.giftImg,it.giftEmoji,28):""}<span style="overflow:hidden;white-space:nowrap">${esc(triggerLabel(it))}</span>`)
-        + abs(gw, y, w-gw, rowH, `background:${rgba(mixHex(H.PanelColor,H.GuideActionColor,.25),H.Opacity/255)};border-left:3px solid ${H.GuideActionColor};display:flex;align-items:center;gap:4px;padding-left:6px;font-size:${fpx(.34)}`, `${H.GuideShowActionImage?thumbSmall(it.actImg,it.actEmoji,28):""}<span style="overflow:hidden;white-space:nowrap">${esc(act)}</span>`);
-      y += rowH + 4;
-    }
+  items.forEach((it, n) => {
+    let css = "", lead = "";
+    if (!list){ if (designOn()){ const r = dRowCss(n + 1, false, rowH); css = r.css; lead = r.lead; } else css = `${bgCss()};border-left:3px solid ${gc}`; }
+    html += abs(0, y, w, rowH, `${css};display:flex;align-items:center;gap:6px;padding-left:${lead ? 0 : 8}px;font-size:${fpx(.34)};overflow:hidden;white-space:nowrap`,
+      `${lead}${gI ? iconFrame(it.giftImg, it.giftEmoji, d, gc, sh) : ""}${names ? `<span style="color:${gc}">${esc(triggerLabel(it))}</span>` : ""}${coins(it) ? `<span style="opacity:.65;font-size:${fpx(.28)}">${coins(it)}</span>` : ""}${H.GuideArrow ? guideArrow(ac) : ""}${aI ? iconFrame(it.actImg, it.actEmoji, d, ac, sh) : ""}${names ? `<span>${esc(act(it))}</span>` : ""}`);
+    y += rowH + gap;
   });
   return {w, h, html};
 }
@@ -1472,7 +1541,9 @@ const DESIGN_COLORS = [["GOLD","🥇 Gold"],["NEON","💜 Neon"],["FIRE","🔥 F
 const D_MEDALS = {GOLD:["#f5be28","#c0c6ce","#cd7f32"],NEON:["#d73cff","#00d7ff","#28e178"],FIRE:["#ff8c00","#f05f1e","#d72828"],ICE:["#96d7ff","#afe4f2","#7da5e1"],CLASSIC:["#f5be28","#c0c6ce","#cd7f32"]};
 function dz(){ return String(state.ini.Hud.Design || "None").toLowerCase(); }
 function designOn(){ const d = dz(); return d && d !== "none"; }
-function dAcc(){ const H = HV(); return {NEON:"#00e5ff",FIRE:"#ff6a00",ICE:"#7fd8ff",CLASSIC:H.AccentColor}[state.ini.Hud.DesignColor] || "#f5b301"; }
+function dAcc(){ const H = state.ini.Hud; return {NEON:"#00e5ff",FIRE:"#ff6a00",ICE:"#7fd8ff",CLASSIC:H.AccentColor}[H.DesignColor] || "#f5b301"; }
+function curLook(){ const H = state.ini.Hud; return designOn() ? H.Design : H.Style; }
+function setLook(l){ const H = state.ini.Hud; if (LOOK_DESIGNS.includes(l)) H.Design = l; else { H.Design = "None"; H.Style = l; } }
 function dMed(){ return D_MEDALS[state.ini.Hud.DesignColor] || D_MEDALS.GOLD; }
 function dAv(s, d, ring, glow, hex){
   const clip = hex ? "clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);" : "border-radius:50%;";
@@ -1691,8 +1762,10 @@ function renderHudSide(){
     h += `</div>`;
   });
   $("#hudSide").innerHTML = h;
-  $("#styleBtns").innerHTML = STYLES.map(s => { const old = H.Style; H.Style = s; const css = bgCss(); H.Style = old; return `<div class="stylebtn ${H.Style===s?"on":""}" data-style="${s}"><div class="sw8" style="${css}"></div>${s}</div>`; }).join("");
-  $("#kitChips").innerHTML = DESIGNS.map(([v, n]) => `<span class="chip ${H.Design===v?"on":""}" data-kit="${v}">${n}</span>`).join("") + " · " + DESIGN_COLORS.map(([v, n]) => `<span class="chip ${H.DesignColor===v?"on":""}" data-kitstyle="${v}">${n}</span>`).join("");
+  const cyc = (H.LookCycle || "").split(",").map(x => x.trim());
+  $("#styleBtns").innerHTML = LOOKS.map(l => { const oD = H.Design, oS = H.Style; setLook(l); const css = bgCss(), acc = HV().AccentColor; H.Design = oD; H.Style = oS;
+    return `<div class="stylebtn ${curLook()===l?"on":""}" data-style="${l}"><div class="sw8" style="${css};display:grid;place-items:center;color:${acc};font-weight:700;font-size:11px">${LOOK_DESIGNS.includes(l)?"🏟️":"🎨"} W 3 · 1 L</div>${l}<label class="incyc" title="F11"><input type="checkbox" data-incyc="${l}" ${cyc.includes(l)?"checked":""}> F11</label></div>`; }).join("");
+  $("#kitChips").innerHTML = DESIGN_COLORS.map(([v, n]) => `<span class="chip ${H.DesignColor===v?"on":""}" data-kitstyle="${v}">${n}</span>`).join("");
   $("#pvNormal").classList.toggle("pri", !vert); $("#pvVertical").classList.toggle("pri", vert);
 }
 function orderList(key, all, names){
@@ -1714,24 +1787,26 @@ $("#hudSide").addEventListener("click", e => {
   }
 });
 $("#styleBtns").addEventListener("click", e => {
+  const inc = e.target.closest("[data-incyc]");
+  if (inc){ const H = state.ini.Hud, cyc = LOOKS.filter(l => l === inc.dataset.incyc ? inc.checked : (H.LookCycle || "").split(",").map(x => x.trim()).includes(l)); H.LookCycle = cyc.join(","); renderAllForms(); changed(); return; }
+  if (e.target.closest(".incyc")) return;
   const s = e.target.closest("[data-style]"); if (!s) return;
-  state.ini.Hud.Style = s.dataset.style;
-  const cyc = state.ini.Hud.StyleCycle.split(",").filter(Boolean); if (!cyc.includes(s.dataset.style)) { cyc.push(s.dataset.style); state.ini.Hud.StyleCycle = cyc.join(","); }
+  setLook(s.dataset.style);
   renderHudSide(); renderAllForms(); changed();
 });
 $("#btnSpotDemo").onclick = () => { state.ui.spotUntil = Date.now() + (state.ini.Spotlight.Seconds || 3) * 1000; renderPreview(); setTimeout(renderPreview, (state.ini.Spotlight.Seconds || 3) * 1000 + 50); };
 $("#pvNormal").onclick = () => { state.ui.preview = "Normal"; renderHudSide(); renderPreview(); save(); };
 $("#pvVertical").onclick = () => { state.ui.preview = "Vertical"; renderHudSide(); renderPreview(); save(); };
 const PRESETS = {
-  "📺 Broadcast": s => { const L = s.ini.Layout = layoutDefaults(false); s.ini.Hud.Style = "Broadcast"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "Bar"; s.ini.Hud.Top3Variant = "List"; s.ini.Hud.HealthVariant = "Segmented"; s.ini.Hud.NotifVariant = "Banner"; s.ini.Hud.FeedAnimation = "Slide"; s.ini.Hud.OverheadStyle = "Card"; s.ui.preview = "Normal"; },
-  "🤖 Cyber": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Style = "Cyber"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "BigTimer"; s.ini.Hud.Top3Variant = "Compact"; s.ini.Hud.HealthVariant = "Numbers"; s.ini.Hud.NotifVariant = "Card"; s.ini.Hud.FeedAnimation = "Pop"; s.ini.Hud.OverheadStyle = "Badge"; s.ini.Aura.EnemyAura = "Pulse"; s.ini.Aura.AllyAura = "Beam"; s.ui.preview = "Normal"; },
-  "👑 Royal": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Style = "Royal"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "Classic"; s.ini.Hud.Top3Variant = "Podium"; s.ini.Hud.HealthVariant = "Bar"; s.ini.Hud.NotifVariant = "Pill"; s.ini.Hud.FeedAnimation = "Fade"; s.ini.Hud.OverheadStyle = "Badge"; s.ini.Aura.EnemyAura = "Ring"; s.ini.Aura.AllyAura = "Glow"; s.ui.preview = "Normal"; },
-  "🎵 TikTok Stream": s => { s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.LayoutMode = "Vertical"; s.ini.Hud.Style = "Stream"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "Bar"; s.ini.Hud.Top3Variant = "Compact"; s.ini.Hud.HealthVariant = "Slim"; s.ini.Hud.NotifVariant = "Pill"; s.ini.Hud.FeedAnimation = "Pop"; s.ini.Hud.OverheadStyle = "Minimal"; s.ini.LayoutVertical.Top3OffsetY = 70; s.ui.preview = "Vertical"; },
-  "🌈 Hologram": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Style = "Hologram"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "BigTimer"; s.ini.Hud.Top3Variant = "List"; s.ini.Hud.HealthVariant = "Segmented"; s.ini.Hud.NotifVariant = "Card"; s.ini.Hud.OverheadStyle = "Classic"; s.ini.Aura.EnemyAura = "Rainbow"; s.ui.preview = "Normal"; },
-  "🏠 الأصل": s => { s.ini.Layout = layoutDefaults(false); s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.Style = "Classic"; s.ini.Hud.GuideMode = "Cards"; s.ini.Hud.LayoutMode = "Normal"; s.ui.preview = "Normal"; },
-  "📱 TikTok": s => { s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.LayoutMode = "Vertical"; s.ini.Hud.Style = "Glass"; s.ui.preview = "Vertical"; },
-  "🎮 Esports": s => { const L = s.ini.Layout = layoutDefaults(false); L.FeedPosition = "TopRight"; L.FeedOffsetY = 0; L.HypePosition = "MiddleRight"; L.HypeOffsetY = 0; L.NotifPosition = "BottomLeft"; s.ini.Hud.Style = "Esports"; s.ini.Hud.GuideMode = "Rotate"; s.ui.preview = "Normal"; },
-  "✨ بسيط": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Style = "Minimal"; s.ini.Hud.GuideMode = "List"; s.ini.Hud.ShowCounters = false; s.ini.Hud.ShowStatus = false; s.ini.Hud.ShowStreak = false; s.ini.Hud.TitleEnabled = false; s.ui.preview = "Normal"; }
+  "📺 Broadcast": s => { const L = s.ini.Layout = layoutDefaults(false); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Broadcast"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "Bar"; s.ini.Hud.Top3Variant = "List"; s.ini.Hud.HealthVariant = "Segmented"; s.ini.Hud.NotifVariant = "Banner"; s.ini.Hud.FeedAnimation = "Slide"; s.ini.Hud.OverheadStyle = "Card"; s.ui.preview = "Normal"; },
+  "🤖 Cyber": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Cyber"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "BigTimer"; s.ini.Hud.Top3Variant = "Compact"; s.ini.Hud.HealthVariant = "Numbers"; s.ini.Hud.NotifVariant = "Card"; s.ini.Hud.FeedAnimation = "Pop"; s.ini.Hud.OverheadStyle = "Badge"; s.ini.Aura.EnemyAura = "Pulse"; s.ini.Aura.AllyAura = "Beam"; s.ui.preview = "Normal"; },
+  "👑 Royal": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Royal"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "Classic"; s.ini.Hud.Top3Variant = "Podium"; s.ini.Hud.HealthVariant = "Bar"; s.ini.Hud.NotifVariant = "Pill"; s.ini.Hud.FeedAnimation = "Fade"; s.ini.Hud.OverheadStyle = "Badge"; s.ini.Aura.EnemyAura = "Ring"; s.ini.Aura.AllyAura = "Glow"; s.ui.preview = "Normal"; },
+  "🎵 TikTok Stream": s => { s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.LayoutMode = "Vertical"; s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Stream"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "Bar"; s.ini.Hud.Top3Variant = "Compact"; s.ini.Hud.HealthVariant = "Slim"; s.ini.Hud.NotifVariant = "Pill"; s.ini.Hud.FeedAnimation = "Pop"; s.ini.Hud.OverheadStyle = "Minimal"; s.ini.LayoutVertical.Top3OffsetY = 70; s.ui.preview = "Vertical"; },
+  "🌈 Hologram": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Hologram"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "BigTimer"; s.ini.Hud.Top3Variant = "List"; s.ini.Hud.HealthVariant = "Segmented"; s.ini.Hud.NotifVariant = "Card"; s.ini.Hud.OverheadStyle = "Classic"; s.ini.Aura.EnemyAura = "Rainbow"; s.ui.preview = "Normal"; },
+  "🏠 الأصل": s => { s.ini.Layout = layoutDefaults(false); s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Classic"; s.ini.Hud.GuideMode = "Cards"; s.ini.Hud.LayoutMode = "Normal"; s.ui.preview = "Normal"; },
+  "📱 TikTok": s => { s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.LayoutMode = "Vertical"; s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Glass"; s.ui.preview = "Vertical"; },
+  "🎮 Esports": s => { const L = s.ini.Layout = layoutDefaults(false); L.FeedPosition = "TopRight"; L.FeedOffsetY = 0; L.HypePosition = "MiddleRight"; L.HypeOffsetY = 0; L.NotifPosition = "BottomLeft"; s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Esports"; s.ini.Hud.GuideMode = "Rotate"; s.ui.preview = "Normal"; },
+  "✨ بسيط": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Minimal"; s.ini.Hud.GuideMode = "List"; s.ini.Hud.ShowCounters = false; s.ini.Hud.ShowStatus = false; s.ini.Hud.ShowStreak = false; s.ini.Hud.TitleEnabled = false; s.ui.preview = "Normal"; }
 };
 $("#presets").innerHTML = Object.keys(PRESETS).map(k => `<span class="chip" data-preset="${k}">${k}</span>`).join("");
 $("#kitChips").addEventListener("click", e => {
@@ -1995,7 +2070,7 @@ function validate(){
   if (!state.interactions.some(i => i.Enabled)) out.push(["warn", "🎁 ما كاين حتى تفاعل مشعول"]);
   if (state.ini.KillEffects.SoundEnabled && !state.sounds.kill) out.push(["warn", "🎵 صوت القتل مشعول ولكن ملف WAV ناقص"]);
   if (state.ini.Death.SoundEnabled && !state.sounds.death) out.push(["warn", "🎵 موسيقى الموت مشعولة ولكن ملف WAV ناقص"]);
-  if (!state.ini.Hud.StyleCycle) out.push(["warn", "🎨 F11 ما عندو حتى شكل"]);
+  if (!state.ini.Hud.LookCycle) out.push(["warn", "🎨 F11 ما عندو حتى شكل"]);
   if (!engineReady()) out.push(["warn", "📜 المحرك ما مدموجش فهاد الصفحة (src). استعمل index.html من بعد python3 build.py"]);
   if (!out.length) out.push(["ok", "✅ كلشي مزيان. تقدر تصدر."]);
   $("#validList").innerHTML = out.map(([t, m]) => `<li class="${t === "err" ? "" : t}">${esc(m)}</li>`).join("");

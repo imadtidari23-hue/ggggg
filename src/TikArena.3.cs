@@ -634,7 +634,7 @@ namespace TikArena
         // [Hud]
         public bool HudEnabled, TextOutline, TextShadow;
         public string HudStyle, HudFont, LayoutMode;
-        public List<string> StyleCycle, FontCycle;
+        public List<string> StyleCycle, FontCycle, LookCycle;
         public float FontScale;
         public int Opacity;
         public Color Accent, TextColor, PanelColor, WinColor, LossColor;
@@ -649,7 +649,9 @@ namespace TikArena
         public string HealthLabel;
         public Color HealthColor;
         public bool GuideEnabled, GuideRandom, GuideShowGiftImage, GuideShowActionImage, GuideTitleEnabled;
-        public int GuideMax, GuideRotateCount;
+        public int GuideMax, GuideRotateCount, GuideColumns, GuideIconSize;
+        public string GuideLayout, GuideIconShape, GuideColors;
+        public bool GuideShowNames, GuideShowCoins, GuideArrow;
         public float GuideRotateSeconds;
         public string GuideMode, GuideTitle;
         public Color GuideGiftColor, GuideActionColor;
@@ -832,6 +834,8 @@ namespace TikArena
             c.HudEnabled = ini.B("Hud", "Enabled", true);
             c.HudStyle = ini.S("Hud", "Style", "Broadcast");
             c.StyleCycle = ini.L("Hud", "StyleCycle", "Broadcast,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Classic,Glass,Neon,Minimal,Esports,Retro");
+            // F11 goes through complete looks (a design or a style) so every panel always matches
+            c.LookCycle = ini.L("Hud", "LookCycle", "Arena,Broadcast,Podium,Cards,Esports,Minimal,Classic,Cyber,Royal,Hologram,Gradient,Stream,Carbon,Glass,Neon,Retro");
             c.StylePalette = ini.B("Hud", "StylePalette", true);
             c.HudFont = ini.S("Hud", "Font", "ChaletLondon");
             c.FontCycle = ini.L("Hud", "FontCycle", "ChaletLondon,ChaletComprimeCologne,Pricedown");
@@ -878,6 +882,14 @@ namespace TikArena
             c.GuideTitle = ini.S("Hud", "GuideTitle", "الهدايا");
             c.GuideGiftColor = ini.C("Hud", "GuideGiftColor", "#2979ff");
             c.GuideActionColor = ini.C("Hud", "GuideActionColor", "#00e676");
+            c.GuideLayout = ini.S("Hud", "GuideLayout", "Vertical");          // Vertical | Horizontal | Grid
+            c.GuideColumns = U.Clamp(ini.I("Hud", "GuideColumns", 3), 1, 10);
+            c.GuideIconShape = ini.S("Hud", "GuideIconShape", "Auto");        // Auto | Circle | Square | Rounded | Hex
+            c.GuideIconSize = U.Clamp(ini.I("Hud", "GuideIconSize", 30), 16, 80);
+            c.GuideColors = ini.S("Hud", "GuideColors", "Hud");               // Hud (follow the look) | Custom
+            c.GuideShowNames = ini.B("Hud", "GuideShowNames", true);
+            c.GuideShowCoins = ini.B("Hud", "GuideShowCoins", false);
+            c.GuideArrow = ini.B("Hud", "GuideArrow", true);
             c.OverheadEnabled = ini.B("Hud", "OverheadEnabled", true);
             c.OverheadAvatar = ini.B("Hud", "OverheadAvatar", true);
             c.OverheadName = ini.B("Hud", "OverheadName", true);
@@ -1884,6 +1896,7 @@ namespace TikArena
                 }
             });
             Draw(dir, "hex", delegate(Graphics g) { g.FillPolygon(Brushes.White, Hex(N, true)); });
+            Draw(dir, "rsq", delegate(Graphics g) { using (GraphicsPath gp = IconMask.Path("rounded", N)) g.FillPath(Brushes.White, gp); });
             Draw(dir, "q_tl", delegate(Graphics g) { g.FillEllipse(Brushes.White, 0, 0, N * 2, N * 2); });
             Draw(dir, "q_tr", delegate(Graphics g) { g.FillEllipse(Brushes.White, -N, 0, N * 2, N * 2); });
             Draw(dir, "q_bl", delegate(Graphics g) { g.FillEllipse(Brushes.White, 0, -N, N * 2, N * 2); });
@@ -1920,6 +1933,81 @@ namespace TikArena
                 }
             }
             catch (Exception ex) { U.Log("shape " + name + ": " + ex.Message); files.Remove(name); }
+        }
+    }
+
+    // gift / action pictures cut to the shape of the gift guide (circle, rounded, hex), cached as PNG
+    static class IconMask
+    {
+        static readonly Dictionary<string, string> done = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public static GraphicsPath Path(string shape, int n)
+        {
+            GraphicsPath gp = new GraphicsPath();
+            if (shape == "circle") gp.AddEllipse(0, 0, n - 1, n - 1);
+            else if (shape == "hex")
+            {
+                PointF[] p = new PointF[6];
+                float c = n / 2f, r = n / 2f - 1;
+                for (int i = 0; i < 6; i++) { double a = Math.PI / 3 * i + Math.PI / 2; p[i] = new PointF(c + (float)Math.Cos(a) * r, c + (float)Math.Sin(a) * r); }
+                gp.AddPolygon(p);
+            }
+            else if (shape == "rounded")
+            {
+                float d = n * 0.5f;
+                gp.AddArc(0, 0, d, d, 180, 90);
+                gp.AddArc(n - 1 - d, 0, d, d, 270, 90);
+                gp.AddArc(n - 1 - d, n - 1 - d, d, d, 0, 90);
+                gp.AddArc(0, n - 1 - d, d, d, 90, 90);
+                gp.CloseFigure();
+            }
+            else gp.AddRectangle(new Rectangle(0, 0, n, n));
+            return gp;
+        }
+
+        public static string Get(string file, string shape)
+        {
+            if (string.IsNullOrEmpty(file) || shape == "square") return file;
+            string key = shape + "|" + file, r;
+            if (done.TryGetValue(key, out r)) return r;
+            r = file;
+            try
+            {
+                string dir = System.IO.Path.Combine(U.DataDir, "cache", "icons");
+                Directory.CreateDirectory(dir);
+                long stamp = new FileInfo(file).LastWriteTimeUtc.Ticks / 10000000 % 1000000000;
+                string target = System.IO.Path.Combine(dir, U.SafeName(System.IO.Path.GetFileNameWithoutExtension(file)) + "_" + stamp + "_" + shape + ".png");
+                if (!File.Exists(target))
+                {
+                    const int n = 128;
+                    using (Image src = Image.FromFile(file))
+                    using (Bitmap sq = new Bitmap(n, n, PixelFormat.Format32bppArgb))
+                    using (Bitmap b = new Bitmap(n, n, PixelFormat.Format32bppArgb))
+                    {
+                        using (Graphics g = Graphics.FromImage(sq))
+                        {
+                            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                            g.Clear(Color.Transparent);
+                            float k = Math.Min(n / (float)src.Width, n / (float)src.Height);
+                            float w = src.Width * k, h = src.Height * k;
+                            g.DrawImage(src, (n - w) / 2, (n - h) / 2, w, h);
+                        }
+                        using (Graphics g = Graphics.FromImage(b))
+                        using (GraphicsPath gp = Path(shape, n))
+                        using (TextureBrush tb = new TextureBrush(sq))
+                        {
+                            g.SmoothingMode = SmoothingMode.AntiAlias;
+                            g.Clear(Color.Transparent);
+                            g.FillPath(tb, gp);
+                        }
+                        b.Save(target, ImageFormat.Png);
+                    }
+                }
+                r = target;
+            }
+            catch (Exception ex) { U.Log("icon mask " + file + ": " + ex.Message); }
+            done[key] = r;
+            return r;
         }
     }
 
@@ -2450,7 +2538,7 @@ namespace TikArena
                 if (!powered) return;
                 if (k == cfg.LiveTestKey && cfg.LiveTestEnabled) { ToggleLiveTest(); return; }
                 if (k == cfg.StartKey) { StartSession(); return; }
-                if (k == cfg.HudStyleKey) { style = Cycle(cfg.StyleCycle, style); Status("HUD: " + style); return; }
+                if (k == cfg.HudStyleKey) { SetLook(Cycle(cfg.LookCycle, CurrentLook)); Status("HUD: " + CurrentLook); return; }
                 if (k == cfg.HudFontKey) { fontName = Cycle(cfg.FontCycle, fontName); Status("Font: " + fontName); return; }
                 if (k == cfg.DesignKey) { design = Cycle(DesignCycle, design); Status("Design: " + design); return; }
                 if (k == cfg.DesignColorKey) { designColor = Cycle(DesignColors, designColor); Status("Color: " + designColor); return; }
@@ -4774,6 +4862,22 @@ namespace TikArena
         static readonly List<string> DesignColors = new List<string> { "GOLD", "NEON", "FIRE", "ICE", "CLASSIC" };
 
         string Dz { get { return (design ?? "None").ToLowerInvariant(); } }
+
+        // one look = a design (Arena, Broadcast...) or a style with no design (Cyber, Royal...)
+        string CurrentLook { get { return DesignOn ? design : style; } }
+
+        void SetLook(string look)
+        {
+            if (string.IsNullOrEmpty(look)) return;
+            foreach (string d in DesignCycle)
+            {
+                if (d == "None" || !string.Equals(d, look, StringComparison.OrdinalIgnoreCase)) continue;
+                design = d;
+                return;
+            }
+            design = "None";
+            style = look;
+        }
         bool DesignOn { get { string d = Dz; return d.Length > 0 && d != "none"; } }
 
         Color[] MedalsD
@@ -5357,10 +5461,13 @@ namespace TikArena
         }
 
         // ================================================================ solid design box (score counters, end screen)
-        void DBox(float x, float y, float w, float h)
+        void DBox(float x, float y, float w, float h) { DPlate(x, y, w, h, 1f); }
+
+        // plate of the current look (every panel uses it, so everything matches)
+        void DPlate(float x, float y, float w, float h, float alpha)
         {
-            Color acc = DesignOn ? DAcc : cAcc;
-            Color bg = Color.FromArgb(240, 14, 16, 24);
+            Color acc = U.WithAlpha(DesignOn ? DAcc : cAcc, (int)(255 * alpha));
+            Color bg = Color.FromArgb((int)(240 * alpha), 14, 16, 24);
             switch (DesignOn ? Dz : "")
             {
                 case "arena":
@@ -5374,8 +5481,8 @@ namespace TikArena
                     Gfx.Rect(x, y, 5, h, acc);
                     break;
                 case "podium":
-                    Gfx.RRect(x, y, w, h, Math.Min(16, h / 2), Color.FromArgb(225, 34, 38, 52));
-                    Gfx.Rect(x + 16, y, w - 32, 2, Color.FromArgb(150, 255, 255, 255));
+                    Gfx.RRect(x, y, w, h, Math.Min(16, h / 2), Color.FromArgb((int)(225 * alpha), 34, 38, 52));
+                    Gfx.Rect(x + 16, y, w - 32, 2, Color.FromArgb((int)(150 * alpha), 255, 255, 255));
                     break;
                 case "cards":
                     Gfx.RRect(x, y, w, h, Math.Min(8, h / 2), bg);
@@ -5388,10 +5495,11 @@ namespace TikArena
                     Gfx.Rect(x + 8, y, w - 16, 2, acc);
                     break;
                 case "minimal":
-                    Gfx.RRect(x, y, w, h, Math.Min(18, h / 2), Color.FromArgb(215, 10, 12, 18));
+                    Gfx.RRect(x, y, w, h, Math.Min(18, h / 2), Color.FromArgb((int)(215 * alpha), 10, 12, 18));
                     break;
                 default:
-                    PanelBg(x, y, w, h, 1.3f);
+                    if (DesignOn) { Gfx.RRect(x, y, w, h, Math.Min(10, h / 2), bg); Gfx.Rect(x + 10, y, w - 20, 2, acc); }
+                    else PanelBg(x, y, w, h, 1.3f * alpha);
                     break;
             }
         }
@@ -5953,6 +6061,13 @@ namespace TikArena
         {
             cAcc = cfg.Accent; cPan = cfg.PanelColor; cTxt = cfg.TextColor; cWin = cfg.WinColor; cLoss = cfg.LossColor;
             string[] p;
+            if (DesignOn)
+            {
+                // a design owns the whole HUD: its accent everywhere, no palette of another style mixed in
+                cAcc = DAcc;
+                cPan = Color.FromArgb(255, 14, 16, 24);
+                return;
+            }
             if (cfg.StylePalette && Palettes.TryGetValue(style ?? "", out p))
             {
                 cAcc = U.ParseColor(p[0], cAcc); cPan = U.ParseColor(p[1], cPan); cTxt = U.ParseColor(p[2], cTxt);
@@ -5987,6 +6102,7 @@ namespace TikArena
 
         void PanelBg(float x, float y, float w, float h, float alpha)
         {
+            if (DesignOn) { DPlate(x, y, w, h, Math.Min(1f, alpha)); return; }
             Color acc = cAcc;
             int A = (int)(255 * alpha);
             long now = U.Now;
@@ -6083,6 +6199,31 @@ namespace TikArena
 
         void Header(string text, float x, float y, float w, float h)
         {
+            if (DesignOn)
+            {
+                Color acc = DAcc;
+                switch (Dz)
+                {
+                    case "broadcast":
+                        {
+                            float tw = Math.Min(w - 16, Gfx.TextW(text, TXT) + 26);
+                            Gfx.Shape("slant_l", x + w / 2 - tw / 2 - 8, y, 8, h, acc);
+                            Gfx.Rect(x + w / 2 - tw / 2, y, tw, h, acc);
+                            Gfx.Shape("slant_r", x + w / 2 + tw / 2, y, 8, h, acc);
+                            Gfx.Text(text, x + w / 2, y + 2, TXT, Ink, Alignment.Center);
+                            break;
+                        }
+                    case "esports": Gfx.PartsCentered(new List<string> { "//", text, "//" }, x + w / 2, y + 2, TXT, acc); break;
+                    case "podium":
+                    case "minimal": Gfx.Text(text, x + w / 2, y + 2, TXT, Color.White, Alignment.Center); break;
+                    case "cards":
+                        Gfx.Text(text, x + w / 2, y + 2, TXT, acc, Alignment.Center);
+                        Gfx.Rect(x + w / 2 - 20, y + h - 2, 40, 2, acc);
+                        break;
+                    default: Gfx.Text(text, x + w / 2, y + 2, TXT, acc, Alignment.Center); break;
+                }
+                return;
+            }
             switch (St)
             {
                 case "esports":
@@ -6638,17 +6779,91 @@ namespace TikArena
             return r;
         }
 
+        // ---------------------------------------------------------------- gift guide in the current look
+        //  [Hud] GuideLayout = Vertical (rows) | Horizontal (one line of tiles) | Grid (GuideColumns)
+        //        GuideIconShape = Auto (follows the look) | Circle | Square | Rounded | Hex, GuideIconSize
+        //        GuideColors = Hud (accent of the look) | Custom (GuideGiftColor / GuideActionColor)
+        //        GuideMode = Cards | List (compact) | Rotate (a few at a time)
+        string GuideShape()
+        {
+            string s = (cfg.GuideIconShape ?? "Auto").ToLowerInvariant();
+            if (s == "circle" || s == "square" || s == "rounded" || s == "hex") return s;
+            switch (CurrentLook.ToLowerInvariant())
+            {
+                case "arena": case "podium": case "minimal": case "classic": case "royal": case "neon": return "circle";
+                case "esports": case "cyber": case "hologram": return "hex";
+                case "broadcast": case "carbon": case "retro": return "square";
+                default: return "rounded";
+            }
+        }
+
+        Color GuideGiftCol { get { return Is(cfg.GuideColors, "Custom") ? cfg.GuideGiftColor : cAcc; } }
+        Color GuideActCol { get { return Is(cfg.GuideColors, "Custom") ? cfg.GuideActionColor : cWin; } }
+
+        // picture in a framed shape: ring (colour) + dark plate + the picture cut to the shape
+        void IconFrame(string file, string shape, float x, float y, float d, Color ring, int alpha)
+        {
+            string sh = shape == "rounded" ? "rsq" : shape;
+            Color plate = Color.FromArgb((int)(230 * alpha / 255f), 18, 20, 28);
+            float t = Math.Max(1.5f, d * 0.07f);
+            if (sh == "square")
+            {
+                Gfx.Rect(x - t, y - t, d + t * 2, d + t * 2, U.WithAlpha(ring, alpha));
+                Gfx.Rect(x, y, d, d, plate);
+            }
+            else
+            {
+                Gfx.Shape(sh, x - t, y - t, d + t * 2, d + t * 2, U.WithAlpha(ring, alpha));
+                Gfx.Shape(sh, x, y, d, d, plate);
+            }
+            if (!Gfx.FileOk(file)) return;
+            float ins = d * (shape == "hex" ? 0.14f : 0.08f);
+            Gfx.Image(IconMask.Get(file, shape), x + ins, y + ins, d - ins * 2, d - ins * 2, alpha);
+        }
+
+        string GiftCoinsText(Interaction it)
+        {
+            return cfg.GuideShowCoins && it.GiftCoins > 0 && Is(it.Trigger, "Gift") ? U.Coins(it.GiftCoins) + " " + cfg.DesignCoinsWord : "";
+        }
+
         SizeF GuidePanel(bool draw)
         {
             List<Interaction> items = GuideVisible();
             if (items.Count == 0) return SizeF.Empty;
+            string lay = (cfg.GuideLayout ?? "Vertical").ToLowerInvariant();
+            if (lay == "horizontal" || lay == "grid") return GuideTiles(draw, items, lay == "grid" ? cfg.GuideColumns : items.Count);
+            return GuideRows(draw, items);
+        }
+
+        SizeF GuideRows(bool draw, List<Interaction> items)
+        {
             bool list = cfg.GuideMode.Equals("List", StringComparison.OrdinalIgnoreCase);
-            float w = list ? 270 : 290;
-            float rowH = list ? 26 : 36;
+            bool names = cfg.GuideShowNames;
+            float d = list ? Math.Max(16, cfg.GuideIconSize * 0.75f) : cfg.GuideIconSize;
+            float rowH = d + (list ? 6 : 10), gap = list ? 0 : 4;
             float titleH = cfg.GuideTitleEnabled && cfg.GuideTitle.Length > 0 ? 26 : 0;
-            float h = titleH + items.Count * (rowH + (list ? 0 : 4)) + (list ? 10 : 2);
+            string shape = GuideShape();
+            bool gImg = cfg.GuideShowGiftImage, aImg = cfg.GuideShowActionImage;
+            float pad = DesignOn && !list ? DesignRowPad(rowH) : 0;
+            // width = the longest row
+            float w = 0;
+            foreach (Interaction it in items)
+            {
+                float rw = 10 + pad;
+                if (gImg) rw += d + 8;
+                if (names) rw += Gfx.TextW(U.Trunc(TriggerLabel(it), 14), TXT) + 6;
+                string c = GiftCoinsText(it);
+                if (c.Length > 0) rw += Gfx.TextW(c, SMALL) + 6;
+                if (cfg.GuideArrow) rw += 18;
+                if (aImg) rw += d + 8;
+                if (names) rw += Gfx.PartsW(Txt.Parts(U.Trunc(it.Title, 20), "", 0, null, 0), TXT) + 4;
+                w = Math.Max(w, rw + 10);
+            }
+            w = Math.Min(Math.Max(w, titleH > 0 ? 200 : 120), 460);
+            float h = titleH + items.Count * (rowH + gap) + (list ? 10 : 0);
             if (!draw) return new SizeF(w, h);
 
+            Color gc = GuideGiftCol, ac = GuideActCol;
             float y = 0;
             if (list) PanelBg(0, 0, w, h, 1);
             if (titleH > 0)
@@ -6658,59 +6873,90 @@ namespace TikArena
                 y += titleH;
             }
             if (list) y += 5;
+            int idx = 0;
             foreach (Interaction it in items)
             {
-                string gift = U.Trunc(TriggerLabel(it), 14);
-                string act = U.Trunc(it.Title, 20);
-                string gi = ImgPath(it.GiftImage), ai = ImgPath(it.ActionImage);
-                if (list)
+                idx++;
+                float x = 8;
+                if (!list)
                 {
-                    float x = 8;
-                    if (cfg.GuideShowGiftImage && Gfx.FileOk(gi)) { Gfx.Image(gi, x, y + 2, 22, 22, 255); x += 26; }
-                    Gfx.Text(gift, x, y + 4, TXT, cfg.GuideGiftColor, Alignment.Left);
-                    x += Gfx.TextW(gift, TXT) + 6;
-                    Gfx.Text(">", x, y + 4, TXT, TextCol(160), Alignment.Left);
-                    x += 14;
-                    if (cfg.GuideShowActionImage && Gfx.FileOk(ai)) { Gfx.Image(ai, x, y + 2, 22, 22, 255); x += 26; }
-                    Gfx.Text(act, x, y + 4, TXT, TextCol(255), Alignment.Left);
-                    y += rowH;
+                    x = 8 + (DesignOn ? DesignRowBg(0, y, w, rowH, 1, idx, false) : 0);
+                    if (!DesignOn) { PanelBg(0, y, w, rowH, 1); Gfx.Rect(0, y, 3, rowH, gc); }
                 }
-                else
+                float ty = y + (rowH - Gfx.LineH(TXT)) / 2;
+                if (gImg) { IconFrame(ImgPath(it.GiftImage), shape, x, y + (rowH - d) / 2, d, gc, 255); x += d + 8; }
+                if (names)
                 {
-                    float gw = w * 0.42f;
-                    Color gcol = U.WithAlpha(cfg.GuideGiftColor, (int)(cfg.Opacity * 0.9f));
-                    Color acol = U.WithAlpha(U.Mix(cPan, cfg.GuideActionColor, 0.25f), cfg.Opacity);
-                    string gz = DesignOn ? Dz : "";
-                    if (gz == "minimal")
-                    {
-                        Gfx.RRect(0, y, w, rowH, rowH / 2, Color.FromArgb(80, 255, 255, 255));
-                        Gfx.RRect(0, y, gw, rowH, rowH / 2, U.WithAlpha(cfg.GuideGiftColor, 170));
-                    }
-                    else if (gz == "arena" || gz == "podium" || gz == "cards" || gz == "classic")
-                    {
-                        float r = gz == "podium" ? 12 : 8;
-                        Gfx.RRect(0, y, w, rowH, r, gz == "podium" ? Color.FromArgb(80, 255, 255, 255) : acol);
-                        Gfx.RRect(0, y, gw, rowH, r, gcol);
-                        Gfx.Rect(gw - r, y, r, rowH, gcol);
-                        Gfx.Rect(gw, y, 3, rowH, cfg.GuideActionColor);
-                    }
-                    else
-                    {
-                        Gfx.Rect(0, y, gw, rowH, gcol);
-                        Gfx.Rect(gw, y, w - gw, rowH, acol);
-                        Gfx.Rect(gw, y, 3, rowH, cfg.GuideActionColor);
-                        if (gz == "broadcast" || gz == "esports") Gfx.Shape("slant_r", w, y, 8, rowH, acol);
-                    }
-                    if (St == "cyber" || St == "hologram") Brackets(0, y, w, rowH, 6, 1, U.WithAlpha(cAcc, 200));
-                    if (St == "royal") Gfx.Border(0, y, w, rowH, 1, U.WithAlpha(cAcc, 200));
-                    float x = 6;
-                    if (cfg.GuideShowGiftImage && Gfx.FileOk(gi)) { Gfx.Image(gi, x, y + 4, 28, 28, 255); x += 32; }
-                    Gfx.Text(gift, x, y + 9, TXT, Color.White, Alignment.Left);
-                    x = gw + 8;
-                    if (cfg.GuideShowActionImage && Gfx.FileOk(ai)) { Gfx.Image(ai, x, y + 4, 28, 28, 255); x += 32; }
-                    Gfx.Text(act, x, y + 9, TXT, TextCol(255), Alignment.Left);
-                    y += rowH + 4;
+                    string g = U.Trunc(TriggerLabel(it), 14);
+                    Gfx.Text(g, x, ty, TXT, gc, Alignment.Left);
+                    x += Gfx.TextW(g, TXT) + 6;
                 }
+                string coins = GiftCoinsText(it);
+                if (coins.Length > 0) { Gfx.Text(coins, x, y + (rowH - Gfx.LineH(SMALL)) / 2, SMALL, TextCol(170), Alignment.Left); x += Gfx.TextW(coins, SMALL) + 6; }
+                if (cfg.GuideArrow)
+                {
+                    Gfx.Shape("slant_r", x + 2, y + rowH / 2 - 5, 5, 5, U.WithAlpha(ac, 220));
+                    Gfx.Shape("slant_l", x + 2, y + rowH / 2, 5, 5, U.WithAlpha(ac, 220));
+                    Gfx.Rect(x - 4, y + rowH / 2 - 1, 7, 2, U.WithAlpha(ac, 220));
+                    x += 18;
+                }
+                if (aImg) { IconFrame(ImgPath(it.ActionImage), shape, x, y + (rowH - d) / 2, d, ac, 255); x += d + 8; }
+                if (names) Gfx.Parts(Txt.Parts(U.Trunc(it.Title, 20), "", 0, null, 0), x, ty, TXT, TextCol(255));
+                y += rowH + gap;
+            }
+            return new SizeF(w, h);
+        }
+
+        SizeF GuideTiles(bool draw, List<Interaction> items, int cols)
+        {
+            cols = Math.Max(1, Math.Min(cols, items.Count));
+            bool names = cfg.GuideShowNames;
+            float d = cfg.GuideIconSize;
+            bool gImg = cfg.GuideShowGiftImage, aImg = cfg.GuideShowActionImage;
+            int icons = (gImg ? 1 : 0) + (aImg ? 1 : 0);
+            float tw = Math.Max(names ? 104 : 0, 16 + icons * d + (icons == 2 ? 22 : 0));
+            bool coinsRow = false;
+            foreach (Interaction it in items) if (GiftCoinsText(it).Length > 0) coinsRow = true;
+            float th = 10 + (icons > 0 ? d + 6 : 0) + (names ? 34 : 0) + (coinsRow ? 14 : 0);
+            const float gap = 6;
+            int rows = (items.Count + cols - 1) / cols;
+            float titleH = cfg.GuideTitleEnabled && cfg.GuideTitle.Length > 0 ? 26 : 0;
+            float w = cols * tw + (cols - 1) * gap, h = titleH + rows * th + (rows - 1) * gap;
+            if (!draw) return new SizeF(w, h);
+
+            Color gc = GuideGiftCol, ac = GuideActCol;
+            string shape = GuideShape();
+            if (titleH > 0) { PanelBg(0, 0, w, titleH - 2, 1); Header(cfg.GuideTitle, 0, 2, w, 22); }
+            int chars = Math.Max(5, (int)(tw / 8.5f));
+            for (int i = 0; i < items.Count; i++)
+            {
+                Interaction it = items[i];
+                float x = (i % cols) * (tw + gap), y = titleH + (i / cols) * (th + gap);
+                PanelBg(x, y, tw, th, 1);
+                Gfx.Rect(x + 6, y, tw - 12, 2, gc);
+                float iy = y + 8;
+                if (icons == 2)
+                {
+                    float x1 = x + tw / 2 - d - 11, x2 = x + tw / 2 + 11;
+                    IconFrame(ImgPath(it.GiftImage), shape, x1, iy, d, gc, 255);
+                    if (cfg.GuideArrow)
+                    {
+                        Gfx.Shape("slant_r", x + tw / 2 - 2, iy + d / 2 - 5, 5, 5, ac);
+                        Gfx.Shape("slant_l", x + tw / 2 - 2, iy + d / 2, 5, 5, ac);
+                    }
+                    IconFrame(ImgPath(it.ActionImage), shape, x2, iy, d, ac, 255);
+                }
+                else if (icons == 1)
+                    IconFrame(ImgPath(gImg ? it.GiftImage : it.ActionImage), shape, x + (tw - d) / 2, iy, d, gImg ? gc : ac, 255);
+                float ny = iy + (icons > 0 ? d + 6 : 0);
+                if (names)
+                {
+                    Gfx.Text(U.Trunc(TriggerLabel(it), chars), x + tw / 2, ny, SMALL, gc, Alignment.Center);
+                    Gfx.PartsCentered(Txt.Parts(U.Trunc(it.Title, chars), "", 0, null, 0), x + tw / 2, ny + 16, SMALL, TextCol(255));
+                    ny += 34;
+                }
+                string coins = GiftCoinsText(it);
+                if (coins.Length > 0) Gfx.Text(coins, x + tw / 2, ny, SMALL * 0.9f, TextCol(170), Alignment.Center);
             }
             return new SizeF(w, h);
         }
