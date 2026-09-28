@@ -117,7 +117,13 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
 .valid li{padding:7px 10px;border-radius:9px;background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.3);font-size:13px}
 .valid li.ok{background:rgba(0,230,118,.07);border-color:rgba(0,230,118,.3)}
 .valid li.warn{background:rgba(255,200,40,.07);border-color:rgba(255,200,40,.35)}
-.obsprev{display:grid;gap:8px;background:#000;border-radius:12px;padding:10px;direction:ltr}
+.obsprev{border-radius:12px;min-height:220px;overflow:auto;position:sticky;top:70px;max-height:80vh}
+.obsbar{display:flex;flex-wrap:wrap;gap:8px}
+.obslay{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:14px;margin-top:12px;align-items:start}
+@media (max-width:900px){.obslay{grid-template-columns:1fr}.obsprev{position:static}}
+.obsgrp{border:1px solid var(--line2);border-radius:12px;padding:8px 10px;margin-bottom:8px;background:var(--bg2)}
+.obsgrp summary{cursor:pointer;font-weight:700;color:var(--acc);margin-bottom:6px}
+.obsgrp .grid{grid-template-columns:1fr 1fr}
 .prompt{background:#080d15;border:1px solid var(--line2);border-radius:10px;padding:10px;font-family:ui-monospace,Consolas,monospace;font-size:12px;direction:ltr;text-align:left;white-space:pre-wrap;max-height:260px;overflow:auto}
 /* modal */
 .modal{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
@@ -155,6 +161,138 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
 @media (max-width:1100px){.inter{grid-template-columns:1fr 1fr}.col.tools{flex-direction:row;flex-wrap:wrap;grid-column:1/-1}.hudwrap{grid-template-columns:1fr}.previewBox{position:relative;top:0}}
 @media (max-width:640px){.inter{grid-template-columns:1fr}.fld.wide{grid-column:auto}main{padding:12px}.top{padding:8px 12px}nav.pills{top:59px;padding:8px 12px}}
 </style>
+<style>
+html.obsmode, html.obsmode body{background:transparent !important;margin:0;min-height:0;overflow:hidden}
+html.obsmode body > *:not(#obsRoot){display:none !important}
+</style>
+<script id="obsRuntime">
+/* TikArena OBS overlay (gift guide) — the same code draws the editor preview, the OBS link (#obs=...) and OBS-overlay.html */
+var OBS_DEFAULTS = {
+  Layout:"Grid", Columns:2, GapX:12, GapY:12, Align:"center", Dir:"rtl", Scale:1, PadX:16, PadY:16,
+  CardStyle:"Split", CardWidth:0, CardPadding:10, CardRadius:14, CardBg:"#0d131d", CardOpacity:85, BorderWidth:0, BorderColor:"#ffc828", Shadow:true,
+  SplitColors:true, GiftColor:"#2979ff", ActionColor:"#00e676", SplitOpacity:85,
+  IconSize:72, IconShape:"rounded", IconBg:"#12141c", IconBgOpacity:60, RingWidth:3, RingMode:"Auto", RingColor:"#ffffff", ImgFit:"contain",
+  ShowGift:true, ShowAction:true, ShowCoins:true, ShowArrow:true, Arrow:"➜", Font:"Cairo", FontSize:15, Bold:true, TextColor:"#ffffff", GiftTextColor:"#ffffff", ActionTextColor:"#ffffff", TextShadow:true,
+  ShowTitle:false, TitleText:"🎁 الهدايا", TitleSize:24, TitleColor:"#ffc828", TitleBg:true,
+  Anim:"none", AnimSpeed:2, PerPage:0, PageSeconds:6, Order:"list", BgMode:"transparent", BgColor:"#000000"
+};
+function obsEsc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function obsRgba(hex, a){ var h = String(hex || "#000").replace("#", ""); if (h.length === 3) h = h.split("").map(function(c){ return c + c; }).join(""); var n = parseInt(h.slice(0, 6), 16) || 0; return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")"; }
+function obsShape(sh){ return sh === "circle" ? "border-radius:50%;" : sh === "rounded" ? "border-radius:26%;" : sh === "hex" ? "clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);" : "border-radius:0;"; }
+function obsIcon(O, img, emoji, ring){
+  var d = +O.IconSize, t = O.RingWidth > 0 ? +O.RingWidth : 0, ins = d * (O.IconShape === "hex" ? .13 : .07), inner = d - ins * 2;
+  var pic = img ? '<img src="' + img + '" style="width:' + inner + 'px;height:' + inner + 'px;object-fit:' + O.ImgFit + ';' + (O.ImgFit === "cover" ? obsShape(O.IconShape) : "") + '">'
+                : '<span style="font-size:' + (inner * .78) + 'px;line-height:1">' + obsEsc(emoji || "🎁") + '</span>';
+  var core = '<span style="display:grid;place-items:center;width:' + d + 'px;height:' + d + 'px;background:' + obsRgba(O.IconBg, O.IconBgOpacity / 100) + ';' + obsShape(O.IconShape) + 'overflow:hidden">' + pic + '</span>';
+  if (!t) return '<span class="ob-ic">' + core + '</span>';
+  var rc = O.RingMode === "Custom" ? O.RingColor : ring;
+  return '<span class="ob-ic" style="display:grid;place-items:center;width:' + (d + t * 2) + 'px;height:' + (d + t * 2) + 'px;background:' + rc + ';' + obsShape(O.IconShape) + '">' + core + '</span>';
+}
+function obsArrow(O, vertical){ return O.ShowArrow ? '<span class="ob-ar" style="color:' + O.ActionColor + ';' + (vertical ? "transform:rotate(90deg);" : (O.Dir === "rtl" ? "transform:scaleX(-1);" : "")) + '">' + obsEsc(O.Arrow) + '</span>' : ""; }
+function obsCoins(O, it){ return O.ShowCoins && it.c ? '<span class="ob-co">💎 ' + it.c + '</span>' : ""; }
+function obsCard(O, it){
+  var gi = obsIcon(O, it.gi, it.ge, O.GiftColor), ai = obsIcon(O, it.ai, it.ae, O.ActionColor);
+  var gn = O.ShowGift ? '<span class="ob-t" style="color:' + O.GiftTextColor + '">' + obsEsc(it.g) + '</span>' : "";
+  var an = O.ShowAction ? '<span class="ob-t" style="color:' + O.ActionTextColor + '">' + obsEsc(it.a) + '</span>' : "";
+  var st = O.CardStyle, half = function(col){ return O.SplitColors ? "background:" + obsRgba(col, O.SplitOpacity / 100) + ";" : ""; };
+  if (st === "Stack") return '<div class="ob-b" style="' + half(O.GiftColor) + '">' + gi + gn + obsCoins(O, it) + '</div>' + obsArrow(O, true) + '<div class="ob-b" style="' + half(O.ActionColor) + '">' + ai + an + '</div>';
+  if (st === "Compact") return '<div class="ob-row">' + gi + obsArrow(O) + ai + '</div>' + gn + obsCoins(O, it) + an;
+  if (st === "Icons") return '<div class="ob-row">' + gi + obsArrow(O) + ai + '</div>';
+  return '<div class="ob-b" style="' + half(O.GiftColor) + '">' + gi + gn + obsCoins(O, it) + '</div>' + (O.ShowArrow ? '<div class="ob-mid">' + obsArrow(O) + '</div>' : "") + '<div class="ob-b" style="' + half(O.ActionColor) + '">' + ai + an + '</div>';
+}
+function obsCss(O, scope){
+  var p = scope ? scope + " " : "", cols = O.Layout === "Row" ? "none" : (O.Layout === "Column" ? "max-content" : "repeat(" + Math.max(1, O.Columns) + ",max-content)");
+  var flowCol = O.Layout === "Row" ? "grid-auto-flow:column;" : "";
+  var dirStack = O.CardStyle === "Stack" || O.CardStyle === "Compact";
+  var shadow = O.TextShadow ? "text-shadow:0 1px 3px #000,0 0 2px #000;" : "";
+  var sp = +O.AnimSpeed || 2;
+  return p + ".ob-root{direction:" + O.Dir + ";padding:" + O.PadY + "px " + O.PadX + "px;transform:scale(" + O.Scale + ");transform-origin:" + (O.Align === "end" ? (O.Dir === "rtl" ? "top left" : "top right") : O.Align === "start" ? (O.Dir === "rtl" ? "top right" : "top left") : "top center") + ";font-family:'" + O.Font + "',Cairo,Arial,sans-serif}"
+    + p + ".ob-title{font-size:" + O.TitleSize + "px;color:" + O.TitleColor + ";font-weight:900;text-align:" + (O.Align === "center" ? "center" : O.Align === "end" ? "end" : "start") + ";margin-bottom:" + O.GapY + "px;" + shadow + (O.TitleBg ? "background:" + obsRgba(O.CardBg, O.CardOpacity / 100) + ";padding:6px 14px;border-radius:" + O.CardRadius + "px;display:inline-block;" : "") + "}"
+    + p + ".ob-tw{text-align:" + (O.Align === "center" ? "center" : O.Align === "end" ? "end" : "start") + "}"
+    + p + ".ob-wrap{display:grid;grid-template-columns:" + cols + ";" + flowCol + "column-gap:" + O.GapX + "px;row-gap:" + O.GapY + "px;justify-content:" + O.Align + ";transition:opacity .4s}"
+    + p + ".ob-card{display:flex;" + (dirStack ? "flex-direction:column;align-items:center;" : "align-items:stretch;") + "gap:" + Math.round(O.CardPadding / 2) + "px;"
+      + (O.CardStyle === "Split" || O.CardStyle === "Stack" ? "padding:0;overflow:hidden;" : "padding:" + O.CardPadding + "px;")
+      + "background:" + obsRgba(O.CardBg, O.CardOpacity / 100) + ";border-radius:" + O.CardRadius + "px;" + (O.BorderWidth > 0 ? "border:" + O.BorderWidth + "px solid " + O.BorderColor + ";" : "")
+      + (O.Shadow ? "box-shadow:0 6px 18px rgba(0,0,0,.45);" : "") + (O.CardWidth > 0 ? "width:" + O.CardWidth + "px;" : "") + "}"
+    + p + ".ob-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:" + O.CardPadding + "px}"
+    + p + ".ob-row{display:flex;align-items:center;justify-content:center;gap:" + Math.max(4, Math.round(O.CardPadding / 2)) + "px}"
+    + p + ".ob-mid{display:flex;align-items:center;margin:0 -8px;z-index:1}"
+    + p + ".ob-ar{font-size:" + Math.max(14, O.IconSize * .32) + "px;font-weight:900;line-height:1;display:inline-block;" + shadow + "}"
+    + p + ".ob-t{font-size:" + O.FontSize + "px;font-weight:" + (O.Bold ? 800 : 500) + ";text-align:center;max-width:" + Math.max(80, O.IconSize * 1.9) + "px;line-height:1.2;" + shadow + "}"
+    + p + ".ob-co{font-size:" + Math.max(10, O.FontSize * .78) + "px;color:" + O.TextColor + ";opacity:.85;" + shadow + "}"
+    + p + ".ob-ic{flex:none}"
+    + "@keyframes obPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}@keyframes obFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}"
+    + "@keyframes obGlow{0%,100%{box-shadow:0 0 0 rgba(0,0,0,0)}50%{box-shadow:0 0 22px " + obsRgba(O.GiftColor, .85) + "}}@keyframes obPop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}"
+    + (O.Anim === "pulse" ? p + ".ob-card{animation:obPulse " + sp + "s ease-in-out infinite}" : "")
+    + (O.Anim === "float" ? p + ".ob-card{animation:obFloat " + sp + "s ease-in-out infinite}" : "")
+    + (O.Anim === "glow" ? p + ".ob-card{animation:obGlow " + sp + "s ease-in-out infinite}" : "")
+    + (O.Anim === "pop" ? p + ".ob-card{animation:obPop .5s ease-out both}" : "");
+}
+function obsSort(O, items){
+  var l = items.slice();
+  if (O.Order === "coinsAsc") l.sort(function(a, b){ return (a.c || 0) - (b.c || 0); });
+  if (O.Order === "coinsDesc") l.sort(function(a, b){ return (b.c || 0) - (a.c || 0); });
+  return l;
+}
+function obsFont(O){
+  var sys = ["Arial", "Impact", "Tahoma", "Segoe UI", "Verdana"];
+  if (sys.indexOf(O.Font) >= 0 || document.getElementById("obFont_" + O.Font.replace(/\W/g, ""))) return;
+  var l = document.createElement("link"); l.rel = "stylesheet"; l.id = "obFont_" + O.Font.replace(/\W/g, "");
+  l.href = "https://fonts.googleapis.com/css2?family=" + encodeURIComponent(O.Font) + ":wght@500;800;900&display=swap";
+  document.head.appendChild(l);
+}
+// draws the overlay in root; with PerPage > 0 it shows a page of cards and changes page every PageSeconds
+function obsMount(root, O, items, scope){
+  O = Object.assign({}, OBS_DEFAULTS, O || {});
+  obsFont(O);
+  if (root._obTimer) clearInterval(root._obTimer);
+  var list = obsSort(O, items || []), per = O.PerPage > 0 ? Math.min(O.PerPage, list.length) : list.length, page = 0;
+  var sc = scope || "";
+  function cards(){
+    var from = per ? (page * per) % Math.max(1, list.length) : 0, part = [];
+    for (var k = 0; k < per; k++) part.push(list[(from + k) % list.length]);
+    return part.map(function(it, n){ return '<div class="ob-card" style="animation-delay:' + (O.Anim === "pop" ? n * .08 : n * .15) + 's">' + obsCard(O, it) + '</div>'; }).join("");
+  }
+  root.innerHTML = '<style>' + obsCss(O, sc) + '</style><div class="ob-root">' + (O.ShowTitle ? '<div class="ob-tw"><div class="ob-title">' + obsEsc(O.TitleText) + '</div></div>' : "") + '<div class="ob-wrap">' + (list.length ? cards() : "") + '</div></div>';
+  if (O.PerPage > 0 && list.length > per){
+    root._obTimer = setInterval(function(){
+      var w = root.querySelector(".ob-wrap"); if (!w){ clearInterval(root._obTimer); return; }
+      w.style.opacity = 0;
+      setTimeout(function(){ page++; w.innerHTML = cards(); w.style.opacity = 1; }, 420);
+    }, Math.max(1, O.PageSeconds) * 1000);
+  }
+}
+// settings + items <-> short text for the link (deflate + base64url)
+async function obsPack(obj){
+  var bytes = new TextEncoder().encode(JSON.stringify(obj));
+  if (window.CompressionStream){
+    var cs = new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+    bytes = new Uint8Array(await new Response(cs).arrayBuffer());
+  }
+  var bin = ""; for (var i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return (window.CompressionStream ? "z" : "j") + btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+async function obsUnpack(str){
+  var kind = str[0], b = str.slice(1).replace(/-/g, "+").replace(/_/g, "/");
+  var bin = atob(b), bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  if (kind === "z"){ var ds = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw")); bytes = new Uint8Array(await new Response(ds).arrayBuffer()); }
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+// link mode: index.html#obs=... shows only the overlay (transparent) for OBS / TikTok LIVE Studio
+(function(){
+  if (!/^#obs=/.test(location.hash)) return;
+  document.documentElement.classList.add("obsmode");
+  document.addEventListener("DOMContentLoaded", async function(){
+    var root = document.createElement("div"); root.id = "obsRoot"; document.body.appendChild(root);
+    try {
+      var d = await obsUnpack(decodeURIComponent(location.hash.slice(5)));
+      if (d.o && d.o.BgMode === "color") document.documentElement.style.background = document.body.style.background = d.o.BgColor;
+      obsMount(root, d.o, d.i);
+    } catch (e){ root.innerHTML = '<div style="color:#fff;background:#b00;padding:10px;font:14px Arial">TikArena OBS: bad link</div>'; }
+  });
+})();
+</script>
 </head>
 <body>
 <header class="top">
@@ -213,7 +351,22 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
   <section class="card" id="sec-cam"><h2><span class="num">08</span>🎥 الكاميرا</h2><div id="formCam"></div></section>
   <section class="card" id="sec-gfx"><h2><span class="num">09</span>🌦️ الجرافيك</h2><div id="formGfx"></div></section>
   <section class="card" id="sec-fx"><h2><span class="num">10</span>💥 التأثيرات والأصوات</h2><div id="formFx"></div></section>
-  <section class="card" id="sec-export"><h2><span class="num">11</span>📦 التصدير</h2>
+  <section class="card" id="sec-obs"><h2><span class="num">11</span>📺 شاشة OBS · دليل الهدايا</h2>
+    <p class="hint">دليل الهدايا ولا هنا (خرج من الهود ديال اللعبة). كتبدل كلشي: الترتيب، الأعمدة، البعد، الأيقونات (دائرة / مربع / مسدس)، الشفافية، الألوان، الكتابة، الحركة... والمعاينة كتبدل مباشرة. من بعد: <b>🔗 الرابط</b> ← كتحطو فـ <b>OBS</b> (Browser Source ← URL، العرض 1080 والعلو 1920 للبث العمودي ولا 1920×1080) ولا فـ <b>TikTok LIVE Studio</b> (Add source ← Link / رابط). الرابط فيه الإعدادات والهدايا؛ ملي تبدل شي حاجة عاود خود الرابط الجديد. الهدايا اللي كيبانو = التفاعلات اللي مشعول فيهم «📺 يبان فشاشة OBS».</p>
+    <div class="obsbar">
+      <button class="btn pri" id="obsMakeLink">🔗 الرابط (نسخ)</button>
+      <button class="btn" id="obsOpenLink">↗️ فتح الشاشة</button>
+      <button class="btn blue" id="obsDownload">⬇️ OBS-overlay.html</button>
+      <button class="btn" id="obsReset">↺ الأصل</button>
+    </div>
+    <input type="text" class="ltr" id="obsLinkBox" readonly placeholder="الرابط كيبان هنا" style="margin-top:8px">
+    <div class="hint" id="obsLinkInfo"></div>
+    <div class="obslay">
+      <div id="obsForm"></div>
+      <div><div class="obsprev" id="obsPrev"></div><p class="hint">المعاينة: المربعات = شفاف.</p></div>
+    </div>
+  </section>
+  <section class="card" id="sec-export"><h2><span class="num">12</span>📦 التصدير</h2>
     <h3>✅ التحقق</h3>
     <ul class="valid" id="validList"></ul>
     <h3>⬇️ الملفات</h3>
@@ -229,9 +382,6 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
     <div class="fld" style="margin-top:12px">
       <label class="tog"><span>وضع claude.ai (INI كينزل .ini.txt، و.cs و.dll فـ ZIP)</span><span class="sw"><input type="checkbox" id="claudeMode"><i></i></span></label>
     </div>
-    <h3>📺 شاشة OBS</h3>
-    <div class="grid" id="obsForm"></div>
-    <div class="obsprev" id="obsPrev" style="margin-top:10px"></div>
     <h3>📘 التثبيت</h3>
     <div class="hint" id="installText"></div>
   </section>
@@ -383,8 +533,6 @@ function defaults(){
     ScoreEnabled:true,ScoreOrder:"Title,Score,Streak",TitleEnabled:true,Title:"حاول تقتلني",ShowScore:true,ShowTimer:true,ShowStreak:true,
     Top3Enabled:true,Top3Order:"Top3,Status",ShowTop3:true,TopCount:3,Top3Title:"أفضل الداعمين",ShowCoins:true,ShowCounters:true,ShowStatus:true,
     HealthEnabled:true,HealthLabel:"health",HealthColor:"#1ed760",ShowArmor:true,ShowHealthPoints:false,HideRadar:false,
-    GuideEnabled:true,GuideMax:8,GuideMode:"Cards",GuideRotateCount:3,GuideRotateSeconds:5,GuideRandom:true,GuideShowGiftImage:true,GuideShowActionImage:true,GuideTitleEnabled:false,GuideTitle:"🎁 الهدايا",GuideGiftColor:"#2979ff",GuideActionColor:"#00e676",
-    GuideLayout:"Vertical",GuideColumns:3,GuideIconShape:"Auto",GuideIconSize:30,GuideColors:"Hud",GuideShowNames:true,GuideShowCoins:false,GuideArrow:true,
     OverheadEnabled:true,OverheadAvatar:true,OverheadName:true,OverheadHealth:true,OverheadHeight:0,AvatarShape:"Circle",OverheadStyle:"Classic",OverheadRing:true,OverheadLevel:true,
     ScoreVariant:"Classic",Top3Variant:"List",HealthVariant:"Bar",NotifVariant:"Card",FeedAnimation:"Slide",
     Design:"Arena",DesignColor:"GOLD",DesignCoinsWord:"كوينز",DesignKey:"F10",DesignColorKey:"F5",
@@ -415,25 +563,26 @@ function defaults(){
   S.LiveTest = {Enabled:true,Key:"F9",ShowBadge:true,Names:"أحمد,سارة,Yassine,Nora,Karim,Lina,Omar,Hiba,Adam,Salma,Mehdi,Imane,Zakaria,Khadija,Anas,Rania",AvatarUrls:"",Comments:"GG,🔥,يلاه,اقتلوه,عاونوه,واو",
     MinDelayMs:700,MaxDelayMs:2200,GiftWeight:45,LikeWeight:25,CommentWeight:10,FollowWeight:8,ShareWeight:6,JoinWeight:6,ComboChance:25,MaxCombo:15};
   S.Spotlight = {Enabled:true,Seconds:3,MinCoins:1000,Sound:"CHALLENGE_UNLOCKED|HUD_AWARDS",OffsetY:0};
-  S.Effects = {MaxSeconds:300,Stack:"Reset",ShowBars:true,BarsPosition:"Bottom",MaxBars:4,BlackoutNight:true,QuakeStrength:2.5,QuakeRagdollPlayer:true};
+  S.Events = {Enabled:true,MaxItems:6,ShowChases:true,ShowInstant:true,InstantSeconds:5,TitleEnabled:false,Title:"الأحداث"};
+  S.Effects = {MaxSeconds:300,Stack:"Reset",ShowBars:true,BarsPosition:"Events",MaxBars:4,BlackoutNight:true,QuakeStrength:2.5,QuakeRagdollPlayer:true};
   S.PlayerFx = {Enabled:true,Popup:true,PopupSeconds:2.5,Burst:true,BuffAura:true,SpeedColor:"#29b6ff",GodColor:"#ffc828",JumpColor:"#39ff14",FreezeColor:"#bff4ff",WeaponColor:"#ff9f1c",HealColor:"#00e676",SpeedTrail:"core|ent_amb_elec_crackle"};
   S.Death = {CustomDeath:true,RespawnSeconds:6,RespawnMode:"Here",CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Overlay:"Clear",ExtraDancers:3,KillerBanner:true,Coffin:false,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
   return {
     v:1, ini:S, interactions:defaultInteractions(),
     sounds:{kill:null, death:null},             // {name, data(dataURL)}
-    obs:{Columns:2, Size:84, ShowNames:true, Background:"transparent"},
-    ui:{sound:true, preview:"Normal", selPanel:"Score", claude:null, mig15:false},
+    obs:Object.assign({}, OBS_DEFAULTS),
+    ui:{sound:true, preview:"Normal", selPanel:"Score", claude:null, mig15:false, mig16:false},
     customGifts:[], giftDb:{}
   };
 }
-const PANELS = [["Score","🏆 الفوز والخسارة"],["Top3","👑 لوحة الداعمين"],["Health","❤️ شريط الطاقة"],["Guide","🎁 دليل الهدايا"],["Notif","🔔 الإشعارات"],["Feed","☠️ Kill Feed"],["Hype","🔥 رسائل الحماس"]];
+const PANELS = [["Score","🏆 الفوز والخسارة"],["Top3","👑 لوحة الداعمين"],["Health","❤️ شريط الطاقة"],["Guide","📡 الأحداث الجارية"],["Notif","🔔 الإشعارات"],["Feed","☠️ Kill Feed"],["Hype","🔥 رسائل الحماس"]];
 function layoutDefaults(v){
   const pos = v ? {Score:"TopCenter",Top3:"TopCenter",Health:"BottomCenter",Guide:"MiddleLeft",Notif:"BottomCenter",Feed:"MiddleCenter",Hype:"TopCenter"}
                 : {Score:"TopCenter",Top3:"TopLeft",Health:"BottomCenter",Guide:"MiddleLeft",Notif:"BottomRight",Feed:"MiddleRight",Hype:"TopRight"};
   const oy = v ? {Top3:100,Notif:-70,Feed:130,Hype:262} : {Hype:70};
   const L = {};
   PANELS.forEach(([p]) => {
-    L[p+"Position"] = pos[p]; L[p+"OffsetX"] = 0; L[p+"OffsetY"] = oy[p]||0; L[p+"Show"] = !(v && p==="Guide");
+    L[p+"Position"] = pos[p]; L[p+"OffsetX"] = 0; L[p+"OffsetY"] = oy[p]||0; L[p+"Show"] = true;
     if (p==="Health") L.HealthWidth = v ? 220 : 260;
   });
   L.Scale = v ? 0.8 : 1;
@@ -490,6 +639,7 @@ function normalize(obj){
   if (s.ini.Hud.DesignCoinsWord === "كوينز") s.ini.Hud.DesignCoinsWord = "";
   delete s.ini.DamageFx.Blood; delete s.ini.DamageFx.HitFx;
   // update 15 (once): an effect lasts only its own time (Reset), the name sits right above the head
+  if (!s.ui.mig16){ s.ini.Effects.BarsPosition = "Events"; s.ini.LayoutVertical.GuideShow = true; s.ini.Layout.GuideShow = true; s.ui.mig16 = true; }
   if (!s.ui.mig15){ if (s.ini.Effects.Stack === "Extend") s.ini.Effects.Stack = "Reset"; s.ui.mig15 = true; }
   if (+s.ini.Hud.OverheadHeight >= 0.8) s.ini.Hud.OverheadHeight = 0;
   s.interactions.forEach(i => { if ((i.Action === "MafiaCar" || i.Action === "MotoHitman") && +i.SpawnDistance > 35) i.SpawnDistance = i.Action === "MafiaCar" ? 28 : 26; });
@@ -861,7 +1011,7 @@ function advFields(i){
   h += iField(i,"Cooldown","⏳ الانتظار بين كل مرة (ث)","f",{min:0});
   h += iField(i,"MultiplyByCombo","✖️ ضرب فالكومبو","b");
   h += iField(i,"EntryCam","🎥 كاميرا الدخول","b");
-  h += iField(i,"ShowInGuide","📋 يبان فدليل الهدايا","b");
+  h += iField(i,"ShowInGuide","📺 يبان فشاشة OBS (دليل الهدايا)","b");
   if (it.Trigger !== "Follow" && it.Trigger !== "Share" && it.Trigger !== "Subscribe") h += iField(i,"OncePerUser","👤 مرة وحدة لكل شخص","b");
   if (person){
     h += iField(i,"Health","❤️ الدم (نقاط)","i",{min:1});
@@ -1130,14 +1280,9 @@ function renderAllForms(){
     {sec:"Hud", title:"🏆 الفوز والخسارة", fields:[["ScoreEnabled","اللوحة","b"],["TitleEnabled","العنوان","b"],["Title","العنوان","t"],["ShowScore","الفوز والخسارة","b"],["ShowTimer","العداد","b"],["ShowStreak","السلسلة","b"],["ShowCounters","🦹👮 عدد الأعداء والمساعدين (تحت)","b"]]},
     {sec:"Hud", title:"👑 لوحة الداعمين", fields:[["Top3Enabled","اللوحة","b"],["ShowTop3","الداعمين","b"],["TopCount","عدد الداعمين","range",{min:1,max:10}],["Top3Title","العنوان","t"],["ShowCoins","الكوينز","b"],["ShowStatus","حالة TikFinity","b"]]},
     {sec:"Hud", title:"❤️ شريط الطاقة", fields:[["HealthEnabled","الشريط","b"],["HealthLabel","الكلمة","t"],["HealthColor","اللون","c"],["ShowArmor","شريط الدرع","b"],["ShowHealthPoints","النقاط (722 / 1000)","b"]]},
-    {sec:"Hud", title:"🎁 دليل الهدايا", hint:"الدليل كيتبع الشكل ديال الهود (F11): نفس الخلفية، نفس اللون، والأيقونات كيتبدل شكلها بوحدها (Auto): دائرية فـ Arena/Podium/Minimal/Classic/Royal/Neon، مسدسة فـ Esports/Cyber/Hologram، مربعة فـ Broadcast/Carbon/Retro، مربعة بزوايا مدورة فالباقي. ولا اختار الشكل بيدك.", fields:[
-      ["GuideEnabled","الدليل","b"],["GuideLayout","📐 الترتيب","s",{opts:[["Vertical","⬇️ عمودي (سطور)"],["Horizontal","➡️ أفقي (مربعات فسطر)"],["Grid","▦ شبكة (أعمدة)"]]}],["GuideColumns","▦ عدد الأعمدة (الشبكة)","i",{min:1,max:10}],
-      ["GuideIconShape","🔷 شكل الأيقونات","s",{opts:[["Auto","✨ Auto (كيتبع الهود)"],["Circle","⚪ دائرية"],["Square","⬜ مربعة"],["Rounded","▢ زوايا مدورة"],["Hex","⬡ مسدسة"]]}],["GuideIconSize","📏 حجم الأيقونات","range",{min:16,max:80,step:1}],
-      ["GuideColors","🎨 الألوان","s",{opts:[["Hud","✨ ديال الهود"],["Custom","🖌️ بيدي"]]}],["GuideGiftColor","لون الهدية (بيدي)","c"],["GuideActionColor","لون الأكشن (بيدي)","c"],
-      ["GuideShowGiftImage","🎁 صورة الهدية","b"],["GuideShowActionImage","🎬 صورة الأكشن","b"],["GuideShowNames","🔤 الأسماء","b"],["GuideArrow","➜ السهم","b"],["GuideShowCoins","💰 ثمن الهدية (كوينز)","b"],
-      ["GuideMode","🃏 النوع","s",{opts:[["Cards","🃏 كروت"],["List","📋 لائحة مدمجة"],["Rotate","🔄 كيتبدلو"]]}],["GuideMax","أقصى عدد","i",{min:1,max:30}],
-      ["GuideRotateCount","Rotate: شحال فمرة","i",{min:1}],["GuideRotateSeconds","Rotate: كل (ث)","f",{min:1}],["GuideRandom","Rotate: عشوائي","b"],
-      ["GuideTitleEnabled","العنوان","b"],["GuideTitle","العنوان","t"]]},
+    {sec:"Events", title:"📡 الأحداث الجارية (بلاصة دليل الهدايا)", hint:"فالبلاصة ديال دليل الهدايا (كتختار البلاصة من الجنب ⬅ 📡) كيبانو الأحداث اللي خدامين دابا، واحد تحت واحد: قطع الضو، الزلزال، الصواريخ، السرعة، القفزة، التجميد، العاصفة، مطر الطوموبيلات... بالعداد والشريط اللي كيخوا، مطاردة المافيا / الموطور / الحيوانات كتبقى حتى يموتو (عدد الحيين)، والأكشنات القصيرة (سلاح، علاج...) كتبان شي ثواني. كيتمحاو ملي يساليو ولا تعاود الجولة. دليل الهدايا ولا فشاشة OBS (قسم التصدير).", fields:[
+      ["Enabled","مشعول","b"],["MaxItems","أقصى عدد","i",{min:1,max:12}],["ShowChases","🚘 المطاردات (مافيا، موطور، حيوانات)","b"],["ShowInstant","🔫 الأكشنات القصيرة","b"],["InstantSeconds","⏱️ مدة الأكشن القصير (ث)","f",{min:1,max:60}],
+      ["TitleEnabled","العنوان","b"],["Title","العنوان","t"]]},
     {sec:"Hud", title:"🧍 فوق راس الشخصيات", fields:[["OverheadEnabled","مشعول","b"],["OverheadAvatar","الصورة","b"],["OverheadName","الاسم","b"],["OverheadHealth","شريط الدم","b"],["OverheadHeight","↕ علو إضافي فوق الراس (متر)","range",{min:0,max:1,step:0.05}]]},
     {sec:"Notifications", title:"🔔 الإشعارات", fields:[["Enabled","مشعولة","b"],["Seconds","المدة (ث)","f",{min:1}],["MaxVisible","أقصى عدد","i",{min:1,max:20}],["ShowAvatar","صورة البروفايل","b"],["ShowGiftIcon","صورة الهدية","b"]]},
     {sec:"Spotlight", title:"⭐ الإشعار الكبير (Spotlight)", hint:"كارطة كبيرة فوسط الشاشة لمدة 3 ثواني: صورة الأكشن، العنوان ديال التفاعل، الجملة، والصورة ديال الداعم. كتبان للتفاعلات اللي مشعول فيهم «⭐ إشعار كبير» (سيارة المافيا والموطور افتراضياً)، ولا أوتوماتيكياً لأي هدية ≥ الكوينز (0 = بلا).", fields:[
@@ -1184,7 +1329,7 @@ function renderAllForms(){
       ["SpeedColor","⚡ السرعة","c"],["GodColor","🛡️ الدرع","c"],["JumpColor","🦘 القفزة/الجاذبية","c"],["FreezeColor","❄️ التجميد","c"],["WeaponColor","🔫 السلاح","c"],["HealColor","💚 العلاج","c"],["SpeedTrail","⚡ شرارات السرعة (asset|name)","t",{ltr:true}]]},
     {sec:"Effects", title:"⏱️ مدة التأثيرات (زلزال، صواريخ، قطع الضو...)", hint:"كل تأثير عندو مدة (كتختارها فكل تفاعل: 15ث، 30ث، دقيقة، ولا كتب الرقم). فوق راسك كيبان شريط فيه صورة الداعم + الأكشن + الوقت الباقي، كيخوا شوية بشوية وملي يسالي التأثير كيحبس بوحدو. إلا جات هدية جديدة ديال نفس التأثير: Extend = كتزاد المدة، Reset = كترجع من اللول، Max = كتبقى الأطول. MaxSeconds = أقصى مدة (0 = بلا حد). والساروت ⏹️ (End) كيحبس كلشي فالحين.", fields:[
       ["MaxSeconds","⛔ أقصى مدة (ث، 0 = بلا حد)","f",{min:0,max:3600}],["Stack","➕ ملي تتعاود الهدية","s",{opts:[["Extend","➕ زيد المدة"],["Reset","🔄 رجع من اللول"],["Max","⬆️ خلي الأطول"]]}],
-      ["ShowBars","📊 بطاقة الوقت","b"],["BarsPosition","📍 فين كتبان","s",{opts:[["Bottom","⬇️ تحت شريط الطاقة"],["Top","⬆️ الفوق (تحت الفوز والخسارة)"],["Left","⬅️ اليسار"],["Right","➡️ اليمين"],["Player","🧍 فوق الشخصية"]]}],["MaxBars","عدد البطاقات","i",{min:1,max:8}],
+      ["ShowBars","📊 بطاقة الوقت","b"],["BarsPosition","📍 فين كتبان","s",{opts:[["Events","📡 فالأحداث الجارية (بلاصة الدليل)"],["Bottom","⬇️ تحت شريط الطاقة"],["Top","⬆️ الفوق (تحت الفوز والخسارة)"],["Left","⬅️ اليسار"],["Right","➡️ اليمين"],["Player","🧍 فوق الشخصية"]]}],["MaxBars","عدد البطاقات","i",{min:1,max:8}],
       ["BlackoutNight","🌑 قطع الضو كيرد الوقت ليل","b"],["QuakeStrength","🌋 قوة الزلزال","range",{min:0.2,max:6,step:0.1}],["QuakeRagdollPlayer","🥴 الزلزال كيطيحك حتى نتا","b"]]},
     {sec:"Aura", title:"🌟 تأثيرات الشخصيات (Aura)", hint:"تأثير دائم حول الأعداء والمساعدين اللي نزلو (ضو، دائرة، عمود، تاج، نار...). الملك (الداعم رقم 1) كيجيه تاج ذهبي. كل تفاعل يقدر يختار التأثير ديالو فـ ⚙️ متقدم. أسماء الـ particles (asset|name) خاصها تجربة.", fields:[
       ["Enabled","مشعول","b"],["EnemyAura","🦹 تأثير الأعداء","s",{opts:AURAS.slice(1)}],["EnemyColor","لون الأعداء","c"],["AllyAura","👮 تأثير المساعدين","s",{opts:AURAS.slice(1)}],["AllyColor","لون المساعدين","c"],
@@ -1382,62 +1527,25 @@ function pvHealth(L){
 function triggerLabel(it){
   switch (it.Trigger){ case "Gift": return it.GiftName || ("#" + it.GiftId); case "Likes": return it.LikesCount + " Likes"; case "Comment": return it.CommentText ? `"${it.CommentText}"` : "Comment"; default: return it.Trigger; }
 }
-// gift guide preview (mirror of GuidePanel / GuideRows / GuideTiles in the engine)
-function guideShape(){
-  const s = String(state.ini.Hud.GuideIconShape || "Auto").toLowerCase();
-  if (["circle","square","rounded","hex"].includes(s)) return s;
-  const l = String(curLook()).toLowerCase();
-  if (["arena","podium","minimal","classic","royal","neon"].includes(l)) return "circle";
-  if (["esports","cyber","hologram"].includes(l)) return "hex";
-  if (["broadcast","carbon","retro"].includes(l)) return "square";
-  return "rounded";
-}
-function shapeCss(sh){ return sh === "circle" ? "border-radius:50%;" : sh === "rounded" ? "border-radius:28%;" : sh === "hex" ? "clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);" : ""; }
-function iconFrame(img, emoji, d, ring, sh){
-  const t = Math.max(1.5, d * 0.07), ins = d * (sh === "hex" ? 0.14 : 0.08), inner = d - ins * 2;
-  const pic = img ? `<img src="${img}" style="width:${inner}px;height:${inner}px;object-fit:contain;${shapeCss(sh)}">` : `<span style="font-size:${inner*0.82}px;line-height:${inner}px">${esc(emoji||"")}</span>`;
-  return `<span style="display:inline-grid;place-items:center;flex:none;width:${d+t*2}px;height:${d+t*2}px;background:${ring};${shapeCss(sh)}"><span style="display:grid;place-items:center;width:${d}px;height:${d}px;background:#12141c;${shapeCss(sh)}">${pic}</span></span>`;
-}
-function guideArrow(c){ return `<span style="flex:none;color:${c};font-weight:900;font-size:14px;width:14px;text-align:center">➜</span>`; }
-function pvGuide(){
-  const H = HV();
-  let items = state.interactions.filter(i => i.Enabled && i.ShowInGuide && i.Trigger !== "Key");
-  items = items.slice(0, H.GuideMode === "Rotate" ? H.GuideRotateCount : H.GuideMax);
-  if (!items.length) return null;
-  const custom = H.GuideColors === "Custom", gc = custom ? H.GuideGiftColor : H.AccentColor, ac = custom ? H.GuideActionColor : H.WinColor;
-  const sh = guideShape(), names = H.GuideShowNames, gI = H.GuideShowGiftImage, aI = H.GuideShowActionImage;
-  const titleH = H.GuideTitleEnabled && H.GuideTitle ? 26 : 0;
-  const coins = it => H.GuideShowCoins && it.Trigger === "Gift" && (it.GiftCoins || giftCoins(it.GiftName)) ? coinsTxt(it.GiftCoins || giftCoins(it.GiftName)) + " " + esc(H.DesignCoinsWord) : "";
-  const act = it => it.Name || (ACT[it.Action]||{}).name || it.Action;
-  const lay = H.GuideLayout || "Vertical";
-  if (lay === "Horizontal" || lay === "Grid"){
-    const d = +H.GuideIconSize || 30, icons = (gI?1:0) + (aI?1:0), cols = Math.max(1, Math.min(lay === "Grid" ? +H.GuideColumns || 3 : items.length, items.length));
-    const tw = Math.max(names ? 104 : 0, 16 + icons * d + (icons === 2 ? 22 : 0)), cRow = items.some(coins);
-    const th = 10 + (icons ? d + 6 : 0) + (names ? 34 : 0) + (cRow ? 14 : 0), rows = Math.ceil(items.length / cols), gap = 6;
-    const w = cols * tw + (cols - 1) * gap, h = titleH + rows * th + (rows - 1) * gap;
-    let html = titleH ? abs(0, 0, w, titleH - 2, bgCss(), header(H.GuideTitle)) : "";
-    items.forEach((it, i) => {
-      const x = (i % cols) * (tw + gap), y = titleH + Math.floor(i / cols) * (th + gap);
-      const ic = [gI && iconFrame(it.giftImg, it.giftEmoji, d, gc, sh), icons === 2 && H.GuideArrow && guideArrow(ac), aI && iconFrame(it.actImg, it.actEmoji, d, ac, sh)].filter(Boolean).join("");
-      html += abs(x, y, tw, th, `${bgCss()};box-shadow:inset 0 2px 0 ${gc};display:flex;flex-direction:column;align-items:center;padding-top:6px;gap:4px;font-size:${fpx(.28)};overflow:hidden`,
-        `${icons ? `<div style="display:flex;align-items:center;gap:4px">${ic}</div>` : ""}${names ? `<div style="color:${gc};white-space:nowrap;max-width:${tw-6}px;overflow:hidden">${esc(triggerLabel(it))}</div><div style="white-space:nowrap;max-width:${tw-6}px;overflow:hidden">${esc(act(it))}</div>` : ""}${coins(it) ? `<div style="opacity:.65;font-size:${fpx(.25)}">${coins(it)}</div>` : ""}`);
-    });
-    return {w, h, html};
-  }
-  const list = H.GuideMode === "List", d = list ? Math.max(16, (+H.GuideIconSize || 30) * .75) : (+H.GuideIconSize || 30);
-  const rowH = d + (list ? 6 : 10), gap = list ? 0 : 4;
-  const est = it => 20 + (gI ? d + 8 : 0) + (names ? (triggerLabel(it).length + act(it).length) * 7.5 + 10 : 0) + (H.GuideArrow ? 18 : 0) + (aI ? d + 8 : 0) + (coins(it) ? 60 : 0);
-  const w = Math.min(460, Math.max(titleH ? 200 : 120, ...items.map(est)));
-  const h = titleH + items.length * (rowH + gap) + (list ? 10 : 0);
-  let y = 0, html = list ? `<div class="hbg" style="${bgCss()}"></div>` : "";
-  if (titleH){ html += abs(0, 0, w, titleH - 2, list ? "" : bgCss(), header(H.GuideTitle)); y += titleH; }
-  if (list) y += 5;
-  items.forEach((it, n) => {
-    let css = "", lead = "";
-    if (!list){ if (designOn()){ const r = dRowCss(n + 1, false, rowH); css = r.css; lead = r.lead; } else css = `${bgCss()};border-left:3px solid ${gc}`; }
-    html += abs(0, y, w, rowH, `${css};display:flex;align-items:center;gap:6px;padding-left:${lead ? 0 : 8}px;font-size:${fpx(.34)};overflow:hidden;white-space:nowrap`,
-      `${lead}${gI ? iconFrame(it.giftImg, it.giftEmoji, d, gc, sh) : ""}${names ? `<span style="color:${gc}">${esc(triggerLabel(it))}</span>` : ""}${coins(it) ? `<span style="opacity:.65;font-size:${fpx(.28)}">${coins(it)}</span>` : ""}${H.GuideArrow ? guideArrow(ac) : ""}${aI ? iconFrame(it.actImg, it.actEmoji, d, ac, sh) : ""}${names ? `<span>${esc(act(it))}</span>` : ""}`);
-    y += rowH + gap;
+// running events panel preview (mirror of EventsPanel in the engine): sample cards
+function pvEvents(){
+  const E = state.ini.Events; if (!E.Enabled) return null;
+  const sup = SAMPLE_SUPS, ints = state.interactions;
+  const find = a => ints.find(x => x.Action === a) || {Name:(ACT[a]||{}).name, actEmoji:(ACT[a]||{}).emoji, actImg:null};
+  const rows = [["MafiaCar", 0, "3", "#ff3b5c", true, 1], ["Blackout", 1, "0:42", "#9b8cff", false, .7], ["Earthquake", 2, "0:09", "#ff7a3c", false, .3], ["GiveWeapon", 3, "0:04", "#ff9f1c", false, .8]]
+    .filter(r => r[4] ? E.ShowChases : (r[0] === "GiveWeapon" ? E.ShowInstant : state.ini.Effects.BarsPosition === "Events")).slice(0, E.MaxItems);
+  if (!rows.length) return null;
+  const th = E.TitleEnabled && E.Title ? 26 : 0, w = 250, h = th + rows.length * 42 + (rows.length - 1) * 6;
+  let html = th ? abs(0, 0, w, th - 2, bgCss(), header(E.Title)) : "";
+  rows.forEach((r, n) => {
+    const it = find(r[0]), y = th + n * 48, S = sup[r[1]];
+    html += abs(0, y, w, 42, `${bgCss(1.3)};border-left:4px solid ${r[3]}`, `
+      <div style="position:absolute;left:8px;top:5px">${avatarHTML(S, 28)}</div>
+      <div style="position:absolute;left:42px;top:5px">${thumbSmall(it.actImg, it.actEmoji, 28)}</div>
+      <div style="position:absolute;left:76px;top:3px;color:#fff;font-size:${fpx(.3)};white-space:nowrap">${esc(it.Name || "")}</div>
+      <div style="position:absolute;left:76px;top:21px;color:${state.ini.Hype.Color};font-size:${fpx(.26)}">${S[0]}</div>
+      <div style="position:absolute;right:10px;top:4px;color:${r[3]};font-size:${fpx(.5)};font-weight:700">${r[2]}</div>
+      <div style="position:absolute;left:8px;bottom:2px;height:3px;width:${(w-16)*r[5]}px;background:${r[3]}"></div>`);
   });
   return {w, h, html};
 }
@@ -1742,7 +1850,7 @@ function pvSpot(frame, vert){
 }
 // sample timer card of a running effect (Effects.BarsPosition)
 function pvFxCard(frame, vert, rects){
-  const E = state.ini.Effects; if (!E.ShowBars || E.BarsPosition === "Player") return "";
+  const E = state.ini.Effects; if (!E.ShowBars || E.BarsPosition === "Player" || E.BarsPosition === "Events") return "";
   const w = 250, h = 42, acc = "#9b8cff", sup = SAMPLE_SUPS[1];
   let s = vert ? Math.min(1, (frame.w - 20) / w) : 1, x = frame.x + (frame.w - w*s)/2, y = 640;
   const H = rects.Health, S = rects.Score;
@@ -1770,7 +1878,7 @@ function renderPreview(){
     Score: H.ScoreEnabled && pvScoreWrap(designOn() ? pvDesignScore() : pvScore()),
     Top3: H.Top3Enabled && (designOn() ? pvDesignTop() : pvTop()),
     Health: H.HealthEnabled && (designOn() ? pvDesignHealth(L) : pvHealth(L)),
-    Guide: H.GuideEnabled && pvGuide(),
+    Guide: pvEvents(),
     Notif: state.ini.Notifications.Enabled && pvFeed(ints.slice(0, Math.min(3, state.ini.Notifications.MaxVisible)).map((it, n) => ({s:SAMPLE_SUPS[n], t:fill(it.Message || it.Name, SAMPLE_SUPS[n][0]), icon:state.ini.Notifications.ShowGiftIcon ? {img:it.giftImg, emoji:it.giftEmoji} : null})), 30, 24, .34, false, "Notif", L),
     Feed: state.ini.KillFeed.Enabled && pvFeed([0,2].map(n => ({s:SAMPLE_SUPS[n], t:fill(state.ini.Texts.KillFeedText, SAMPLE_SUPS[n][0])})), 26, 20, .34, false, "Feed", L),
     Hype: state.ini.Hype.Enabled && pvFeed([{s:SAMPLE_SUPS[0], t:fill(state.ini.Hype.KingJoinText, SAMPLE_SUPS[0][0]), lv:48},{s:SAMPLE_SUPS[1], t:fill(state.ini.Hype.ComboText, SAMPLE_SUPS[1][0]), lv:25}], 38, 30, .38, true, "Hype", L)
@@ -1783,13 +1891,12 @@ function renderPreview(){
   if (vert && L.AutoArrange){
     let top = 8, bottom = 720 - (+L.BottomMargin || 0), gap = +L.Gap || 0;
     const on = p => panels[p] && L[p + "Show"];
-    const need = ["Score","Top3","Hype","Health","Notif","Feed"].filter(on).reduce((t, p) => t + panels[p].h * fit(panels[p]) + gap, 0);
+    const need = ["Score","Top3","Hype","Guide","Health","Notif","Feed"].filter(on).reduce((t, p) => t + panels[p].h * fit(panels[p]) + gap, 0);
     const room = bottom - top - 150, k = need > room ? Math.max(0.55, room / need) : 1;
-    ["Score","Top3","Hype"].forEach(p => { if (!on(p)) return; const P = panels[p], s = fit(P) * k; put(p, P, frame.x + (frame.w - P.w*s)/2, top, s); top += P.h*s + gap*k; });
+    ["Score","Top3","Hype","Guide"].forEach(p => { if (!on(p)) return; const P = panels[p], s = fit(P) * k; put(p, P, frame.x + (frame.w - P.w*s)/2, top, s); top += P.h*s + gap*k; });
     const E = state.ini.Effects;
     if (E.ShowBars && E.BarsPosition === "Bottom"){ const fs = Math.min(1, (frame.w - 20) / 250) * k; bottom -= 42 * fs; rects.FxSlot = {x:frame.x + (frame.w - 250 * fs) / 2, y:bottom, s:fs}; bottom -= gap * k; }
     ["Health","Notif","Feed"].forEach(p => { if (!on(p)) return; const P = panels[p], s = fit(P) * k; bottom -= P.h*s; put(p, P, frame.x + (frame.w - P.w*s)/2, bottom, s); bottom -= gap*k; });
-    const G = panels.Guide; if (G && L.GuideShow){ const s = fit(G); const [x, y] = anchor(L, "Guide", G.w*s, G.h*s, frame); put("Guide", G, x, y, s); }
   } else Object.keys(panels).forEach(p => {
     const P = panels[p];
     if (!P || !L[p + "Show"]) return;
@@ -1862,10 +1969,10 @@ const PRESETS = {
   "👑 Royal": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Royal"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "Classic"; s.ini.Hud.Top3Variant = "Podium"; s.ini.Hud.HealthVariant = "Bar"; s.ini.Hud.NotifVariant = "Pill"; s.ini.Hud.FeedAnimation = "Fade"; s.ini.Hud.OverheadStyle = "Badge"; s.ini.Aura.EnemyAura = "Ring"; s.ini.Aura.AllyAura = "Glow"; s.ui.preview = "Normal"; },
   "🎵 TikTok Stream": s => { s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.LayoutMode = "Vertical"; s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Stream"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "Bar"; s.ini.Hud.Top3Variant = "Compact"; s.ini.Hud.HealthVariant = "Slim"; s.ini.Hud.NotifVariant = "Pill"; s.ini.Hud.FeedAnimation = "Pop"; s.ini.Hud.OverheadStyle = "Minimal"; s.ini.LayoutVertical.Top3OffsetY = 70; s.ui.preview = "Vertical"; },
   "🌈 Hologram": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Hologram"; s.ini.Hud.StylePalette = true; s.ini.Hud.ScoreVariant = "BigTimer"; s.ini.Hud.Top3Variant = "List"; s.ini.Hud.HealthVariant = "Segmented"; s.ini.Hud.NotifVariant = "Card"; s.ini.Hud.OverheadStyle = "Classic"; s.ini.Aura.EnemyAura = "Rainbow"; s.ui.preview = "Normal"; },
-  "🏠 الأصل": s => { s.ini.Layout = layoutDefaults(false); s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Classic"; s.ini.Hud.GuideMode = "Cards"; s.ini.Hud.LayoutMode = "Normal"; s.ui.preview = "Normal"; },
+  "🏠 الأصل": s => { s.ini.Layout = layoutDefaults(false); s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Classic"; s.ini.Hud.LayoutMode = "Normal"; s.ui.preview = "Normal"; },
   "📱 TikTok": s => { s.ini.LayoutVertical = layoutDefaults(true); s.ini.Hud.LayoutMode = "Vertical"; s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Glass"; s.ui.preview = "Vertical"; },
-  "🎮 Esports": s => { const L = s.ini.Layout = layoutDefaults(false); L.FeedPosition = "TopRight"; L.FeedOffsetY = 0; L.HypePosition = "MiddleRight"; L.HypeOffsetY = 0; L.NotifPosition = "BottomLeft"; s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Esports"; s.ini.Hud.GuideMode = "Rotate"; s.ui.preview = "Normal"; },
-  "✨ بسيط": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Minimal"; s.ini.Hud.GuideMode = "List"; s.ini.Hud.ShowCounters = false; s.ini.Hud.ShowStatus = false; s.ini.Hud.ShowStreak = false; s.ini.Hud.TitleEnabled = false; s.ui.preview = "Normal"; }
+  "🎮 Esports": s => { const L = s.ini.Layout = layoutDefaults(false); L.FeedPosition = "TopRight"; L.FeedOffsetY = 0; L.HypePosition = "MiddleRight"; L.HypeOffsetY = 0; L.NotifPosition = "BottomLeft"; s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Esports"; s.ui.preview = "Normal"; },
+  "✨ بسيط": s => { s.ini.Layout = layoutDefaults(false); s.ini.Hud.Design = "None"; s.ini.Hud.Style = "Minimal"; s.ini.Hud.ShowCounters = false; s.ini.Hud.ShowStatus = false; s.ini.Hud.ShowStreak = false; s.ini.Hud.TitleEnabled = false; s.ui.preview = "Normal"; }
 };
 $("#presets").innerHTML = Object.keys(PRESETS).map(k => `<span class="chip" data-preset="${k}">${k}</span>`).join("");
 $("#kitChips").addEventListener("click", e => {
@@ -1877,42 +1984,115 @@ $("#kitChips").addEventListener("click", e => {
 });
 $("#presets").addEventListener("click", e => { const c = e.target.closest("[data-preset]"); if (!c) return; PRESETS[c.dataset.preset](state); renderAllForms(); renderHudSide(); changed(); toast("✅ " + c.dataset.preset); });
 
-// ------------------------------------------------------------- OBS
+// ------------------------------------------------------------- OBS overlay (gift guide) editor
+//  every detail of the overlay is here; the link (#obs=...) carries the settings + the gifts,
+//  so after a change: copy the link again (or download OBS-overlay.html).
+const OBS_FONTS = ["Cairo","Tajawal","Almarai","Changa","Lalezar","Rubik","Poppins","Bebas Neue","Arial","Impact","Tahoma"];
+const OBS_GROUPS = [
+  ["📐 الترتيب", [["Layout","الترتيب","s",[["Grid","▦ شبكة (أعمدة)"],["Row","➡️ سطر أفقي واحد"],["Column","⬇️ عمود واحد"]]],["Columns","▦ عدد الأعمدة","range",{min:1,max:10,step:1}],
+    ["GapX","↔ البعد الأفقي بين الكروت","range",{min:0,max:100,step:1}],["GapY","↕ البعد العمودي بين الكروت","range",{min:0,max:100,step:1}],
+    ["Align","📍 المحاذاة","s",[["start","البداية"],["center","الوسط"],["end","النهاية"]]],["Dir","🔁 الاتجاه","s",[["rtl","من اليمين ← (عربي)"],["ltr","من اليسار → "]]],
+    ["Scale","🔍 الحجم الكامل","range",{min:0.3,max:3,step:0.05}],["PadX","↔ الهامش الجانبي","range",{min:0,max:200,step:1}],["PadY","↕ الهامش الفوقاني","range",{min:0,max:200,step:1}],
+    ["Order","🔢 الترتيب ديال الهدايا","s",[["list","بحال اللائحة"],["coinsAsc","الرخيصة الأولى"],["coinsDesc","الغالية الأولى"]]],
+    ["PerPage","📄 شحال فكل صفحة (0 = كلهم)","range",{min:0,max:20,step:1}],["PageSeconds","⏱️ تبدل الصفحة كل (ث)","range",{min:2,max:30,step:1}]]],
+  ["🃏 الكارطة", [["CardStyle","شكل الكارطة","s",[["Split","◧ مقسومة (هدية | أكشن)"],["Stack","⬒ فوق بعضها"],["Compact","▣ مدمجة (أيقونات + أسماء)"],["Icons","⚪ أيقونات فقط"]]],
+    ["CardWidth","↔ العرض (0 = أوتوماتيكي)","range",{min:0,max:600,step:5}],["CardPadding","▢ الحشو الداخلي","range",{min:0,max:40,step:1}],["CardRadius","◜ دوران الزوايا","range",{min:0,max:60,step:1}],
+    ["CardBg","🎨 لون الخلفية","c"],["CardOpacity","🌫️ الشفافية ديال الخلفية (0 = شفافة)","range",{min:0,max:100,step:1}],
+    ["BorderWidth","▭ عرض الإطار","range",{min:0,max:10,step:1}],["BorderColor","لون الإطار","c"],["Shadow","🌑 الظل","b"],
+    ["SplitColors","🟦🟩 تلوين الجوج ديال الكارطة","b"],["GiftColor","🎁 لون الهدية","c"],["ActionColor","🎬 لون الأكشن","c"],["SplitOpacity","🌫️ شفافية الألوان","range",{min:0,max:100,step:1}]]],
+  ["🔷 الأيقونات", [["IconSize","📏 حجم الأيقونة","range",{min:20,max:220,step:1}],["IconShape","الشكل","s",[["circle","⚪ دائرة"],["rounded","▢ زوايا مدورة"],["square","⬜ مربع"],["hex","⬡ مسدس"]]],
+    ["IconBg","🎨 لون خلفية الأيقونة","c"],["IconBgOpacity","🌫️ الشفافية (0 = شفافة)","range",{min:0,max:100,step:1}],
+    ["RingWidth","⭕ عرض الحلقة (0 = بلا)","range",{min:0,max:12,step:1}],["RingMode","لون الحلقة","s",[["Auto","✨ لون الهدية / الأكشن"],["Custom","🖌️ لون واحد"]]],["RingColor","لون الحلقة (واحد)","c"],
+    ["ImgFit","🖼️ الصورة","s",[["contain","كاملة"],["cover","معمرة الشكل"]]]]],
+  ["🔤 الكتابة", [["ShowGift","🎁 سمية الهدية","b"],["ShowAction","🎬 سمية الأكشن","b"],["ShowCoins","💎 الثمن (كوينز)","b"],["ShowArrow","➜ السهم","b"],["Arrow","شكل السهم","t"],
+    ["Font","🅰️ الخط","s",OBS_FONTS.map(f => [f, f])],["FontSize","📏 حجم الكتابة","range",{min:8,max:60,step:1}],["Bold","عريض","b"],
+    ["GiftTextColor","لون سمية الهدية","c"],["ActionTextColor","لون سمية الأكشن","c"],["TextColor","لون الثمن","c"],["TextShadow","ظل الكتابة","b"]]],
+  ["🏷️ العنوان", [["ShowTitle","العنوان","b"],["TitleText","النص","t"],["TitleSize","الحجم","range",{min:10,max:80,step:1}],["TitleColor","اللون","c"],["TitleBg","خلفية العنوان","b"]]],
+  ["🎬 الحركة والخلفية", [["Anim","الحركة","s",[["none","⛔ بلا"],["pulse","💓 نبض"],["float","🎈 طفو"],["glow","✨ ضو"],["pop","💥 دخول"]]],["AnimSpeed","⏱️ السرعة (ث)","range",{min:0.5,max:8,step:0.1}],
+    ["BgMode","🖼️ خلفية الشاشة","s",[["transparent","شفافة (للبث)"],["color","لون"]]],["BgColor","لون الخلفية","c"]]]
+];
+const OBS_PRESETS = {
+  "◧ الأصل": {},
+  "⚪ دوائر": {IconShape:"circle", CardStyle:"Compact", CardOpacity:0, Shadow:false, RingWidth:4, Columns:3},
+  "▦ شبكة 3": {Layout:"Grid", Columns:3, CardStyle:"Compact", IconSize:64, GapX:10, GapY:10},
+  "➡️ سطر أفقي": {Layout:"Row", CardStyle:"Stack", IconSize:56, GapX:8},
+  "⬇️ عمود": {Layout:"Column", CardStyle:"Split", IconSize:48, GapY:8, FontSize:13},
+  "✨ شفاف": {CardOpacity:0, SplitColors:false, Shadow:false, IconBgOpacity:0, RingWidth:0},
+  "🔥 كروت ملونة": {CardStyle:"Split", SplitColors:true, GiftColor:"#ff3b5c", ActionColor:"#ffc828", CardRadius:20, Anim:"float"},
+  "📺 صفحات": {PerPage:4, PageSeconds:6, Anim:"pop"}
+};
+function obsFieldHTML([k, label, type, o]){
+  const v = state.obs[k];
+  let inner;
+  if (type === "b") return `<label class="tog" style="background:var(--bg2);border:1px solid var(--line2);border-radius:9px;padding:6px 9px"><span>${label}</span><span class="sw"><input type="checkbox" data-obs="${k}" ${v?"checked":""}><i></i></span></label>`;
+  if (type === "s") inner = `<select data-obs="${k}">${o.map(([a, n]) => `<option value="${esc(a)}" ${String(a)===String(v)?"selected":""}>${esc(n)}</option>`).join("")}</select>`;
+  else if (type === "c") inner = `<input type="color" data-obs="${k}" value="${esc(v)}">`;
+  else if (type === "range") inner = `<div style="display:flex;gap:6px;align-items:center"><input type="range" data-obs="${k}" min="${o.min}" max="${o.max}" step="${o.step}" value="${v}" style="flex:1"><input type="number" data-obs="${k}" min="${o.min}" max="${o.max}" step="${o.step}" value="${v}" style="width:70px"></div>`;
+  else inner = `<input type="text" data-obs="${k}" value="${esc(v)}">`;
+  return `<div class="fld"><label>${label}</label>${inner}</div>`;
+}
 function renderObsForm(){
-  const O = state.obs;
-  $("#obsForm").innerHTML = `
-    <div class="fld"><label>عدد الأعمدة</label><input type="number" min="1" max="8" data-obs="Columns" value="${O.Columns}"></div>
-    <div class="fld"><label>حجم الصور (px)</label><input type="number" min="32" max="256" data-obs="Size" value="${O.Size}"></div>
-    <div class="fld"><label class="tog"><span>الأسماء</span><span class="sw"><input type="checkbox" data-obs="ShowNames" ${O.ShowNames?"checked":""}><i></i></span></label></div>
-    <div class="fld"><label>الخلفية</label><select data-obs="Background"><option value="transparent" ${O.Background==="transparent"?"selected":""}>شفافة</option><option value="#070a10" ${O.Background!=="transparent"?"selected":""}>داكنة</option></select></div>`;
+  $("#obsForm").innerHTML = `<div class="chips" style="margin-bottom:10px">${Object.keys(OBS_PRESETS).map(p => `<span class="chip" data-obspreset="${p}">${p}</span>`).join("")}</div>`
+    + OBS_GROUPS.map(([t, fields]) => `<details class="obsgrp" open><summary>${t}</summary><div class="grid">${fields.map(obsFieldHTML).join("")}</div></details>`).join("");
   renderObsPreview();
 }
 $("#obsForm").addEventListener("input", e => {
-  const k = e.target.dataset.obs; if (!k) return;
-  state.obs[k] = e.target.type === "checkbox" ? e.target.checked : (e.target.tagName === "SELECT" ? e.target.value : (+e.target.value || 1));
-  save(); renderObsPreview();
+  const el = e.target, k = el.dataset.obs; if (!k) return;
+  state.obs[k] = el.type === "checkbox" ? el.checked : (el.type === "range" || el.type === "number" ? (+el.value || 0) : el.value);
+  if (el.type === "range" || el.type === "number") el.closest(".fld").querySelectorAll(`[data-obs="${k}"]`).forEach(x => { if (x !== el) x.value = el.value; });
+  obsLinkStale(); save(); renderObsPreview();
 });
-function obsTiles(forExport){
-  const O = state.obs, H = state.ini.Hud, s = O.Size;
-  return state.interactions.filter(i => i.Enabled && i.ShowInGuide && i.Trigger !== "Key").map((it, n) => {
-    const gi = it.giftImg || emojiToPng(it.giftEmoji), ai = it.actImg || emojiToPng(it.actEmoji);
-    const act = it.Name || (ACT[it.Action] || {}).name || it.Action;
-    return `<div class="t"><div class="g" style="background:${H.GuideGiftColor}"><img src="${gi}" style="width:${s}px;height:${s}px">${O.ShowNames?`<span>${esc(triggerLabel(it))}</span>`:""}</div><div class="a" style="background:${rgba(mixHex(H.PanelColor,H.GuideActionColor,.3),.92)};border-left:4px solid ${H.GuideActionColor}"><img src="${ai}" style="width:${s}px;height:${s}px">${O.ShowNames?`<span>${esc(act)}</span>`:""}</div></div>`;
-  }).join("");
+$("#obsForm").addEventListener("click", e => {
+  const p = e.target.closest("[data-obspreset]"); if (!p) return;
+  state.obs = Object.assign({}, OBS_DEFAULTS, p.dataset.obspreset === "◧ الأصل" ? {} : state.obs, OBS_PRESETS[p.dataset.obspreset]);
+  obsLinkStale(); save(); renderObsForm(); toast("✅ " + p.dataset.obspreset);
+});
+// gifts shown in the overlay (interactions with "📺 يبان فشاشة OBS")
+function obsItemsRaw(){
+  return state.interactions.filter(i => i.Enabled && i.ShowInGuide && i.Trigger !== "Key").map(it => ({
+    g: triggerLabel(it), a: it.Name || (ACT[it.Action] || {}).name || it.Action,
+    c: it.Trigger === "Gift" ? (giftCoins(it.GiftName) || 0) : 0,
+    gi: it.giftImg || null, ge: it.giftEmoji || "", ai: it.actImg || null, ae: it.actEmoji || ""
+  }));
 }
-const OBS_CSS = O => `.wrap{display:grid;grid-template-columns:repeat(${O.Columns},max-content);gap:10px}.t{display:flex;border-radius:14px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.45)}.t .g,.t .a{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 10px;gap:4px;min-width:${O.Size+20}px}.t span{font:700 ${Math.max(11,O.Size/6)}px Cairo,Arial,sans-serif;color:#fff;text-shadow:0 1px 2px #000;max-width:${O.Size*1.6}px;text-align:center}`;
+// small pictures for the link (keeps the link short)
+function obsShrink(src, max){
+  return new Promise(res => {
+    if (!src) return res(null);
+    const im = new Image();
+    im.onload = () => { const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.max(1, Math.round(im.width * k)); c.height = Math.max(1, Math.round(im.height * k)); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); let d = c.toDataURL("image/webp", .82); if (!/^data:image\/webp/.test(d)) d = c.toDataURL("image/png"); res(d); };
+    im.onerror = () => res(null);
+    im.src = src;
+  });
+}
+async function obsLink(){
+  const size = Math.min(160, Math.max(48, Math.round(state.obs.IconSize * 1.25)));
+  const items = await Promise.all(obsItemsRaw().map(async it => Object.assign({}, it, {gi: await obsShrink(it.gi, size), ai: await obsShrink(it.ai, size)})));
+  return location.href.split("#")[0] + "#obs=" + await obsPack({o: state.obs, i: items});
+}
+function obsLinkStale(){ const b = $("#obsLinkBox"); if (b && b.value) { b.value = ""; $("#obsLinkInfo").textContent = "⚠️ بدلتي شي حاجة: عاود ضغط «🔗 الرابط» باش ياخد التعديلات"; } }
 function renderObsPreview(){
-  const O = state.obs;
-  $("#obsPrev").innerHTML = `<style>#obsPrev ${OBS_CSS(O).replace(/}\./g, "}#obsPrev .")}</style><div class="wrap">${obsTiles()}</div>`;
-  $("#obsPrev").style.background = O.Background === "transparent" ? "repeating-conic-gradient(#1a1f29 0 25%,#11151d 0 50%) 0 0/20px 20px" : O.Background;
+  const box = $("#obsPrev"); if (!box) return;
+  box.style.background = state.obs.BgMode === "color" ? state.obs.BgColor : "repeating-conic-gradient(#1a1f29 0 25%,#11151d 0 50%) 0 0/20px 20px";
+  obsMount(box, state.obs, obsItemsRaw(), "#obsPrev");
 }
 function obsHTML(){
-  const O = state.obs;
-  return `<!doctype html><html><head><meta charset="utf-8"><title>TikArena OBS</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@700&display=swap"><style>html,body{margin:0;background:${O.Background};}body{padding:12px}${OBS_CSS(O)}</style></head><body><div class="wrap">${obsTiles(true)}</div></body></html>`;
+  const rt = document.getElementById("obsRuntime").textContent, bg = state.obs.BgMode === "color" ? state.obs.BgColor : "transparent";
+  return `<!doctype html><html><head><meta charset="utf-8"><title>TikArena OBS</title><style>html,body{margin:0;background:${bg};overflow:hidden}</style><script>${rt}<\/script></head><body><div id="r"></div><script>obsMount(document.getElementById("r"), ${JSON.stringify(state.obs)}, ${JSON.stringify(obsItemsRaw())});<\/script></body></html>`;
 }
+$("#obsMakeLink").onclick = async () => {
+  const link = await obsLink();
+  $("#obsLinkBox").value = link;
+  const kb = (link.length / 1024).toFixed(1);
+  $("#obsLinkInfo").textContent = (location.protocol === "file:" ? "⚠️ الصفحة مفتوحة من ملف فهاد الجهاز: الرابط كيخدم غير فهاد الجهاز. ملي ترفع الصفحة لموقع (رابط https) الرابط كيخدم فأي بلاصة. " : "✅ ") + `طول الرابط ${kb} KB`;
+  try { await navigator.clipboard.writeText(link); toast("🔗 تنسخ الرابط"); } catch(e){ $("#obsLinkBox").select(); toast("🔗 نسخ الرابط من الخانة"); }
+};
+$("#obsOpenLink").onclick = async () => { const link = $("#obsLinkBox").value || await obsLink(); window.open(link, "_blank"); };
+$("#obsDownload").onclick = () => download("OBS-overlay.html", obsHTML(), "text/html");
+$("#obsReset").onclick = () => { state.obs = Object.assign({}, OBS_DEFAULTS); obsLinkStale(); save(); renderObsForm(); };
 
 // ------------------------------------------------------------- nav
-const NAV = [["sec-inter","🎁 التفاعلات"],["sec-keys","⌨️ الأزرار"],["sec-challenge","🏆 التحدي"],["sec-chars","🧍 الشخصيات"],["sec-random","🎲 العشوائي"],["sec-hud","🖥️ الهود"],["sec-hype","🔥 الحماس"],["sec-cam","🎥 الكاميرا"],["sec-gfx","🌦️ الجرافيك"],["sec-fx","💥 التأثيرات"],["sec-export","📦 التصدير"]];
+const NAV = [["sec-inter","🎁 التفاعلات"],["sec-keys","⌨️ الأزرار"],["sec-challenge","🏆 التحدي"],["sec-chars","🧍 الشخصيات"],["sec-random","🎲 العشوائي"],["sec-hud","🖥️ الهود"],["sec-hype","🔥 الحماس"],["sec-cam","🎥 الكاميرا"],["sec-gfx","🌦️ الجرافيك"],["sec-fx","💥 التأثيرات"],["sec-obs","📺 OBS"],["sec-export","📦 التصدير"]];
 $("#nav").innerHTML = NAV.map(([id, t]) => `<a href="#${id}" data-id="${id}">${t}</a>`).join("");
 const io = new IntersectionObserver(ents => ents.forEach(en => { if (en.isIntersecting) $$("#nav a").forEach(a => a.classList.toggle("on", a.dataset.id === en.target.id)); }), {rootMargin:"-45% 0px -50% 0px"});
 NAV.forEach(([id]) => io.observe(document.getElementById(id)));
@@ -1920,7 +2100,7 @@ NAV.forEach(([id]) => io.observe(document.getElementById(id)));
 <script>
 "use strict";
 // ------------------------------------------------------------- INI export
-const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest","PlayerFx","Effects","Spotlight","Music","DamageFx"];
+const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest","PlayerFx","Effects","Spotlight","Music","DamageFx","Events"];
 const INTER_KEYS = ["Enabled","Name","Action","Trigger","GiftName","GiftId","LikesCount","CommentText","OncePerUser","TestKey","Units","MultiplyByCombo","Cooldown","Effect","Message","GiftImage","ActionImage","EntryCam","ShowInGuide",
   "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","KeepSeconds","Amount","Music","Weather","Aura","AuraColor","GiftCoins","GiftMatch","Spotlight","SpotlightText"];
 function iniVal(v){
@@ -2033,7 +2213,7 @@ function readme(){
 "   " + G.HudStyleKey + " شكل الهود · " + G.HudFontKey + " الخط · " + G.LayoutKey + " 16:9/9:16 · " + G.PauseKey + " إيقاف مؤقت · " + G.EmergencyKey + " الطوارئ · " + G.StopEffectsKey + " حبس التأثيرات · " + G.HypeTestKey + " تجربة الحماس",
 "   أزرار التجربة: " + state.interactions.filter(i => i.TestKey && i.TestKey !== "None").map(i => i.TestKey + "=" + (i.Name || i.Action)).join(" · "),
 "",
-"5) OBS: Browser Source <- Local file <- OBS-overlay.html",
+"5) OBS / TikTok LIVE Studio: القسم 11 📺 ← 🔗 الرابط ← Browser Source / Link (ولا OBS-overlay.html)",
 "",
 "التحديث التلقائي:",
 "   - AutoImport: السكريبت كيقلب كل ثانيتين فـ Downloads على أحدث TikArena*.ini ولا TikArena*.ini.txt وكينسخو.",
