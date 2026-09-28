@@ -618,7 +618,7 @@ namespace TikArena
         public string RoundVanishEffect;
         public float DurationMinutes, EndScreenSeconds;
         // [Queue]
-        public int MaxEnemies, MaxAllies, MaxPerEvent, DelayMs;
+        public int MaxEnemies, MaxAllies, MaxPerEvent, DelayMs, MaxPerSupporter;
         public float CorpseCleanupSeconds, VehicleCleanupSeconds;
         public bool ClearQueueOnRoundEnd;
         // [World]
@@ -794,7 +794,10 @@ namespace TikArena
             c.RoundVanishEffect = ini.S("Challenge", "VanishEffect", "SoftSmoke");
 
             c.MaxEnemies = U.Clamp(ini.I("Queue", "MaxEnemies", 15), 1, 100);
-            c.MaxAllies = U.Clamp(ini.I("Queue", "MaxAllies", 10), 1, 100);
+            c.MaxAllies = U.Clamp(ini.I("Queue", "MaxAllies", 15), 1, 100);
+            // fair share: one supporter never has more than this on the field at once (0 = no limit),
+            // the rest waits and supporters take turns
+            c.MaxPerSupporter = Math.Max(0, ini.I("Queue", "MaxPerSupporter", 10));
             c.MaxPerEvent = Math.Max(0, ini.I("Queue", "MaxPerEvent", 0));
             c.DelayMs = U.Clamp(ini.I("Queue", "DelayMs", 400), 0, 60000);
             c.CorpseCleanupSeconds = Math.Max(0, ini.F("Queue", "CorpseCleanupSeconds", 2));
@@ -3092,7 +3095,8 @@ namespace TikArena
             j.Sup = s;
             j.Left = units;
             j.Coins = coins;
-            if (IsSpawn(it.Action)) spawnQ.Add(j); else instantQ.Add(j);
+            if (IsSpawn(it.Action)) { spawnQ.Add(j); NotifyWaiting(s, it.Action); }
+            else instantQ.Add(j);
 
             if (IsHelp(it.Action)) s.RoundHelpCoins += Math.Max(coins, 1);
             if (IsEnemyAction(it.Action)) { lastEnemySup = s; lastEnemyAt = U.Now; }
@@ -3238,6 +3242,49 @@ namespace TikArena
         }
 
         // ================================================================ queues
+        //  fixed distance for enemies / allies on foot (cars and motorbikes still drive in from SpawnDistance)
+        const float FootSpawnDistance = 8f;
+        readonly Dictionary<string, long> waitNotified = new Dictionary<string, long>();
+
+        int AliveBySup(Supporter s, bool enemy)
+        {
+            int n = 0;
+            foreach (Tracked t in tracked) if (t.Sup == s && t.Enemy == enemy && t.DeadAt == 0) n++;
+            return n;
+        }
+
+        // room of one supporter now (per supporter cap and free places in the arena)
+        int RoomFor(Supporter s, bool enemy)
+        {
+            int free = (enemy ? cfg.MaxEnemies : cfg.MaxAllies) - AliveCount(enemy);
+            if (cfg.MaxPerSupporter > 0 && s != null) free = Math.Min(free, cfg.MaxPerSupporter - AliveBySup(s, enemy));
+            return Math.Max(0, free);
+        }
+
+        // "Amine: 40 waiting" when a big gift can not come all at once
+        void NotifyWaiting(Supporter s, string action)
+        {
+            if (!cfg.NotifEnabled || s == null) return;
+            bool enemy = !IsAllySpawn(action);
+            int queued = 0;
+            foreach (Job q in spawnQ) if (q.Sup == s && IsAllySpawn(ActionOf(q)) != enemy) queued += q.Left * SlotsFor(ActionOf(q));
+            int waiting = queued - RoomFor(s, enemy);
+            if (waiting <= 0) return;
+            long last;
+            string key = s.Key + (enemy ? "|e" : "|a");
+            if (waitNotified.TryGetValue(key, out last) && U.Now - last < 3000) return;
+            waitNotified[key] = U.Now;
+            FeedItem f = new FeedItem();
+            f.Parts = Txt.Parts(cfg.Tx(enemy ? "QueueWaitText" : "QueueWaitAllyText", "{name}: {count} waiting"), s.Nick, waiting, null, s.Level);
+            f.Text = string.Join(" ", f.Parts.ToArray());
+            f.Avatar = cfg.NotifAvatar ? Avatar(s) : null;
+            f.Start = U.Now;
+            f.End = U.Now + (long)(cfg.NotifSeconds * 1000);
+            f.Col = cfg.TextColor;
+            notifs.Add(f);
+            while (notifs.Count > cfg.NotifMax) notifs.RemoveAt(0);
+        }
+
         int AliveCount(bool enemy)
         {
             int n = 0;
@@ -3298,10 +3345,13 @@ namespace TikArena
                         if (ally) allyBlocked = true; else enemyBlocked = true;
                         continue;
                     }
+                    // this supporter already has his share on the field: the next supporter goes first
+                    if (cfg.MaxPerSupporter > 0 && j.Sup != null && AliveBySup(j.Sup, !ally) + Math.Min(need, cfg.MaxPerSupporter) > cfg.MaxPerSupporter) continue;
                     RunJob(j);
                     j.It.LastFire = now;
                     j.Left--;
-                    if (j.Left <= 0) spawnQ.RemoveAt(i);
+                    spawnQ.RemoveAt(i);
+                    if (j.Left > 0) spawnQ.Add(j);   // turns: the others come before his next unit
                     nextSpawn = now + cfg.DelayMs;
                     break;
                 }
@@ -3651,7 +3701,7 @@ namespace TikArena
             Interaction it = j.It;
             Ped pl = Game.Player.Character;
             bool sky = string.Equals(it.Effect, "SkyDrop", StringComparison.OrdinalIgnoreCase);
-            Vector3 pos = AroundPlayer(it.SpawnDistance);
+            Vector3 pos = AroundPlayer(FootSpawnDistance);
             if (sky) pos.Z += 45f;
             Model m = LoadModel(it.Model, DefaultModel(it.Action == "Random" ? (animal ? "Animals" : (enemy ? "SpawnEnemy" : "SpawnAlly")) : it.Action));
             if (!m.IsLoaded) return;
@@ -3666,7 +3716,7 @@ namespace TikArena
                 Function.Call(Hash.SET_PED_NEVER_LEAVES_GROUP, p, true);
                 Function.Call(Hash.SET_PED_RELATIONSHIP_GROUP_HASH, p, relAlly);
             }
-            if (it.Blip) AddBlip(p, enemy);
+            if (it.Blip || enemy) AddBlip(p, enemy);
             Tracked t = Track(p, j, enemy, animal, null, true);
             if (sky && !animal)
             {
@@ -3690,7 +3740,7 @@ namespace TikArena
             int h = Function.Call<int>(Hash.CLONE_PED, pl, false, false, true);
             Ped p = Entity.FromHandle(h) as Ped;
             if (p == null || !p.Exists()) return;
-            Vector3 pos = AroundPlayer(Math.Min(j.It.SpawnDistance, 6f));
+            Vector3 pos = AroundPlayer(FootSpawnDistance);
             p.Position = pos;
             p.Heading = pl.Heading;
             SetupPed(p, j.It, false, false);
@@ -3735,7 +3785,7 @@ namespace TikArena
                 Function.Call(Hash.SET_PED_COMBAT_ATTRIBUTES, p, 3, i != 0);
                 Tracked t = Track(p, j, true, false, v, i == 0);
                 TaskPed(t);
-                if (it.Blip) AddBlip(p, true);
+                AddBlip(p, true);   // enemy crew: always the red point, on each rider
             }
             pm.MarkAsNoLongerNeeded();
             Function.Call(Hash.SET_VEHICLE_ENGINE_ON, v, true, true, false);

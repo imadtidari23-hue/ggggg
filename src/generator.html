@@ -372,7 +372,7 @@ function defaults(){
   S.TikFinity = {Enabled:true,Url:"ws://localhost:21213/",ReconnectSeconds:5,LearnMode:true,TestUserName:"Test"};
   S.Challenge = {Enabled:true,DurationMinutes:10,AutoRestart:true,EndScreenEnabled:true,EndScreenSeconds:6,MvpEnabled:true,
     ResetOnNewRound:true,ClearEnemies:true,ClearAllies:true,ClearEffects:true,HoldQueue:true,VanishEffect:"SoftSmoke"};
-  S.Queue = {MaxEnemies:15,MaxAllies:10,MaxPerEvent:0,DelayMs:400,CorpseCleanupSeconds:2,VehicleCleanupSeconds:60,ClearQueueOnRoundEnd:false};
+  S.Queue = {MaxEnemies:15,MaxAllies:15,MaxPerSupporter:10,MaxPerEvent:0,DelayMs:400,CorpseCleanupSeconds:2,VehicleCleanupSeconds:60,ClearQueueOnRoundEnd:false};
   S.World = {PoliceIgnore:true,GangsIgnore:true};
   S.Player = {ApplyOnRoundStart:true,Health:1000,Armor:100,Invincible:false};
   S.Random = {Duration:15,Effect:"SoftSmoke",EnemyModel:"s_m_y_clown_01",EnemyWeapon:"WEAPON_BAT",EnemyHealth:150,AllyModel:"s_m_y_swat_01",AllyWeapon:"WEAPON_CARBINERIFLE",AllyHealth:300,
@@ -402,7 +402,7 @@ function defaults(){
   S.Camera = {InvincibleDuringCam:true,EntryEnabled:true,EntryMinCoins:1000,EntrySeconds:3,KillerEnabled:true,KillerSeconds:3,SlowMoMode:"LastInWave",SlowMoScale:0.3,SlowMoSeconds:1.5,WinEnabled:true,WinSeconds:4};
   S.Graphics = {LockTime:false,Hour:21,Minute:0,LockWeather:false,Weather:"Clear",TimecycleEnabled:false,Timecycle:"rply_saturation",TimecycleStrength:0.6,DensityEnabled:false,PedDensity:1,VehicleDensity:1};
   S.Texts = {WinText:"فوز",LossText:"خسارة",WinShort:"فوز",LossShort:"خسارة",MvpText:"MVP",MvpWinReason:"ساعدك باش تربح",MvpLossReason:"هو السبب ف الخسارة",KillFeedText:"{name} قُتل",
-    WinStreakText:"انتصارات متتالية",LossStreakText:"خسارات متتالية",EnemiesShort:"أعداء",AlliesShort:"مساعدين",KillsShort:"قتلات",QueueShort:"الطابور",PausedText:"إيقاف مؤقت",RespawnText:"الرجوع بعد",ResumedText:"استئناف",
+    WinStreakText:"انتصارات متتالية",LossStreakText:"خسارات متتالية",EnemiesShort:"أعداء",AlliesShort:"مساعدين",KillsShort:"قتلات",QueueShort:"الطابور",QueueWaitText:"⏳ {name}: {count} أعداء فالانتظار",QueueWaitAllyText:"⏳ {name}: {count} مساعدين فالانتظار",PausedText:"إيقاف مؤقت",RespawnText:"الرجوع بعد",ResumedText:"استئناف",
     StartedText:"بدأ التحدي",EmergencyText:"تم مسح كل شيء",StopEffectsText:"تحبسو جميع التأثيرات",LoadedText:"جاهز. ضغط",ReloadedText:"تحدثات الإعدادات",ImportedText:"تجابو الإعدادات الجداد من Downloads"};
   S.Layout = layoutDefaults(false);
   S.LayoutVertical = layoutDefaults(true);
@@ -860,8 +860,10 @@ function advFields(i){
     h += iField(i,"CombatMovement","😤 الشراسة","s",[[0,"0 · واقف"],[1,"1 · دفاعي"],[2,"2 · هجومي"],[3,"3 · انتحاري"]]);
     h += iField(i,"ShootRate","🔥 سرعة الضرب","i",{min:10,max:1000});
     h += iField(i,"Ammo","📦 الرصاص","i",{min:1});
-    h += iField(i,"SpawnDistance","📏 المسافة (متر)","f",{min:2});
-    h += iField(i,"Blip","📍 علامة فالخريطة","b");
+    if (t === "crew") h += iField(i,"SpawnDistance","📏 المسافة (متر) · الطوموبيل كتجي سايقة","f",{min:20});
+    else h += `<div><label>📏 المسافة</label><div class="hint" style="padding:8px 0">8 متر (ثابتة)</div></div>`;
+    if (!/^(SpawnEnemy|MafiaCar|MotoHitman|Animals)$/.test(it.Action)) h += iField(i,"Blip","📍 علامة فالخريطة","b");
+    else h += `<div><label>📍 علامة فالخريطة</label><div class="hint" style="padding:8px 0">🔴 ديما حمرا (كتمشي ملي يموت)</div></div>`;
     if (t === "crew") h += iField(i,"Weapon","🔫 سلاح الطاقم","weapon");
   }
   if (person){ h += iField(i,"Aura","🌟 تأثير الشخصية (Aura)","s",AURAS); h += `<div><label>🎨 لون التأثير (خاوي = حسب النوع)</label><div style="display:flex;gap:4px"><input type="color" value="${esc(it.AuraColor||"#ffc828")}" data-auracolor="${i}"><input type="text" class="ltr" data-ii="${i}" data-ik="AuraColor" data-t="t" value="${esc(it.AuraColor)}" placeholder="#ff3b5c"></div></div>`; }
@@ -1057,6 +1059,7 @@ const TC_HINT = "أمثلة: rply_saturation · rply_vignette · NG_filmic01 · 
 function renderAllForms(){
   renderForm("#concBox", [{sec:"Queue", fields:[
     ["MaxEnemies","🦹 أقصى عدد ديال الأعداء","i",{min:1,max:100}],["MaxAllies","👮 أقصى عدد ديال المساعدين","i",{min:1,max:100}],
+    ["MaxPerSupporter","🤝 أقصى لكل داعم فنفس الوقت (0 = بلا حد)","i",{min:0,max:100}],
     ["DelayMs","⏱️ الوقت بين كل نزول (ms)","i",{min:0}],["MaxPerEvent","🎁 أقصى لكل هدية (0 = بلا حد)","i",{min:0}]]}]);
   renderForm("#formKeys", [
     {sec:"General", title:"⌨️ الأزرار", fields:[["PowerKey","⏻ تشغيل / إطفاء","k"],["StartKey","▶️ بدا التحدي + الاتصال","k"],["HudStyleKey","🎨 شكل الهود","k"],["HudFontKey","🔤 الخط","k"],
