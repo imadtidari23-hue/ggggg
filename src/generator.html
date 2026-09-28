@@ -118,7 +118,10 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
 .valid li.ok{background:rgba(0,230,118,.07);border-color:rgba(0,230,118,.3)}
 .valid li.warn{background:rgba(255,200,40,.07);border-color:rgba(255,200,40,.35)}
 .obsprev{border-radius:12px;min-height:220px;overflow:auto;position:sticky;top:70px;max-height:80vh}
-.obsbar{display:flex;flex-wrap:wrap;gap:8px}
+.obsbar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.obslink{max-width:860px;margin:10px auto 0;padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,rgba(0,230,118,.06),transparent);display:grid;gap:10px}
+.obslinkrow{display:flex;gap:8px}.obslinkrow input{flex:1;font-size:14px;padding:12px;direction:ltr}
+#obsLinkMode{justify-self:center}
 .obslay{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:14px;margin-top:12px;align-items:start}
 @media (max-width:900px){.obslay{grid-template-columns:1fr}.obsprev{position:static}}
 .obsgrp{border:1px solid var(--line2);border-radius:12px;padding:8px 10px;margin-bottom:8px;background:var(--bg2)}
@@ -279,7 +282,31 @@ async function obsUnpack(str){
   if (kind === "z"){ var ds = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw")); bytes = new Uint8Array(await new Response(ds).arrayBuffer()); }
   return JSON.parse(new TextDecoder().decode(bytes));
 }
-// link mode: index.html#obs=... shows only the overlay (transparent) for OBS / TikTok LIVE Studio
+// fixed link: obs.html (html data-obs-page) without #obs= reads obs-data.json next to it and
+// checks it again every 15 s, so a new upload shows up in OBS by itself
+function obsPageHTML(rt){
+  return '<!doctype html><html data-obs-page><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TikArena OBS</title>'
+    + '<style>html,body{margin:0;background:transparent;overflow:hidden}</style><script id="obsRuntime">' + rt + '<\/script></head><body></body></html>';
+}
+(function(){
+  if (/^#obs=/.test(location.hash) || !document.documentElement.hasAttribute("data-obs-page")) return;
+  document.addEventListener("DOMContentLoaded", function(){
+    var root = document.createElement("div"); root.id = "obsRoot"; document.body.appendChild(root);
+    var last = "";
+    function load(){
+      fetch("obs-data.json?t=" + Date.now(), {cache:"no-store"}).then(function(r){ return r.ok ? r.text() : ""; }).then(function(t){
+        if (!t || t === last) return;
+        last = t;
+        var d = JSON.parse(t);
+        document.documentElement.style.background = document.body.style.background = d.o && d.o.BgMode === "color" ? d.o.BgColor : "transparent";
+        obsMount(root, d.o, d.i);
+      }).catch(function(){});
+    }
+    load();
+    setInterval(load, 15000);
+  });
+})();
+// link mode: index.html#obs=... / obs.html#obs=... shows only the overlay (transparent) for OBS / TikTok LIVE Studio
 (function(){
   if (!/^#obs=/.test(location.hash)) return;
   document.documentElement.classList.add("obsmode");
@@ -353,14 +380,17 @@ async function obsUnpack(str){
   <section class="card" id="sec-fx"><h2><span class="num">10</span>💥 التأثيرات والأصوات</h2><div id="formFx"></div></section>
   <section class="card" id="sec-obs"><h2><span class="num">11</span>📺 شاشة OBS · دليل الهدايا</h2>
     <p class="hint">دليل الهدايا ولا هنا (خرج من الهود ديال اللعبة). كتبدل كلشي: الترتيب، الأعمدة، البعد، الأيقونات (دائرة / مربع / مسدس)، الشفافية، الألوان، الكتابة، الحركة... والمعاينة كتبدل مباشرة. من بعد: <b>🔗 الرابط</b> ← كتحطو فـ <b>OBS</b> (Browser Source ← URL، العرض 1080 والعلو 1920 للبث العمودي ولا 1920×1080) ولا فـ <b>TikTok LIVE Studio</b> (Add source ← Link / رابط). الرابط فيه الإعدادات والهدايا؛ ملي تبدل شي حاجة عاود خود الرابط الجديد. الهدايا اللي كيبانو = التفاعلات اللي مشعول فيهم «📺 يبان فشاشة OBS».</p>
-    <div class="obsbar">
-      <button class="btn pri" id="obsMakeLink">🔗 الرابط (نسخ)</button>
-      <button class="btn" id="obsOpenLink">↗️ فتح الشاشة</button>
-      <button class="btn blue" id="obsDownload">⬇️ OBS-overlay.html</button>
-      <button class="btn" id="obsReset">↺ الأصل</button>
+    <div class="obslink">
+      <div class="seg" id="obsLinkMode"><b data-lm="quick" class="on">⚡ رابط سريع</b><b data-lm="fixed">📌 رابط ثابت (Netlify)</b></div>
+      <div class="obslinkrow"><input type="text" class="ltr" id="obsLinkBox" readonly placeholder="الرابط كيتصاوب..."><button class="btn pri" id="obsCopy">📋 نسخ</button><button class="btn" id="obsOpenLink">↗️ فتح</button></div>
+      <div class="hint" id="obsLinkInfo"></div>
+      <div class="obsbar">
+        <button class="btn vio" id="obsNetlify">📦 ملفات Netlify (ZIP)</button>
+        <button class="btn" id="obsJson">⬇️ obs-data.json</button>
+        <button class="btn blue" id="obsDownload">⬇️ OBS-overlay.html</button>
+        <button class="btn" id="obsReset">↺ الأصل</button>
+      </div>
     </div>
-    <input type="text" class="ltr" id="obsLinkBox" readonly placeholder="الرابط كيبان هنا" style="margin-top:8px">
-    <div class="hint" id="obsLinkInfo"></div>
     <div class="obslay">
       <div id="obsForm"></div>
       <div><div class="obsprev" id="obsPrev"></div><p class="hint">المعاينة: المربعات = شفاف.</p></div>
@@ -571,7 +601,7 @@ function defaults(){
     v:1, ini:S, interactions:defaultInteractions(),
     sounds:{kill:null, death:null},             // {name, data(dataURL)}
     obs:Object.assign({}, OBS_DEFAULTS),
-    ui:{sound:true, preview:"Normal", selPanel:"Score", claude:null, mig15:false, mig16:false},
+    ui:{sound:true, preview:"Normal", selPanel:"Score", claude:null, mig15:false, mig16:false, obsLinkMode:"quick"},
     customGifts:[], giftDb:{}
   };
 }
@@ -2032,6 +2062,7 @@ function obsFieldHTML([k, label, type, o]){
   return `<div class="fld"><label>${label}</label>${inner}</div>`;
 }
 function renderObsForm(){
+  $$("#obsLinkMode b").forEach(x => x.classList.toggle("on", x.dataset.lm === (state.ui.obsLinkMode || "quick")));
   $("#obsForm").innerHTML = `<div class="chips" style="margin-bottom:10px">${Object.keys(OBS_PRESETS).map(p => `<span class="chip" data-obspreset="${p}">${p}</span>`).join("")}</div>`
     + OBS_GROUPS.map(([t, fields]) => `<details class="obsgrp" open><summary>${t}</summary><div class="grid">${fields.map(obsFieldHTML).join("")}</div></details>`).join("");
   renderObsPreview();
@@ -2065,29 +2096,64 @@ function obsShrink(src, max){
     im.src = src;
   });
 }
-async function obsLink(){
+const onWeb = () => /^https?:$/.test(location.protocol);
+// obs.html is next to index.html on the site (and in the project folder after build.py)
+const obsBase = () => onWeb() ? new URL("obs.html", location.href).href : location.href.split("#")[0];
+async function obsData(){
   const size = Math.min(160, Math.max(48, Math.round(state.obs.IconSize * 1.25)));
   const items = await Promise.all(obsItemsRaw().map(async it => Object.assign({}, it, {gi: await obsShrink(it.gi, size), ai: await obsShrink(it.ai, size)})));
-  return location.href.split("#")[0] + "#obs=" + await obsPack({o: state.obs, i: items});
+  return {o: state.obs, i: items};
 }
-function obsLinkStale(){ const b = $("#obsLinkBox"); if (b && b.value) { b.value = ""; $("#obsLinkInfo").textContent = "⚠️ بدلتي شي حاجة: عاود ضغط «🔗 الرابط» باش ياخد التعديلات"; } }
+async function obsLink(){ return obsBase() + "#obs=" + await obsPack(await obsData()); }
+let obsLinkTimer = 0;
+// the link in the middle of the section follows every change (settings or interactions)
+function obsLinkStale(){ clearTimeout(obsLinkTimer); obsLinkTimer = setTimeout(updateObsLink, 500); }
+async function updateObsLink(){
+  const box = $("#obsLinkBox"), info = $("#obsLinkInfo"); if (!box) return;
+  if (state.ui.obsLinkMode === "fixed"){
+    box.value = onWeb() ? new URL("obs.html", location.href).href : "https://YOUR-SITE.netlify.app/obs.html";
+    info.innerHTML = (onWeb() ? "📌 هاد الرابط ما كيتبدلش. " : "📌 ملي ترفع الملفات لـ Netlify كيولي الرابط: <b>https://السمية-ديالك.netlify.app/obs.html</b>. ")
+      + "كيقرا <b>obs-data.json</b> من الموقع وكيتشيك عليه كل 15 ثانية: بدل اللي بغيتي هنا ← <b>📦 ملفات Netlify</b> ← رفعهم من جديد، وOBS كيتبدل بوحدو بلا ما تبدل الرابط.";
+    return;
+  }
+  const link = await obsLink();
+  box.value = link;
+  info.innerHTML = `⚡ الرابط فيه الإعدادات والهدايا (${(link.length / 1024).toFixed(1)} KB) وكيتبدل بوحدو هنا مع كل تعديل: ملي تبدل شي حاجة، نسخ الرابط الجديد وحطو فـ OBS.`
+    + (onWeb() ? "" : " ⚠️ الصفحة مفتوحة من ملف فهاد الجهاز: الرابط كيخدم غير هنا. ملي ترفعها لـ Netlify كيخدم فأي بلاصة.");
+}
 function renderObsPreview(){
   const box = $("#obsPrev"); if (!box) return;
+  obsLinkStale();
   box.style.background = state.obs.BgMode === "color" ? state.obs.BgColor : "repeating-conic-gradient(#1a1f29 0 25%,#11151d 0 50%) 0 0/20px 20px";
   obsMount(box, state.obs, obsItemsRaw(), "#obsPrev");
 }
 function obsHTML(){
-  const rt = document.getElementById("obsRuntime").textContent, bg = state.obs.BgMode === "color" ? state.obs.BgColor : "transparent";
+  const rt = document.getElementById("obsRuntime").textContent.replace(/<\/script/gi, "<\\/script"), bg = state.obs.BgMode === "color" ? state.obs.BgColor : "transparent";
   return `<!doctype html><html><head><meta charset="utf-8"><title>TikArena OBS</title><style>html,body{margin:0;background:${bg};overflow:hidden}</style><script>${rt}<\/script></head><body><div id="r"></div><script>obsMount(document.getElementById("r"), ${JSON.stringify(state.obs)}, ${JSON.stringify(obsItemsRaw())});<\/script></body></html>`;
 }
-$("#obsMakeLink").onclick = async () => {
-  const link = await obsLink();
-  $("#obsLinkBox").value = link;
-  const kb = (link.length / 1024).toFixed(1);
-  $("#obsLinkInfo").textContent = (location.protocol === "file:" ? "⚠️ الصفحة مفتوحة من ملف فهاد الجهاز: الرابط كيخدم غير فهاد الجهاز. ملي ترفع الصفحة لموقع (رابط https) الرابط كيخدم فأي بلاصة. " : "✅ ") + `طول الرابط ${kb} KB`;
-  try { await navigator.clipboard.writeText(link); toast("🔗 تنسخ الرابط"); } catch(e){ $("#obsLinkBox").select(); toast("🔗 نسخ الرابط من الخانة"); }
+$("#obsCopy").onclick = async () => {
+  if (!$("#obsLinkBox").value) await updateObsLink();
+  const link = $("#obsLinkBox").value;
+  try { await navigator.clipboard.writeText(link); toast("📋 تنسخ الرابط"); } catch(e){ $("#obsLinkBox").select(); document.execCommand("copy"); toast("📋 تنسخ الرابط"); }
 };
-$("#obsOpenLink").onclick = async () => { const link = $("#obsLinkBox").value || await obsLink(); window.open(link, "_blank"); };
+$("#obsOpenLink").onclick = async () => { if (!$("#obsLinkBox").value) await updateObsLink(); window.open($("#obsLinkBox").value, "_blank"); };
+$("#obsLinkMode").onclick = e => {
+  const b = e.target.closest("[data-lm]"); if (!b) return;
+  state.ui.obsLinkMode = b.dataset.lm; save();
+  $$("#obsLinkMode b").forEach(x => x.classList.toggle("on", x === b));
+  $("#obsLinkBox").value = ""; updateObsLink();
+};
+$("#obsJson").onclick = async () => download("obs-data.json", JSON.stringify(await obsData()), "application/json");
+// everything Netlify needs: the control page, obs.html (overlay only) and obs-data.json (for the fixed link)
+$("#obsNetlify").onclick = async () => {
+  const rt = document.getElementById("obsRuntime").textContent;
+  const files = [{name:"obs.html", data:utf8(obsPageHTML(rt))}, {name:"obs-data.json", data:utf8(JSON.stringify(await obsData()))}];
+  let page = null;
+  try { const r = await fetch(location.href.split("#")[0], {cache:"no-store"}); if (r.ok) page = await r.arrayBuffer(); } catch(e){}
+  if (page) files.unshift({name:"index.html", data:new Uint8Array(page)});
+  download("TikArena-Netlify.zip", makeZip(files), "application/zip");
+  toast(page ? "📦 index.html + obs.html + obs-data.json" : "📦 obs.html + obs-data.json (زيد معاهم index.html ديالك)");
+};
 $("#obsDownload").onclick = () => download("OBS-overlay.html", obsHTML(), "text/html");
 $("#obsReset").onclick = () => { state.obs = Object.assign({}, OBS_DEFAULTS); obsLinkStale(); save(); renderObsForm(); };
 

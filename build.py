@@ -12,6 +12,7 @@ Steps:
   3. src/generator.html -> index.html
      "%%ENGINE%%" is replaced with the engine source (JSON string) and
      "%%ENGINE_DLL%%" with the base64 of dist/TikArena.dll.
+  4. obs.html (overlay only, same OBS runtime as the page) next to index.html
 
 Usage:
   SHVDN_REF=/path/ScriptHookVDotNet3.dll python3 build.py
@@ -115,6 +116,22 @@ def build_page(engine):
     with open(os.path.join(ROOT, "index.html"), "w", encoding="utf-8", newline="\n") as f:
         f.write(page)
     print("page: index.html (%d KB)" % (len(page.encode("utf-8")) // 1024))
+    build_obs(page)
+
+
+def build_obs(page):
+    """obs.html: only the OBS overlay (same runtime as the page), for Netlify / OBS / TikTok LIVE Studio.
+    obs.html#obs=... shows the settings of the link; obs.html alone reads obs-data.json next to it."""
+    m = re.search(r'<script id="obsRuntime">(.*?)</script>', page, re.S)
+    if not m:
+        sys.exit("src/generator.html must contain <script id=\"obsRuntime\">")
+    html = ('<!doctype html><html data-obs-page><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1"><title>TikArena OBS</title>'
+            '<style>html,body{margin:0;background:transparent;overflow:hidden}</style>'
+            '<script id="obsRuntime">' + m.group(1) + '</script></head><body></body></html>')
+    with open(os.path.join(ROOT, "obs.html"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(html)
+    print("obs: obs.html (%d KB)" % (len(html.encode("utf-8")) // 1024))
 
 
 if __name__ == "__main__":

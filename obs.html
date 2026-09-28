@@ -1,0 +1,152 @@
+<!doctype html><html data-obs-page><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TikArena OBS</title><style>html,body{margin:0;background:transparent;overflow:hidden}</style><script id="obsRuntime">
+/* TikArena OBS overlay (gift guide) — the same code draws the editor preview, the OBS link (#obs=...) and OBS-overlay.html */
+var OBS_DEFAULTS = {
+  Layout:"Grid", Columns:2, GapX:12, GapY:12, Align:"center", Dir:"rtl", Scale:1, PadX:16, PadY:16,
+  CardStyle:"Split", CardWidth:0, CardPadding:10, CardRadius:14, CardBg:"#0d131d", CardOpacity:85, BorderWidth:0, BorderColor:"#ffc828", Shadow:true,
+  SplitColors:true, GiftColor:"#2979ff", ActionColor:"#00e676", SplitOpacity:85,
+  IconSize:72, IconShape:"rounded", IconBg:"#12141c", IconBgOpacity:60, RingWidth:3, RingMode:"Auto", RingColor:"#ffffff", ImgFit:"contain",
+  ShowGift:true, ShowAction:true, ShowCoins:true, ShowArrow:true, Arrow:"➜", Font:"Cairo", FontSize:15, Bold:true, TextColor:"#ffffff", GiftTextColor:"#ffffff", ActionTextColor:"#ffffff", TextShadow:true,
+  ShowTitle:false, TitleText:"🎁 الهدايا", TitleSize:24, TitleColor:"#ffc828", TitleBg:true,
+  Anim:"none", AnimSpeed:2, PerPage:0, PageSeconds:6, Order:"list", BgMode:"transparent", BgColor:"#000000"
+};
+function obsEsc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function obsRgba(hex, a){ var h = String(hex || "#000").replace("#", ""); if (h.length === 3) h = h.split("").map(function(c){ return c + c; }).join(""); var n = parseInt(h.slice(0, 6), 16) || 0; return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")"; }
+function obsShape(sh){ return sh === "circle" ? "border-radius:50%;" : sh === "rounded" ? "border-radius:26%;" : sh === "hex" ? "clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);" : "border-radius:0;"; }
+function obsIcon(O, img, emoji, ring){
+  var d = +O.IconSize, t = O.RingWidth > 0 ? +O.RingWidth : 0, ins = d * (O.IconShape === "hex" ? .13 : .07), inner = d - ins * 2;
+  var pic = img ? '<img src="' + img + '" style="width:' + inner + 'px;height:' + inner + 'px;object-fit:' + O.ImgFit + ';' + (O.ImgFit === "cover" ? obsShape(O.IconShape) : "") + '">'
+                : '<span style="font-size:' + (inner * .78) + 'px;line-height:1">' + obsEsc(emoji || "🎁") + '</span>';
+  var core = '<span style="display:grid;place-items:center;width:' + d + 'px;height:' + d + 'px;background:' + obsRgba(O.IconBg, O.IconBgOpacity / 100) + ';' + obsShape(O.IconShape) + 'overflow:hidden">' + pic + '</span>';
+  if (!t) return '<span class="ob-ic">' + core + '</span>';
+  var rc = O.RingMode === "Custom" ? O.RingColor : ring;
+  return '<span class="ob-ic" style="display:grid;place-items:center;width:' + (d + t * 2) + 'px;height:' + (d + t * 2) + 'px;background:' + rc + ';' + obsShape(O.IconShape) + '">' + core + '</span>';
+}
+function obsArrow(O, vertical){ return O.ShowArrow ? '<span class="ob-ar" style="color:' + O.ActionColor + ';' + (vertical ? "transform:rotate(90deg);" : (O.Dir === "rtl" ? "transform:scaleX(-1);" : "")) + '">' + obsEsc(O.Arrow) + '</span>' : ""; }
+function obsCoins(O, it){ return O.ShowCoins && it.c ? '<span class="ob-co">💎 ' + it.c + '</span>' : ""; }
+function obsCard(O, it){
+  var gi = obsIcon(O, it.gi, it.ge, O.GiftColor), ai = obsIcon(O, it.ai, it.ae, O.ActionColor);
+  var gn = O.ShowGift ? '<span class="ob-t" style="color:' + O.GiftTextColor + '">' + obsEsc(it.g) + '</span>' : "";
+  var an = O.ShowAction ? '<span class="ob-t" style="color:' + O.ActionTextColor + '">' + obsEsc(it.a) + '</span>' : "";
+  var st = O.CardStyle, half = function(col){ return O.SplitColors ? "background:" + obsRgba(col, O.SplitOpacity / 100) + ";" : ""; };
+  if (st === "Stack") return '<div class="ob-b" style="' + half(O.GiftColor) + '">' + gi + gn + obsCoins(O, it) + '</div>' + obsArrow(O, true) + '<div class="ob-b" style="' + half(O.ActionColor) + '">' + ai + an + '</div>';
+  if (st === "Compact") return '<div class="ob-row">' + gi + obsArrow(O) + ai + '</div>' + gn + obsCoins(O, it) + an;
+  if (st === "Icons") return '<div class="ob-row">' + gi + obsArrow(O) + ai + '</div>';
+  return '<div class="ob-b" style="' + half(O.GiftColor) + '">' + gi + gn + obsCoins(O, it) + '</div>' + (O.ShowArrow ? '<div class="ob-mid">' + obsArrow(O) + '</div>' : "") + '<div class="ob-b" style="' + half(O.ActionColor) + '">' + ai + an + '</div>';
+}
+function obsCss(O, scope){
+  var p = scope ? scope + " " : "", cols = O.Layout === "Row" ? "none" : (O.Layout === "Column" ? "max-content" : "repeat(" + Math.max(1, O.Columns) + ",max-content)");
+  var flowCol = O.Layout === "Row" ? "grid-auto-flow:column;" : "";
+  var dirStack = O.CardStyle === "Stack" || O.CardStyle === "Compact";
+  var shadow = O.TextShadow ? "text-shadow:0 1px 3px #000,0 0 2px #000;" : "";
+  var sp = +O.AnimSpeed || 2;
+  return p + ".ob-root{direction:" + O.Dir + ";padding:" + O.PadY + "px " + O.PadX + "px;transform:scale(" + O.Scale + ");transform-origin:" + (O.Align === "end" ? (O.Dir === "rtl" ? "top left" : "top right") : O.Align === "start" ? (O.Dir === "rtl" ? "top right" : "top left") : "top center") + ";font-family:'" + O.Font + "',Cairo,Arial,sans-serif}"
+    + p + ".ob-title{font-size:" + O.TitleSize + "px;color:" + O.TitleColor + ";font-weight:900;text-align:" + (O.Align === "center" ? "center" : O.Align === "end" ? "end" : "start") + ";margin-bottom:" + O.GapY + "px;" + shadow + (O.TitleBg ? "background:" + obsRgba(O.CardBg, O.CardOpacity / 100) + ";padding:6px 14px;border-radius:" + O.CardRadius + "px;display:inline-block;" : "") + "}"
+    + p + ".ob-tw{text-align:" + (O.Align === "center" ? "center" : O.Align === "end" ? "end" : "start") + "}"
+    + p + ".ob-wrap{display:grid;grid-template-columns:" + cols + ";" + flowCol + "column-gap:" + O.GapX + "px;row-gap:" + O.GapY + "px;justify-content:" + O.Align + ";transition:opacity .4s}"
+    + p + ".ob-card{display:flex;" + (dirStack ? "flex-direction:column;align-items:center;" : "align-items:stretch;") + "gap:" + Math.round(O.CardPadding / 2) + "px;"
+      + (O.CardStyle === "Split" || O.CardStyle === "Stack" ? "padding:0;overflow:hidden;" : "padding:" + O.CardPadding + "px;")
+      + "background:" + obsRgba(O.CardBg, O.CardOpacity / 100) + ";border-radius:" + O.CardRadius + "px;" + (O.BorderWidth > 0 ? "border:" + O.BorderWidth + "px solid " + O.BorderColor + ";" : "")
+      + (O.Shadow ? "box-shadow:0 6px 18px rgba(0,0,0,.45);" : "") + (O.CardWidth > 0 ? "width:" + O.CardWidth + "px;" : "") + "}"
+    + p + ".ob-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:" + O.CardPadding + "px}"
+    + p + ".ob-row{display:flex;align-items:center;justify-content:center;gap:" + Math.max(4, Math.round(O.CardPadding / 2)) + "px}"
+    + p + ".ob-mid{display:flex;align-items:center;margin:0 -8px;z-index:1}"
+    + p + ".ob-ar{font-size:" + Math.max(14, O.IconSize * .32) + "px;font-weight:900;line-height:1;display:inline-block;" + shadow + "}"
+    + p + ".ob-t{font-size:" + O.FontSize + "px;font-weight:" + (O.Bold ? 800 : 500) + ";text-align:center;max-width:" + Math.max(80, O.IconSize * 1.9) + "px;line-height:1.2;" + shadow + "}"
+    + p + ".ob-co{font-size:" + Math.max(10, O.FontSize * .78) + "px;color:" + O.TextColor + ";opacity:.85;" + shadow + "}"
+    + p + ".ob-ic{flex:none}"
+    + "@keyframes obPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}@keyframes obFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}"
+    + "@keyframes obGlow{0%,100%{box-shadow:0 0 0 rgba(0,0,0,0)}50%{box-shadow:0 0 22px " + obsRgba(O.GiftColor, .85) + "}}@keyframes obPop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}"
+    + (O.Anim === "pulse" ? p + ".ob-card{animation:obPulse " + sp + "s ease-in-out infinite}" : "")
+    + (O.Anim === "float" ? p + ".ob-card{animation:obFloat " + sp + "s ease-in-out infinite}" : "")
+    + (O.Anim === "glow" ? p + ".ob-card{animation:obGlow " + sp + "s ease-in-out infinite}" : "")
+    + (O.Anim === "pop" ? p + ".ob-card{animation:obPop .5s ease-out both}" : "");
+}
+function obsSort(O, items){
+  var l = items.slice();
+  if (O.Order === "coinsAsc") l.sort(function(a, b){ return (a.c || 0) - (b.c || 0); });
+  if (O.Order === "coinsDesc") l.sort(function(a, b){ return (b.c || 0) - (a.c || 0); });
+  return l;
+}
+function obsFont(O){
+  var sys = ["Arial", "Impact", "Tahoma", "Segoe UI", "Verdana"];
+  if (sys.indexOf(O.Font) >= 0 || document.getElementById("obFont_" + O.Font.replace(/\W/g, ""))) return;
+  var l = document.createElement("link"); l.rel = "stylesheet"; l.id = "obFont_" + O.Font.replace(/\W/g, "");
+  l.href = "https://fonts.googleapis.com/css2?family=" + encodeURIComponent(O.Font) + ":wght@500;800;900&display=swap";
+  document.head.appendChild(l);
+}
+// draws the overlay in root; with PerPage > 0 it shows a page of cards and changes page every PageSeconds
+function obsMount(root, O, items, scope){
+  O = Object.assign({}, OBS_DEFAULTS, O || {});
+  obsFont(O);
+  if (root._obTimer) clearInterval(root._obTimer);
+  var list = obsSort(O, items || []), per = O.PerPage > 0 ? Math.min(O.PerPage, list.length) : list.length, page = 0;
+  var sc = scope || "";
+  function cards(){
+    var from = per ? (page * per) % Math.max(1, list.length) : 0, part = [];
+    for (var k = 0; k < per; k++) part.push(list[(from + k) % list.length]);
+    return part.map(function(it, n){ return '<div class="ob-card" style="animation-delay:' + (O.Anim === "pop" ? n * .08 : n * .15) + 's">' + obsCard(O, it) + '</div>'; }).join("");
+  }
+  root.innerHTML = '<style>' + obsCss(O, sc) + '</style><div class="ob-root">' + (O.ShowTitle ? '<div class="ob-tw"><div class="ob-title">' + obsEsc(O.TitleText) + '</div></div>' : "") + '<div class="ob-wrap">' + (list.length ? cards() : "") + '</div></div>';
+  if (O.PerPage > 0 && list.length > per){
+    root._obTimer = setInterval(function(){
+      var w = root.querySelector(".ob-wrap"); if (!w){ clearInterval(root._obTimer); return; }
+      w.style.opacity = 0;
+      setTimeout(function(){ page++; w.innerHTML = cards(); w.style.opacity = 1; }, 420);
+    }, Math.max(1, O.PageSeconds) * 1000);
+  }
+}
+// settings + items <-> short text for the link (deflate + base64url)
+async function obsPack(obj){
+  var bytes = new TextEncoder().encode(JSON.stringify(obj));
+  if (window.CompressionStream){
+    var cs = new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+    bytes = new Uint8Array(await new Response(cs).arrayBuffer());
+  }
+  var bin = ""; for (var i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return (window.CompressionStream ? "z" : "j") + btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+async function obsUnpack(str){
+  var kind = str[0], b = str.slice(1).replace(/-/g, "+").replace(/_/g, "/");
+  var bin = atob(b), bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  if (kind === "z"){ var ds = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw")); bytes = new Uint8Array(await new Response(ds).arrayBuffer()); }
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+// fixed link: obs.html (html data-obs-page) without #obs= reads obs-data.json next to it and
+// checks it again every 15 s, so a new upload shows up in OBS by itself
+function obsPageHTML(rt){
+  return '<!doctype html><html data-obs-page><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TikArena OBS</title>'
+    + '<style>html,body{margin:0;background:transparent;overflow:hidden}</style><script id="obsRuntime">' + rt + '<\/script></head><body></body></html>';
+}
+(function(){
+  if (/^#obs=/.test(location.hash) || !document.documentElement.hasAttribute("data-obs-page")) return;
+  document.addEventListener("DOMContentLoaded", function(){
+    var root = document.createElement("div"); root.id = "obsRoot"; document.body.appendChild(root);
+    var last = "";
+    function load(){
+      fetch("obs-data.json?t=" + Date.now(), {cache:"no-store"}).then(function(r){ return r.ok ? r.text() : ""; }).then(function(t){
+        if (!t || t === last) return;
+        last = t;
+        var d = JSON.parse(t);
+        document.documentElement.style.background = document.body.style.background = d.o && d.o.BgMode === "color" ? d.o.BgColor : "transparent";
+        obsMount(root, d.o, d.i);
+      }).catch(function(){});
+    }
+    load();
+    setInterval(load, 15000);
+  });
+})();
+// link mode: index.html#obs=... / obs.html#obs=... shows only the overlay (transparent) for OBS / TikTok LIVE Studio
+(function(){
+  if (!/^#obs=/.test(location.hash)) return;
+  document.documentElement.classList.add("obsmode");
+  document.addEventListener("DOMContentLoaded", async function(){
+    var root = document.createElement("div"); root.id = "obsRoot"; document.body.appendChild(root);
+    try {
+      var d = await obsUnpack(decodeURIComponent(location.hash.slice(5)));
+      if (d.o && d.o.BgMode === "color") document.documentElement.style.background = document.body.style.background = d.o.BgColor;
+      obsMount(root, d.o, d.i);
+    } catch (e){ root.innerHTML = '<div style="color:#fff;background:#b00;padding:10px;font:14px Arial">TikArena OBS: bad link</div>'; }
+  });
+})();
+</script></head><body></body></html>
