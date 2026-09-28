@@ -179,7 +179,7 @@ h3:after{content:"";flex:1;height:1px;background:var(--line2)}
         <div class="styles" id="styleBtns"></div>
         <h3>🧩 تخطيطات جاهزة</h3>
         <div class="chips" id="presets"></div>
-        <h3>🏟️ تصاميم LiveHud</h3>
+        <h3>🏟️ الديزاين (على اللوحات الأصلية)</h3>
         <div class="chips" id="kitChips"></div>
       </div>
       <div id="hudSide"></div>
@@ -359,6 +359,7 @@ function defaults(){
     GuideEnabled:true,GuideMax:8,GuideMode:"Cards",GuideRotateCount:3,GuideRotateSeconds:5,GuideRandom:true,GuideShowGiftImage:true,GuideShowActionImage:true,GuideTitleEnabled:false,GuideTitle:"🎁 الهدايا",GuideGiftColor:"#2979ff",GuideActionColor:"#00e676",
     OverheadEnabled:true,OverheadAvatar:true,OverheadName:true,OverheadHealth:true,OverheadHeight:1.2,AvatarShape:"Circle",OverheadStyle:"Classic",OverheadRing:true,OverheadLevel:true,
     ScoreVariant:"Classic",Top3Variant:"List",HealthVariant:"Bar",NotifVariant:"Card",FeedAnimation:"Slide",
+    Design:"Arena",DesignColor:"GOLD",DesignCoinsWord:"كوينز",DesignKey:"F10",DesignColorKey:"F5",
     TextMode:"Auto",UnicodeFont:"Segoe UI",UnicodeBold:true,UnicodeSize:1,StripEmoji:true,FancyToAscii:true,MaxTextTextures:1500};
   S.Notifications = {Enabled:true,Seconds:5,MaxVisible:5,ShowAvatar:true,ShowGiftIcon:true};
   S.KillFeed = {Enabled:true,Seconds:4,MaxVisible:4};
@@ -382,12 +383,6 @@ function defaults(){
     FireFx:"core|ent_amb_torch_fire",SmokeFx:"core|exp_grd_bzgas_smoke",ElectricFx:"core|ent_amb_elec_crackle",SparklesFx:"core|ent_amb_sparking_wires"};
   S.LiveTest = {Enabled:true,Key:"F9",ShowBadge:true,Names:"أحمد,سارة,Yassine,Nora,Karim,Lina,Omar,Hiba,Adam,Salma,Mehdi,Imane,Zakaria,Khadija,Anas,Rania",AvatarUrls:"",Comments:"GG,🔥,يلاه,اقتلوه,عاونوه,واو",
     MinDelayMs:700,MaxDelayMs:2200,GiftWeight:45,LikeWeight:25,CommentWeight:10,FollowWeight:8,ShareWeight:6,JoinWeight:6,ComboChance:25,MaxCombo:15};
-  S.LiveHud = {Enabled:true,Design:"arena",Style:"GOLD",Font:"default",FontCustom:"",AvatarShape:"auto",Panel:"auto",Scale:1,TikTokScale:0.9,PanelAlpha:190,Accent:"#f5b301",DesignKey:"F10",StyleKey:"F5",
-    ShowTop:true,ReplaceTop3:true,PodiumPulse:true,TopCount:3,TopY:170,TopTitle:"أفضل الداعمين",CoinsWord:"كوينز",CoinWord:"كوين",
-    ShowBoard:true,BoardSide:"right",BoardTitle:"الطابور",EmptyText:"صيفط هدية باش تدخل!",BoardRows:5,ListY:300,ListW:420,UnitIcon:"action",
-    ShowGiftSpot:false,GiftSpotInteraction:1,GiftSpotWord:"GIFT",GiftSpotX:130,GiftSpotBottom:150,GiftSpotSize:110,
-    ShowResult:true,ReplaceEndScreen:true,ResultStyle:"design",ResultY:360,WinTitle:"فوز!",LossTitle:"خسارة!",
-    MegaEnabled:true,MegaMinCoins:1000,MegaTitle:"MEGA GIFT!",MegaColor:"#ffd23c",MegaMs:6500};
   S.Death = {CelebrationEnabled:true,Seconds:8,Dance:true,DanceDict:"missfbi3_sniping",DanceAnim:"dance_m_default",Coffin:true,CoffinModel:"prop_coffin_02b",SoundEnabled:false,Sound:""};
   return {
     v:1, ini:S, interactions:defaultInteractions(),
@@ -400,7 +395,7 @@ function defaults(){
 const PANELS = [["Score","🏆 الفوز والخسارة"],["Top3","👑 لوحة الداعمين"],["Health","❤️ شريط الطاقة"],["Guide","🎁 دليل الهدايا"],["Notif","🔔 الإشعارات"],["Feed","☠️ Kill Feed"],["Hype","🔥 رسائل الحماس"]];
 function layoutDefaults(v){
   const pos = v ? {Score:"TopCenter",Top3:"TopCenter",Health:"BottomCenter",Guide:"MiddleLeft",Notif:"BottomCenter",Feed:"MiddleCenter",Hype:"TopCenter"}
-                : {Score:"TopCenter",Top3:"TopLeft",Health:"BottomCenter",Guide:"MiddleLeft",Notif:"BottomRight",Feed:"BottomLeft",Hype:"TopRight"};
+                : {Score:"TopCenter",Top3:"TopLeft",Health:"BottomCenter",Guide:"MiddleLeft",Notif:"BottomRight",Feed:"MiddleRight",Hype:"TopRight"};
   const oy = v ? {Top3:100,Notif:-70,Feed:130,Hype:262} : {Hype:70};
   const L = {};
   PANELS.forEach(([p]) => {
@@ -961,17 +956,8 @@ function renderAllForms(){
       ["FontScale","حجم الكتابة","range",{min:0.5,max:2,step:0.05}],["Opacity","الشفافية","range",{min:0,max:255}],["TextOutline","الحواشي","b"],["TextShadow","الظل","b"],
       ["AccentColor","اللون الرئيسي","c"],["TextColor","لون الكتابة","c"],["PanelColor","لون الخلفية","c"],["WinColor","لون الفوز","c"],["LossColor","لون الخسارة","c"],
       ["AvatarShape","شكل الصور","s",{opts:[["Circle","⚪ دائرة"],["Square","⬜ مربع"]]}],["HideRadar","🗺️ إخفاء الرادار","b"]]},
-    {sec:"LiveHud", title:"🏟️ تصاميم LiveHud (7 أشكال × 5 ألوان)", hint:"التصاميم ديال الصورة: Arena · Broadcast · Podium · Cards · Esports · Minimal · Classic. كيبينو أفضل الداعمين (بالكوينز) والطابور (NEXT) بالصور الحقيقية والأسماء العربية، وبانر الفوز/الخسارة، و MEGA GIFT للهدايا الكبار. فاللعبة: F10 = التصميم الموالي، F5 = اللون الموالي. المعاينة فوق تقريبية.", fields:[
-      ["Enabled","مشعول","b"],["Design","🏟️ التصميم","s",{opts:KIT_DESIGNS}],["Style","🎨 اللون","s",{opts:KIT_STYLES}],["Font","🔤 الخط","s",{opts:["default","sport","gta","modern","elegant","mono","fun","custom"]}],["FontCustom","خط مخصص (custom)","t"],
-      ["AvatarShape","⚪ شكل الصور","s",{opts:[["auto","حسب التصميم"],["circle","دائرة"],["rounded","مربع مدور"],["square","مربع"],["hex","سداسي"]]}],["Panel","🪟 الخلفية","s",{opts:[["auto","حسب التصميم"],["dark","داكنة"],["glass","زجاج"],["light","فاتحة"]]}],
-      ["Scale","📏 الحجم","range",{min:0.4,max:2,step:0.05}],["TikTokScale","📱 الحجم فـ 9:16","range",{min:0.4,max:2,step:0.05}],["PanelAlpha","الشفافية","range",{min:0,max:255}],["Accent","اللون الرئيسي (Gold/Classic)","c"],
-      ["DesignKey","⌨️ زر التصميم","k"],["StyleKey","⌨️ زر اللون","k"]]},
-    {sec:"LiveHud", title:"🏆 LiveHud: أفضل الداعمين", fields:[["ShowTop","مشعول","b"],["ReplaceTop3","يعوض لوحة الداعمين القديمة","b"],["TopCount","العدد","range",{min:1,max:3}],["TopY","↕ Y (من 1080)","i"],["TopTitle","العنوان","t"],["CoinsWord","كلمة الكوينز","t"],["CoinWord","المفرد","t"],["PodiumPulse","نبض المرتبة 1","b"]]},
-    {sec:"LiveHud", title:"📋 LiveHud: الطابور (NEXT)", fields:[["ShowBoard","مشعول","b"],["BoardSide","الجهة","s",{opts:[["right","اليمين"],["left","اليسار"]]}],["BoardTitle","العنوان","t"],["EmptyText","ملي يكون خاوي","t"],["BoardRows","عدد السطور","i",{min:1,max:12}],["ListY","↕ Y (من 1080)","i"],["ListW","↔ العرض","i",{min:200,max:900}],
-      ["UnitIcon","🔹 أيقونة كل وحدة","s",{opts:[["action","صورة الأكشن"],["gift","صورة الهدية"],["ball","⚽ الكرة"]]}]]},
-    {sec:"LiveHud", title:"🎁 LiveHud: هدية مميزة (تحت يسار)", fields:[["ShowGiftSpot","مشعول","b"],["GiftSpotInteraction","رقم التفاعل","i",{min:1}],["GiftSpotWord","الكلمة","t"],["GiftSpotX","X","i"],["GiftSpotBottom","البعد من التحت","i"],["GiftSpotSize","الحجم","i",{min:40,max:300}]]},
-    {sec:"LiveHud", title:"🏁 LiveHud: النتيجة و MEGA GIFT", fields:[["ShowResult","بانر الفوز/الخسارة (مع MVP)","b"],["ReplaceEndScreen","يعوض شاشة النهاية القديمة","b"],["ResultStyle","الشكل","s",{opts:[["design","حسب التصميم"],["gta","ستايل GTA (Wasted)"]]}],["ResultY","↕ Y","i"],["WinTitle","الفوز","t"],["LossTitle","الخسارة","t"],
-      ["MegaEnabled","💎 MEGA GIFT","b"],["MegaMinCoins","للهدايا ≥ (كوينز)","i",{min:1}],["MegaTitle","العنوان","t"],["MegaColor","اللون","c"],["MegaMs","المدة (ms)","i",{min:1000}]]},
+    {sec:"Hud", title:"🏟️ الديزاين (Arena · Broadcast · Podium · Cards · Esports · Minimal · Classic)", hint:"كيبدل الشكل ديال اللوحات الأصلية: لوحة الداعمين (فوق يسار) واللائحات ديال اليمين (الإشعارات و Kill Feed)، بلا ما يزيد حتى لوحة جديدة. None = الستايل العادي. فاللعبة: F10 = الديزاين الموالي، F5 = اللون الموالي.", fields:[
+      ["Design","🏟️ الديزاين","s",{opts:DESIGNS}],["DesignColor","🎨 ألوان الميداليات","s",{opts:DESIGN_COLORS}],["DesignCoinsWord","كلمة الكوينز","t"],["DesignKey","⌨️ زر الديزاين","k"],["DesignColorKey","⌨️ زر اللون","k"]]},
     {sec:"Hud", title:"🔤 العربية وأسماء الداعمين", hint:"الخطوط ديال GTA ما فيهاش الحروف العربية. Auto: أي كتابة عربية (أسماء، جمل، عناوين) كتترسم كصورة بخط ديال Windows (الحروف مربوطة ومن اليمين لليسار) وكتبان فالهود. Latin: كتتحول لحروف لاتينية (أحمد → Ahmd). Always: كلشي كصورة. الأسماء المزخرفة (𝓐𝓶𝓲𝓷𝓮) كتولي عادية.", fields:[
       ["TextMode","🔤 طريقة الكتابة","s",{opts:[["Auto","✅ Auto (العربية كصورة)"],["Always","🖼️ كلشي كصورة"],["Latin","🔠 تحويل للاتيني"],["Off","⛔ بلا (GTA فقط)"]]}],
       ["UnicodeFont","🅰️ خط Windows","s",{opts:["Segoe UI","Tahoma","Arial","Calibri","Traditional Arabic","Sakkal Majalla","Simplified Arabic","Cairo","Dubai","Noto Sans Arabic"]}],
@@ -1215,12 +1201,14 @@ function pvFeed(rows, rowH, img, size, hype, panel, L){
   const pos = L[panel + "Position"] || "";
   const al = banner ? "stretch" : (/Right$/.test(pos) ? "flex-end" : (/Left$/.test(pos) ? "flex-start" : "center"));
   let html = `<div style="display:flex;flex-direction:column;gap:${banner?3:4}px;align-items:${al}">`;
-  rows.forEach(r => {
-    let css = bgCss();
-    if (pill) css = `background:${rgba(H.PanelColor, Math.max(H.Opacity/255,.7))};border-radius:${rowH}px;border-left:${rowH/2}px solid ${H.AccentColor};padding-left:4px`;
-    if (banner) css += `;justify-content:center;box-shadow:inset 0 2px 0 ${H.AccentColor}`;
+  const des = !hype && designOn();
+  rows.forEach((r, ri) => {
+    let css = bgCss(), lead = "";
+    if (des){ const dr = dRowCss(ri + 1, ri === rows.length - 1, rowH); css = dr.css; lead = dr.lead; }
+    if (pill && !des) css = `background:${rgba(H.PanelColor, Math.max(H.Opacity/255,.7))};border-radius:${rowH}px;border-left:${rowH/2}px solid ${H.AccentColor};padding-left:4px`;
+    if (banner && !des) css += `;justify-content:center;box-shadow:inset 0 2px 0 ${H.AccentColor}`;
     if (hype) css += `;border:1px solid ${rgba(state.ini.Hype.Color,.86)};border-left:3px solid ${state.ini.Hype.Color}`;
-    html += `<div style="position:relative;height:${rowH}px;display:flex;align-items:center;gap:6px;padding:0 6px;font-size:${fpx(size)};${css}">${avatarHTML(r.s, img)}${hype&&state.ini.Hype.ShowLevel?`<b style="background:${state.ini.Hype.Color};color:#000;font-size:${fpx(.25)};padding:0 4px">Lv ${r.lv}</b>`:""}<span style="color:${hype?state.ini.Hype.Color:H.TextColor};white-space:nowrap">${esc(r.t)}</span>${r.icon?thumbSmall(r.icon.img,r.icon.emoji,img):""}</div>`;
+    html += `<div style="position:relative;height:${rowH}px;display:flex;align-items:center;gap:6px;padding:0 6px;font-size:${fpx(size)};${css}">${lead}${avatarHTML(r.s, img)}${hype&&state.ini.Hype.ShowLevel?`<b style="background:${state.ini.Hype.Color};color:#000;font-size:${fpx(.25)};padding:0 4px">Lv ${r.lv}</b>`:""}<span style="color:${hype?state.ini.Hype.Color:H.TextColor};white-space:nowrap">${esc(r.t)}</span>${r.icon?thumbSmall(r.icon.img,r.icon.emoji,img):""}</div>`;
   });
   html += `</div>`;
   return {w, h:rows.length * (rowH + 4), html};
@@ -1338,75 +1326,86 @@ function actionSubject(it){
   return "a video game power-up";
 }
 
-// ------------------------------------------------------------- LiveHud designs (approximate preview of the in-game kit)
-const KIT_DESIGNS = [["arena","🏟️ Arena"],["broadcast","📺 Broadcast"],["podium","🏆 Podium"],["cards","🃏 Cards"],["esports","🎮 Esports"],["minimal","✨ Minimal"],["classic","📋 Classic"]];
-const KIT_STYLES = [["GOLD","🥇 Gold"],["NEON","💜 Neon"],["FIRE","🔥 Fire"],["ICE","❄️ Ice"],["CLASSIC","🎖️ Classic"]];
-const KIT_MEDALS = {GOLD:["#f5be28","#c0c6ce","#cd7f32"],NEON:["#d73cff","#00d7ff","#28e178"],FIRE:["#ff8c00","#f05f1e","#d72828"],ICE:["#96d7ff","#afe4f2","#7da5e1"],CLASSIC:["#f5be28","#c0c6ce","#cd7f32"]};
-function kitAccent(K){ return {NEON:"#00e5ff",FIRE:"#ff6a00",ICE:"#7fd8ff"}[K.Style] || K.Accent; }
-function kitAv(s, d, shape, ring){
-  const r = shape === "square" ? "12%" : (shape === "rounded" ? "28%" : "50%");
-  const clip = shape === "hex" ? "clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);border-radius:0;" : `border-radius:${r};`;
-  return `<span style="display:inline-grid;place-items:center;width:${d}px;height:${d}px;${clip}background:${s[2]};font:900 ${d*0.45}px Arial;color:#fff;flex:none;${ring && shape!=="hex"?`box-shadow:0 0 0 ${Math.max(2,d/16)}px ${ring},0 0 ${d/3}px ${ring}`:""}">${s[1]}</span>`;
+// ------------------------------------------------------------- designs over the original panels (same sizes as the engine)
+const DESIGNS = [["None","⛔ بلا (الستايل العادي)"],["Arena","🏟️ Arena"],["Broadcast","📺 Broadcast"],["Podium","🏆 Podium"],["Cards","🃏 Cards"],["Esports","🎮 Esports"],["Minimal","✨ Minimal"],["Classic","📋 Classic"]];
+const DESIGN_COLORS = [["GOLD","🥇 Gold"],["NEON","💜 Neon"],["FIRE","🔥 Fire"],["ICE","❄️ Ice"],["CLASSIC","🎖️ Classic"]];
+const D_MEDALS = {GOLD:["#f5be28","#c0c6ce","#cd7f32"],NEON:["#d73cff","#00d7ff","#28e178"],FIRE:["#ff8c00","#f05f1e","#d72828"],ICE:["#96d7ff","#afe4f2","#7da5e1"],CLASSIC:["#f5be28","#c0c6ce","#cd7f32"]};
+function dz(){ return String(state.ini.Hud.Design || "None").toLowerCase(); }
+function designOn(){ const d = dz(); return d && d !== "none"; }
+function dAcc(){ const H = HV(); return {NEON:"#00e5ff",FIRE:"#ff6a00",ICE:"#7fd8ff",CLASSIC:H.AccentColor}[state.ini.Hud.DesignColor] || "#f5b301"; }
+function dMed(){ return D_MEDALS[state.ini.Hud.DesignColor] || D_MEDALS.GOLD; }
+function dAv(s, d, ring, glow, hex){
+  const clip = hex ? "clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);" : "border-radius:50%;";
+  const inner = `<span style="display:inline-grid;place-items:center;width:${d}px;height:${d}px;${clip}background:${s[2]};font-size:${d*0.6}px">${s[1]}</span>`;
+  if (hex) return `<span style="display:inline-grid;place-items:center;width:${d*1.3}px;height:${d*1.3}px;clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);background:${ring}">${inner}</span>`;
+  return `<span style="display:inline-grid;place-items:center;border-radius:50%;box-shadow:0 0 0 ${Math.max(2,d*0.07)}px ${ring}${glow?`,0 0 ${d*0.6}px ${ring}`:""}">${inner}</span>`;
 }
-function pvKit(vert){
-  const K = state.ini.LiveHud; if (!K.Enabled) return "";
-  const acc = kitAccent(K), med = KIT_MEDALS[K.Style] || KIT_MEDALS.GOLD, d = K.Design;
-  const shape = K.AvatarShape !== "auto" ? K.AvatarShape : ({broadcast:"square",podium:"rounded",cards:"rounded",esports:"hex"}[d] || "circle");
-  const panelKind = K.Panel !== "auto" ? K.Panel : ({podium:"glass",minimal:"glass"}[d] || "dark");
-  const pbg = panelKind === "glass" ? "rgba(255,255,255,.22)" : (panelKind === "light" ? "rgba(248,249,252,.92)" : `rgba(14,16,24,${K.PanelAlpha/255})`);
-  const ptx = panelKind === "light" ? "#16181e" : "#fff";
-  // kit space (1920x1080 wide, 1080x1920 tiktok) -> preview 1280x720
-  const VK = vert ? 1080/1920 : 1, VOX = vert ? (1920 - 1080*VK)/2 : 0, VW = vert ? 1080 : 1920, U = 1280/1920;
-  const sc = (+K.Scale || 1) * (vert ? (+K.TikTokScale || 0.9) : 1);
-  const X = x => (VOX + x*VK)*U, Y = y => y*VK*U, Z = v => v*VK*U;
-  const sups = SAMPLE_SUPS.slice(0, Math.max(1, Math.min(3, K.TopCount))).map((s, i) => [s[0], s[1].length > 2 ? s[0][0] : s[1], ["#e0592a","#6b2ed8","#3cbf3c"][i], s[3]]);
-  const top = [sups[1], sups[0], sups[2]].filter(Boolean), order = sups.length > 1 ? [1,0,2] : [0];
-  const word = K.CoinsWord, title = K.TopTitle;
-  let h = "";
-  const box = (x, y, w, hh, css, inner) => `<div style="position:absolute;left:${X(x)}px;top:${Y(y)}px;width:${Z(w)}px;height:${Z(hh)}px;${css}">${inner||""}</div>`;
-  const f = px => `font-size:${Z(px*sc)}px`;
-  const coins = n => n >= 10000 ? (n/1000).toFixed(1)+"K" : n;
-  if (K.ShowTop){
-    const cx = VW/2, ty = K.TopY * (vert ? 1920/1080 : 1);
-    if (d === "arena" || d === "esports"){
-      if (d === "esports") h += box(cx-300, ty-38, 600, 30, `text-align:center;color:${acc};font:italic 900 ${Z(24*sc)}px Arial;letter-spacing:2px`, `// ${esc(title)} //`);
-      order.forEach((ix, c) => { const s = sups[ix]; if (!s) return; const big = ix === 0, dd = (big?120:96)*sc, x = cx + (c-1)*220*sc, y = ty + (big?0:20*sc);
-        h += box(x-dd/2, y, dd, dd+80*sc, `text-align:center;color:#fff;${f(20)}`, `${big&&d==="arena"?`<div style="position:absolute;top:${-Z(26*sc)}px;left:0;right:0;color:${med[0]};font-size:${Z(30*sc)}px">♛</div>`:""}${kitAv(s, Z(dd), shape, med[ix])}<div style="margin-top:4px"><span style="background:${d==="esports"?"#111":"rgba(0,0,0,.75)"};padding:1px 8px;${d==="esports"?"transform:skewX(-12deg);display:inline-block;":"border-radius:10px"}">${d==="esports"?"#"+(ix+1)+" ":""}${s[0]}</span></div><div style="color:${med[ix]};font-weight:900">${coins(s[3])} ${esc(word)}</div>`); });
-    } else if (d === "broadcast"){
-      h += box(cx-100, ty-26, 200, 24, `background:${acc};color:#111;font:900 ${Z(18*sc)}px Arial;text-align:center;transform:skewX(-15deg)`, esc(title));
-      sups.forEach((s, i) => { const x = cx - 330*sc + i*220*sc; h += box(x, ty, 210*sc, 62*sc, `display:flex;align-items:center;gap:6px;background:${pbg};color:${ptx};transform:skewX(-12deg);border-bottom:3px solid ${med[i]};${f(18)}`, `<b style="background:${med[i]};color:#111;padding:0 8px;font-size:${Z(34*sc)}px">${i+1}</b>${kitAv(s, Z(46*sc), "square")}<div><b>${s[0]}</b><div style="color:${med[i]}">${coins(s[3])} ${esc(word)}</div></div>`); });
-    } else if (d === "podium"){
-      order.forEach((ix, c) => { const s = sups[ix]; if (!s) return; const hh = [110,80,60][ix]*sc, w = 160*sc, x = cx - 240*sc + c*160*sc, base = ty + 230*sc;
-        h += box(x, base-hh, w, hh, `background:linear-gradient(${med[ix]},${med[ix]}aa);color:#111;text-align:center;font:900 ${Z(40*sc)}px Arial`, `${ix+1}<div style="font-size:${Z(14*sc)}px">${coins(s[3])} ${esc(word)}</div>`);
-        h += box(x+w/2-45*sc, base-hh-120*sc, 90*sc, 115*sc, `text-align:center;color:#fff;${f(16)}`, `${kitAv(s, Z(84*sc), shape, med[ix])}<div style="background:rgba(255,255,255,.3);border-radius:8px;margin-top:3px">${s[0]}</div>`); });
-    } else if (d === "cards"){
-      order.forEach((ix, c) => { const s = sups[ix]; if (!s) return; const big = ix === 0, w = (big?150:130)*sc, hh = (big?190:160)*sc, x = cx - 230*sc + c*160*sc - w/2 + 65*sc;
-        h += box(x, ty + (big?0:14*sc), w, hh, `background:linear-gradient(160deg,#fff,${med[ix]});clip-path:polygon(0 0,100% 0,100% 80%,50% 100%,0 80%);color:#222;text-align:center;${f(16)}`, `<div style="display:flex;justify-content:space-between;padding:4px 8px;font:900 ${Z(36*sc)}px Arial"><span>${coins(s[3])}</span><small style="font-size:${Z(18*sc)}px">#${ix+1}</small></div>${kitAv(s, Z(64*sc), shape)}<div style="font-weight:700">${s[0]}</div>`); });
-    } else if (d === "minimal"){
-      h += box(cx-270*sc, ty, 540*sc, 58*sc, `display:flex;align-items:center;justify-content:space-around;background:rgba(255,255,255,.25);border-radius:40px;color:#fff;${f(16)}`, `🏆` + sups.map((s,i)=>`<span style="display:flex;align-items:center;gap:4px">${kitAv(s, Z(40*sc), shape)}<span>${s[0]}<br><small style="color:${med[i]}">${coins(s[3])} ${esc(word)}</small></span></span>`).join(""));
-    } else {
-      h += box(cx-210*sc, ty, 420*sc, (60+sups.length*50)*sc, `background:${pbg};color:${ptx};border-radius:12px;padding:8px 14px;${f(22)}`, `<div style="color:${acc};font-weight:700">🏆 ${esc(title)}</div>` + sups.map((s,i)=>`<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><b style="background:${med[i]};color:#111;border-radius:50%;width:${Z(26*sc)}px;text-align:center">${i+1}</b>${kitAv(s, Z(36*sc), "circle")}<span style="flex:1">${s[0]}</span><span style="color:${med[i]}">${coins(s[3])} ${esc(word)}</span></div>`).join(""));
-    }
+function pvDesignTop(){
+  const H = HV(), d = dz(), acc = dAcc(), md = dMed(), T = state.ini.Texts;
+  const rows = H.Top3Order.split(",").map(x => x.trim().toLowerCase()).filter(r => (r==="top3" && H.ShowTop3) || (r==="counters" && H.ShowCounters) || (r==="status" && H.ShowStatus && state.ini.TikFinity.Enabled));
+  if (!rows.length) return null;
+  const showTop = rows.includes("top3");
+  const n = d === "classic" ? Math.max(1, Math.min(10, H.TopCount)) : Math.max(1, Math.min(3, H.TopCount));
+  const sups = SAMPLE_SUPS.slice(0, n), word = H.DesignCoinsWord, cn = c => (c >= 10000 ? (c/1000).toFixed(1)+"K" : c) + " " + esc(word);
+  const size = {arena:[300,120],esports:[300,140],broadcast:[Math.min(3,n)*147,58],podium:[272,152],cards:[234,116],minimal:[36+Math.min(3,n)*104,40]}[d] || [240, 30 + n*28 + 4];
+  let [w, h] = showTop ? size : [236, 0];
+  const extra = (rows.length - (showTop ? 1 : 0)) * 20, total = h + (extra > 0 ? extra + 4 : 0);
+  const order = [1,0,2], s28 = fpx(.28), s34 = fpx(.34);
+  let html = "";
+  const tag = (name, cx, y, bg, slant) => abs(cx - 60, y, 120, 16, "text-align:center", `<span style="display:inline-block;padding:0 7px;height:16px;line-height:16px;font-size:${s28};background:${bg};${slant?"transform:skewX(-14deg)":"border-radius:8px"};color:#fff">${esc(name)}</span>`);
+  if (showTop) switch (d){
+    case "arena": case "esports": {
+      const es = d === "esports", oy = es ? 20 : 0;
+      if (es) html += abs(0, 0, w, 18, `text-align:center;color:${acc};font-size:${s34};font-style:italic;font-weight:900`, `// ${esc(H.Top3Title)} //`);
+      order.forEach((ix, c) => { const s = sups[ix]; if (!s) return; const big = ix === 0, dd = big ? 56 : 44, cx = 50 + c*100, cy = oy + (big ? 50 : 56);
+        if (big && !es) html += abs(cx-13, cy-dd/2-26, 26, 20, `color:${md[0]};font-size:22px;text-align:center;line-height:20px`, "♛");
+        html += abs(cx-dd*0.7, cy-dd*0.7, dd*1.4, dd*1.4, "display:grid;place-items:center", dAv(s, dd, md[ix], big, es));
+        if (!es) html += abs(cx-8, cy+dd/2-10, 16, 16, `background:${md[ix]};border-radius:50%;color:#1c1812;font:900 11px Arial;text-align:center;line-height:16px`, ix+1);
+        html += tag((es ? "#" + (ix+1) + " " : "") + s[0], cx, oy + 84, es ? "rgba(10,12,18,.92)" : "rgba(8,10,14,.86)", es);
+        if (H.ShowCoins) html += abs(cx-60, oy+102, 120, 16, `text-align:center;color:${md[ix]};font-size:${s28};font-weight:700`, cn(s[3])); });
+      break; }
+    case "broadcast":
+      html += abs(w/2-70, 0, 140, 17, `text-align:center;background:${acc};color:#1c1812;font-size:${s28};font-weight:900;transform:skewX(-14deg);line-height:17px`, esc(H.Top3Title));
+      sups.slice(0,3).forEach((s, i) => { html += abs(i*147, 21, 138, 34, `background:rgba(12,14,20,.9);border-bottom:2px solid ${md[i]};display:flex;align-items:center;gap:4px;transform:skewX(-8deg)`, `<b style="background:${md[i]};color:#1c1812;width:22px;height:34px;line-height:34px;text-align:center;font-size:${fpx(.5)}">${i+1}</b><span style="display:inline-grid;place-items:center;width:26px;height:26px;background:${s[2]};border-radius:50%">${s[1]}</span><div style="font-size:${s28};line-height:1.25"><div>${s[0]}</div>${H.ShowCoins?`<div style="color:${md[i]}">${cn(s[3])}</div>`:""}</div>`); });
+      break;
+    case "podium": {
+      const ph = [44,32,24];
+      order.forEach((ix, c) => { const s = sups[ix]; if (!s) return; const x0 = 6 + c*89, cx = x0 + 43, hh = ph[ix], dd = ix === 0 ? 46 : 38, acy = 150 - hh - 26 - dd/2;
+        html += abs(x0, 150-hh, 86, hh, `background:linear-gradient(${md[ix]},${md[ix]}dd);border-top:3px solid rgba(255,255,255,.5);text-align:center;color:#1c1812;font-weight:900;font-size:${fpx(.5)};line-height:1.1`, `${ix+1}${H.ShowCoins&&hh>=30?`<div style="font-size:${fpx(.22)}">${cn(s[3])}</div>`:""}`);
+        if (ix === 0) html += abs(cx-11, acy-dd/2-20, 22, 18, `color:${md[0]};font-size:18px;text-align:center`, "♛");
+        html += abs(cx-dd*0.7, acy-dd*0.7, dd*1.4, dd*1.4, "display:grid;place-items:center", dAv(s, dd, md[ix], ix === 0, false));
+        html += tag(s[0], cx, 150-hh-21, "rgba(255,255,255,.43)", false); });
+      break; }
+    case "cards": {
+      const xs = [0,77,166];
+      order.forEach((ix, c) => { const s = sups[ix]; if (!s) return; const big = ix === 0, cw = big ? 82 : 68, bh = big ? 100 : 86, x = xs[c], y = big ? 0 : 10;
+        html += abs(x, y, cw, bh + 14, `background:linear-gradient(#fff 0%,${md[ix]} 90%);clip-path:polygon(0 0,100% 0,100% ${bh/(bh+14)*100}%,50% 100%,0 ${bh/(bh+14)*100}%);color:#1c1812`,
+          `<div style="display:flex;justify-content:space-between;padding:2px 5px;font-weight:900;font-size:${fpx(big?.5:.44)}"><span>${s[3]>=10000?(s[3]/1000).toFixed(1)+"K":s[3]}</span><small style="font-size:${s28}">#${ix+1}</small></div><div style="font-size:${fpx(.21)};padding-left:6px;margin-top:-4px">${esc(word)}</div><div style="text-align:center;margin-top:2px">${dAv(s, big?32:26, "#fff", false, false)}</div><div style="text-align:center;font-size:${s28}">${s[0]}</div>`); });
+      break; }
+    case "minimal":
+      html += abs(0, 0, w, 38, `background:rgba(255,255,255,.3);border-radius:19px;display:flex;align-items:center;gap:6px;padding-left:10px`, `<span style="color:${md[0]};font-size:16px">♛</span>` + sups.slice(0,3).map((s, i) => `<span style="display:flex;align-items:center;gap:5px;width:98px">${dAv(s, 24, md[i], false, false)}<span style="font-size:${fpx(.26)};line-height:1.2">${s[0]}${H.ShowCoins?`<br><b style="color:${md[i]}">${cn(s[3])}</b>`:""}</span></span>`).join(""));
+      break;
+    default:
+      html += abs(0, 0, w, h, `background:rgba(14,16,24,${Math.max(170,H.Opacity)/255});border-radius:10px`, `<div style="padding:3px 10px;color:${acc};font-size:${s34};font-weight:700">♛ ${esc(H.Top3Title)}</div>` + sups.map((s, i) => `<div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 10px;font-size:${s34}"><b style="background:${md[i]||"#787e88"};color:#1c1812;border-radius:50%;width:16px;height:16px;line-height:16px;text-align:center;font-size:11px">${i+1}</b><span style="display:inline-grid;place-items:center;width:22px;height:22px;background:${s[2]};border-radius:50%">${s[1]}</span><span style="flex:1">${s[0]}</span>${H.ShowCoins?`<b style="color:${md[i]||"#aaa"};font-size:${s28}">${cn(s[3])}</b>`:""}</div>`).join(""));
   }
-  if (K.ShowBoard){
-    const w = K.ListW * sc, x = K.BoardSide === "left" ? 30 : VW - 30 - w, y = K.ListY * (vert ? 1920/1080 : 1);
-    const rows = SAMPLE_SUPS.slice(0, Math.min(5, K.BoardRows)), rowH = 50*sc, n = [5,3,2,1,1];
-    const icon = "⚡";
-    const hdr = {broadcast:`background:#000;color:#fff;font-weight:900`, esports:`background:${acc};color:#111;font-style:italic;font-weight:900;transform:skewX(-12deg)`, podium:`color:#fff`, minimal:`color:#fff;font-size:${Z(14*sc)}px;letter-spacing:2px`}[d] || `color:${acc};font-weight:700`;
-    let inner = `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;${hdr}"><span>${icon} ${esc(K.BoardTitle)}</span><b style="background:${acc};color:#111;border-radius:9px;padding:0 7px">12</b></div>`;
-    rows.forEach((s, i) => {
-      const rowCss = d === "podium" ? `background:rgba(255,255,255,.28);border-radius:12px;margin:4px 6px` : (d === "minimal" ? `background:rgba(255,255,255,.3);border-radius:30px;margin:4px 0 4px auto;width:70%` : (d === "esports" ? `background:rgba(10,12,20,.85);transform:skewX(-10deg);margin:3px 0` : `margin:2px 6px;${i===0?`background:linear-gradient(90deg,${acc}55,transparent);border-left:3px solid ${acc}`:""}`));
-      const lead = d === "cards" ? `<b style="background:${acc};color:#111;padding:0 5px">${n[i]}</b>` : (d === "broadcast" ? `<b style="background:#fff;color:#111;padding:0 5px">${i+1}</b>` : (d === "esports" ? `<i style="color:${acc}">#${i+1}</i>` : ""));
-      inner += `<div style="display:flex;align-items:center;gap:6px;height:${Z(rowH*0.8)}px;padding:0 8px;${rowCss}">${lead}${kitAv(s, Z(30*sc), shape)}<span style="flex:1">${s[0]}</span><span>${d==="cards"?"#"+(i+1):icon+" ×"+n[i]}</span></div>`;
-    });
-    const bg = d === "podium" || d === "minimal" || d === "esports" ? "" : `background:${pbg};border-radius:${d==="broadcast"?0:14}px;`;
-    h += `<div style="position:absolute;left:${X(x)}px;top:${Y(y)}px;width:${Z(w)}px;${bg}color:${ptx};font-size:${Z(18*sc)}px">${inner}</div>`;
+  let ry = h + (showTop ? 4 : 0);
+  rows.forEach(r => { if (r === "top3") return;
+    html += abs(w/2-112, ry, 224, 18, `background:rgba(10,12,18,.63);border-radius:9px;text-align:center;font-size:${s28};line-height:18px`, r === "counters" ? `${esc(T.EnemiesShort)} 4 · ${esc(T.AlliesShort)} 2 · ${esc(T.QueueShort)} 7` : `<span style="display:inline-block;width:7px;height:7px;background:${H.WinColor};margin-right:5px"></span>TikFinity`);
+    ry += 20; });
+  return {w, h: total, html};
+}
+// row background of the right lists in the current design
+function dRowCss(i, newest, rowH){
+  const acc = dAcc();
+  switch (dz()){
+    case "arena": return {css:`background:rgba(14,16,24,.84);border-radius:8px;${newest?`background:linear-gradient(90deg,${rgba(acc,.35)},rgba(14,16,24,.84) 60%);border-left:3px solid ${acc}`:""}`, lead:""};
+    case "broadcast": return {css:`background:rgba(0,0,0,.9);padding-left:0;${newest?`border-bottom:2px solid ${acc}`:""}`, lead:`<b style="background:#fff;color:#1c1812;width:${rowH-4}px;height:${rowH}px;line-height:${rowH}px;text-align:center">${i}</b>`};
+    case "podium": return {css:`background:rgba(255,255,255,.31);border-radius:10px;${newest?`border-bottom:2px solid ${acc}`:""}`, lead:""};
+    case "cards": return {css:`background:rgba(14,16,24,.84);border-radius:6px`, lead:`<b style="background:${newest?acc:"#f5be28"};color:#1c1812;width:${rowH-8}px;height:${rowH-8}px;line-height:${rowH-8}px;text-align:center">${i}</b>`};
+    case "esports": return {css:`background:rgba(10,12,20,.88);border-left:3px solid ${acc};transform:skewX(-10deg)`, lead:`<i style="color:${acc};font-weight:900">#${i}</i>`};
+    case "minimal": return {css:`background:rgba(255,255,255,.31);border-radius:${rowH}px;padding-left:10px;${newest?`box-shadow:inset 0 -2px 0 ${acc}`:""}`, lead:""};
+    default: return {css:bgCss(), lead:""};
   }
-  if (K.ShowGiftSpot){
-    const it = state.interactions[(+K.GiftSpotInteraction || 1) - 1];
-    h += box(K.GiftSpotX - K.GiftSpotSize/2, 1080*(vert?1920/1080:1) - K.GiftSpotBottom - K.GiftSpotSize, K.GiftSpotSize, K.GiftSpotSize + 40, `text-align:center;color:#fff;${f(22)}`, `<div style="font-size:${Z(K.GiftSpotSize*0.7)}px">${it ? (it.giftImg ? `<img src="${it.giftImg}" style="width:${Z(K.GiftSpotSize)}px">` : esc(it.giftEmoji)) : "🎁"}</div><b style="background:${acc};color:#111;padding:0 8px;border-radius:8px">${esc(K.GiftSpotWord)}</b>`);
-  }
-  return `<div class="pp" data-panel="Kit" style="left:0;top:0;width:1280px;height:720px;pointer-events:none;font-family:Arial,sans-serif">${h}</div>`;
 }
 
 function renderPreview(){
@@ -1420,7 +1419,7 @@ function renderPreview(){
   const ints = state.interactions.filter(i => i.Enabled);
   const panels = {
     Score: H.ScoreEnabled && pvScore(),
-    Top3: H.Top3Enabled && !(state.ini.LiveHud.Enabled && state.ini.LiveHud.ReplaceTop3 && state.ini.LiveHud.ShowTop) && pvTop(),
+    Top3: H.Top3Enabled && (designOn() ? pvDesignTop() : pvTop()),
     Health: H.HealthEnabled && pvHealth(L),
     Guide: H.GuideEnabled && pvGuide(),
     Notif: state.ini.Notifications.Enabled && pvFeed(ints.slice(0, Math.min(3, state.ini.Notifications.MaxVisible)).map((it, n) => ({s:SAMPLE_SUPS[n], t:fill(it.Message || it.Name, SAMPLE_SUPS[n][0]), icon:state.ini.Notifications.ShowGiftIcon ? {img:it.giftImg, emoji:it.giftEmoji} : null})), 30, 24, .34, false, "Notif", L),
@@ -1435,7 +1434,6 @@ function renderPreview(){
     const [x, y] = anchor(L, p, P.w * sc, P.h * sc, frame);
     html += `<div class="pp ${state.ui.selPanel===p?"sel":""}" data-panel="${p}" style="left:${x}px;top:${y}px;width:${P.w}px;height:${P.h}px;transform:scale(${sc});${txtCss()}">${P.html}</div>`;
   });
-  html += pvKit(vert);
   if (state.ini.LiveTest.Enabled && state.ini.LiveTest.ShowBadge) html += `<div style="position:absolute;left:${frame.x + frame.w - 110}px;top:4px;background:#fe2c55;color:#fff;font:700 12px Arial;padding:2px 8px">● LIVE TEST</div>`;
   vp.innerHTML = html;
 }
@@ -1459,8 +1457,7 @@ function renderHudSide(){
   });
   $("#hudSide").innerHTML = h;
   $("#styleBtns").innerHTML = STYLES.map(s => { const old = H.Style; H.Style = s; const css = bgCss(); H.Style = old; return `<div class="stylebtn ${H.Style===s?"on":""}" data-style="${s}"><div class="sw8" style="${css}"></div>${s}</div>`; }).join("");
-  const K = state.ini.LiveHud;
-  $("#kitChips").innerHTML = `<span class="chip ${K.Enabled?"":"on"}" data-kit="off">⛔ بلا</span>` + KIT_DESIGNS.map(([v, n]) => `<span class="chip ${K.Enabled && K.Design===v?"on":""}" data-kit="${v}">${n}</span>`).join("") + " · " + KIT_STYLES.map(([v, n]) => `<span class="chip ${K.Style===v?"on":""}" data-kitstyle="${v}">${n}</span>`).join("");
+  $("#kitChips").innerHTML = DESIGNS.map(([v, n]) => `<span class="chip ${H.Design===v?"on":""}" data-kit="${v}">${n}</span>`).join("") + " · " + DESIGN_COLORS.map(([v, n]) => `<span class="chip ${H.DesignColor===v?"on":""}" data-kitstyle="${v}">${n}</span>`).join("");
   $("#pvNormal").classList.toggle("pri", !vert); $("#pvVertical").classList.toggle("pri", vert);
 }
 function orderList(key, all, names){
@@ -1503,10 +1500,9 @@ const PRESETS = {
 $("#presets").innerHTML = Object.keys(PRESETS).map(k => `<span class="chip" data-preset="${k}">${k}</span>`).join("");
 $("#kitChips").addEventListener("click", e => {
   const c = e.target.closest("[data-kit],[data-kitstyle]"); if (!c) return;
-  const K = state.ini.LiveHud;
-  if (c.dataset.kitstyle) K.Style = c.dataset.kitstyle;
-  else if (c.dataset.kit === "off") K.Enabled = false;
-  else { K.Enabled = true; K.Design = c.dataset.kit; }
+  const H = state.ini.Hud;
+  if (c.dataset.kitstyle) H.DesignColor = c.dataset.kitstyle;
+  else H.Design = c.dataset.kit;
   renderAllForms(); renderHudSide(); changed();
 });
 $("#presets").addEventListener("click", e => { const c = e.target.closest("[data-preset]"); if (!c) return; PRESETS[c.dataset.preset](state); renderAllForms(); renderHudSide(); changed(); toast("✅ " + c.dataset.preset); });
@@ -1554,7 +1550,7 @@ NAV.forEach(([id]) => io.observe(document.getElementById(id)));
 <script>
 "use strict";
 // ------------------------------------------------------------- INI export
-const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest","LiveHud"];
+const SECTION_ORDER = ["General","TikFinity","Challenge","Queue","World","Player","Random","Hud","Notifications","KillFeed","Hype","Sounds","Camera","Graphics","Texts","Layout","LayoutVertical","KillEffects","Death","Aura","LiveTest"];
 const INTER_KEYS = ["Enabled","Name","Action","Trigger","GiftName","GiftId","LikesCount","CommentText","OncePerUser","TestKey","Units","MultiplyByCombo","Cooldown","Effect","Message","GiftImage","ActionImage","EntryCam","ShowInGuide",
   "Model","Health","Armor","Weapon","Ammo","Accuracy","CombatAbility","CombatMovement","ShootRate","Blip","SpawnDistance","VehicleModel","WarpIntoVehicle","Duration","Amount","Weather","Aura","AuraColor","GiftCoins"];
 function iniVal(v){
@@ -1745,7 +1741,7 @@ function validate(){
   const out = [], G = state.ini.General;
   const gk = {};
   ["PowerKey","StartKey","HudStyleKey","HudFontKey","EmergencyKey","PauseKey","LayoutKey","HypeTestKey"].forEach(k => { const v = G[k]; if (v && v !== "None"){ (gk[v] = gk[v] || []).push(k); } });
-  if (state.ini.LiveHud.Enabled) ["DesignKey","StyleKey"].forEach(k => { const v = state.ini.LiveHud[k]; if (v && v !== "None") (gk[v] = gk[v] || []).push("LiveHud." + k); });
+  ["DesignKey","DesignColorKey"].forEach(k => { const v = state.ini.Hud[k]; if (v && v !== "None") (gk[v] = gk[v] || []).push("Hud." + k); });
   if (state.ini.LiveTest.Enabled && state.ini.LiveTest.Key !== "None") (gk[state.ini.LiveTest.Key] = gk[state.ini.LiveTest.Key] || []).push("LiveTest");
   Object.keys(gk).forEach(v => { if (gk[v].length > 1) out.push(["err", `⌨️ الزر ${v} مستعمل جوج مرات: ${gk[v].join(" · ")}`]); });
   const tk = {};

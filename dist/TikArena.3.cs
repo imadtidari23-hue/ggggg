@@ -475,7 +475,7 @@ namespace TikArena
             LayoutCfg l = new LayoutCfg();
             string[] defPos = vertical
                 ? new string[] { "TopCenter", "TopCenter", "BottomCenter", "MiddleLeft", "BottomCenter", "MiddleCenter", "TopCenter" }
-                : new string[] { "TopCenter", "TopLeft", "BottomCenter", "MiddleLeft", "BottomRight", "BottomLeft", "TopRight" };
+                : new string[] { "TopCenter", "TopLeft", "BottomCenter", "MiddleLeft", "BottomRight", "MiddleRight", "TopRight" };
             float[] defOy = vertical ? new float[] { 0, 100, 0, 0, -70, 130, 262 } : new float[] { 0, 0, 0, 0, 0, 0, 70 };
             for (int i = 0; i < Panels.Length; i++)
             {
@@ -647,7 +647,8 @@ namespace TikArena
         public float OverheadHeight;
         public string AvatarShape;
         public bool StylePalette, OverheadRing, OverheadLevel;
-        public string TextMode, UnicodeFont;
+        public string TextMode, UnicodeFont, HudDesign, HudDesignColor, DesignCoinsWord;
+        public Keys DesignKey, DesignColorKey;
         public bool UnicodeBold, StripEmoji, FancyToAscii;
         public float UnicodeSize;
         public int MaxTextTextures;
@@ -849,6 +850,11 @@ namespace TikArena
             c.OverheadRing = ini.B("Hud", "OverheadRing", true);
             c.OverheadLevel = ini.B("Hud", "OverheadLevel", true);
             c.TextMode = ini.S("Hud", "TextMode", "Auto");
+            c.HudDesign = ini.S("Hud", "Design", "Arena");
+            c.HudDesignColor = ini.S("Hud", "DesignColor", "GOLD");
+            c.DesignCoinsWord = ini.S("Hud", "DesignCoinsWord", "كوينز");
+            c.DesignKey = ini.K("Hud", "DesignKey", "F10");
+            c.DesignColorKey = ini.K("Hud", "DesignColorKey", "F5");
             c.UnicodeFont = ini.S("Hud", "UnicodeFont", "Segoe UI");
             c.UnicodeBold = ini.B("Hud", "UnicodeBold", true);
             c.UnicodeSize = U.Clamp(ini.F("Hud", "UnicodeSize", 1f), 0.4f, 3f);
@@ -1761,6 +1767,93 @@ namespace TikArena
         }
     }
 
+    // ------------------------------------------------------------------------
+    //  White shape pictures (made once with GDI+, drawn tinted) for the HUD designs:
+    //  rounded corners, circle, ring, glow, hexagon, card point, parallelogram, crown.
+    //  Rule: script pictures are drawn above GTA rectangles/text, so text is never
+    //  placed on a shape picture (only on rectangles), except finite labels drawn as text pictures.
+    // ------------------------------------------------------------------------
+    static class Shapes
+    {
+        static readonly Dictionary<string, string> files = new Dictionary<string, string>();
+        const int N = 128;
+
+        public static string F(string name)
+        {
+            string f;
+            return files.TryGetValue(name, out f) ? f : null;
+        }
+
+        static PointF[] Hex(float s, bool pointyTop)
+        {
+            PointF[] p = new PointF[6];
+            float c = s / 2f, r = s / 2f - 1;
+            for (int i = 0; i < 6; i++)
+            {
+                double a = Math.PI / 3 * i + (pointyTop ? Math.PI / 2 : 0);
+                p[i] = new PointF(c + (float)Math.Cos(a) * r, c + (float)Math.Sin(a) * r);
+            }
+            return p;
+        }
+
+        public static void Make(string dir)
+        {
+            try { Directory.CreateDirectory(dir); } catch { }
+            Draw(dir, "circle", delegate(Graphics g) { g.FillEllipse(Brushes.White, 1, 1, N - 2, N - 2); });
+            Draw(dir, "ring", delegate(Graphics g) { using (Pen p = new Pen(Color.White, N * 0.12f)) g.DrawEllipse(p, N * 0.06f + 1, N * 0.06f + 1, N * 0.88f - 2, N * 0.88f - 2); });
+            Draw(dir, "glow", delegate(Graphics g)
+            {
+                using (GraphicsPath gp = new GraphicsPath())
+                {
+                    gp.AddEllipse(0, 0, N, N);
+                    using (PathGradientBrush pb = new PathGradientBrush(gp))
+                    {
+                        pb.CenterColor = Color.FromArgb(255, 255, 255, 255);
+                        pb.SurroundColors = new Color[] { Color.FromArgb(0, 255, 255, 255) };
+                        g.FillEllipse(pb, 0, 0, N, N);
+                    }
+                }
+            });
+            Draw(dir, "hex", delegate(Graphics g) { g.FillPolygon(Brushes.White, Hex(N, true)); });
+            Draw(dir, "q_tl", delegate(Graphics g) { g.FillEllipse(Brushes.White, 0, 0, N * 2, N * 2); });
+            Draw(dir, "q_tr", delegate(Graphics g) { g.FillEllipse(Brushes.White, -N, 0, N * 2, N * 2); });
+            Draw(dir, "q_bl", delegate(Graphics g) { g.FillEllipse(Brushes.White, 0, -N, N * 2, N * 2); });
+            Draw(dir, "q_br", delegate(Graphics g) { g.FillEllipse(Brushes.White, -N, -N, N * 2, N * 2); });
+            Draw(dir, "tri_down", delegate(Graphics g) { g.FillPolygon(Brushes.White, new PointF[] { new PointF(0, 0), new PointF(N, 0), new PointF(N / 2f, N) }); });
+            Draw(dir, "slant_l", delegate(Graphics g) { g.FillPolygon(Brushes.White, new PointF[] { new PointF(N, 0), new PointF(N, N), new PointF(0, N) }); });
+            Draw(dir, "slant_r", delegate(Graphics g) { g.FillPolygon(Brushes.White, new PointF[] { new PointF(0, 0), new PointF(N, 0), new PointF(0, N) }); });
+            Draw(dir, "crown", delegate(Graphics g)
+            {
+                g.FillPolygon(Brushes.White, new PointF[] {
+                    new PointF(N * 0.08f, N * 0.85f), new PointF(N * 0.08f, N * 0.30f), new PointF(N * 0.30f, N * 0.55f), new PointF(N * 0.50f, N * 0.12f),
+                    new PointF(N * 0.70f, N * 0.55f), new PointF(N * 0.92f, N * 0.30f), new PointF(N * 0.92f, N * 0.85f) });
+                g.FillEllipse(Brushes.White, N * 0.02f, N * 0.20f, N * 0.14f, N * 0.14f);
+                g.FillEllipse(Brushes.White, N * 0.43f, N * 0.02f, N * 0.14f, N * 0.14f);
+                g.FillEllipse(Brushes.White, N * 0.84f, N * 0.20f, N * 0.14f, N * 0.14f);
+            });
+        }
+
+        static void Draw(string dir, string name, Action<Graphics> paint)
+        {
+            string file = Path.Combine(dir, name + ".png");
+            files[name] = file;
+            if (File.Exists(file)) return;
+            try
+            {
+                using (Bitmap b = new Bitmap(N, N, PixelFormat.Format32bppArgb))
+                using (Graphics g = Graphics.FromImage(b))
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    g.Clear(Color.Transparent);
+                    paint(g);
+                    b.Save(file, ImageFormat.Png);
+                }
+            }
+            catch (Exception ex) { U.Log("shape " + name + ": " + ex.Message); files.Remove(name); }
+        }
+    }
+
     static class Gfx
     {
         static readonly TextElement te = new TextElement("", PointF.Empty, 0.35f);
@@ -1947,6 +2040,36 @@ namespace TikArena
             sp.Draw();
         }
 
+        // tinted white shape picture (see Shapes)
+        public static void Shape(string name, float x, float y, float w, float h, Color c)
+        {
+            string f = Shapes.F(name);
+            if (f != null && w > 0 && h > 0) ImageAbsTint(f, Ox + x * S, Oy + y * S, w * S, h * S, c);
+        }
+
+        // rounded rectangle: rectangles for the body (text can sit on it) + 4 corner pictures
+        public static void RRect(float x, float y, float w, float h, float r, Color c)
+        {
+            r = Math.Min(r, Math.Min(w, h) / 2);
+            if (r < 1.5f || Shapes.F("q_tl") == null) { Rect(x, y, w, h, c); return; }
+            Rect(x + r, y, w - 2 * r, h, c);
+            Rect(x, y + r, r, h - 2 * r, c);
+            Rect(x + w - r, y + r, r, h - 2 * r, c);
+            Shape("q_tl", x, y, r, r, c);
+            Shape("q_tr", x + w - r, y, r, r, c);
+            Shape("q_bl", x, y + h - r, r, r, c);
+            Shape("q_br", x + w - r, y + h - r, r, r, c);
+        }
+
+        // text forced to a picture (for short labels drawn over a shape picture)
+        public static void TextPic(string s, float x, float y, float size, Color c, Alignment al)
+        {
+            string p = Txt.Prep(s);
+            Txt.Tex t = p.Length > 0 ? Txt.Get(p, false, false, true) : null;
+            if (t != null) DrawTex(t, Ox + x * S, Oy + y * S, size * S * FontScale, c, al);
+            else Text(s, x, y, size, c, al);
+        }
+
         public static void Image(string file, float x, float y, float w, float h, int alpha)
         {
             ImageAbs(file, Ox + x * S, Oy + y * S, w * S, h * S, alpha);
@@ -2089,6 +2212,7 @@ namespace TikArena
             LoadConfig();
             avatars.Circle = !string.Equals(cfg.AvatarShape, "Square", StringComparison.OrdinalIgnoreCase);
             avatars.Start(Path.Combine(U.DataDir, "cache"));
+            Shapes.Make(Path.Combine(U.DataDir, "cache", "ui"));
             Interval = 0;
             Tick += OnTick;
             KeyDown += OnKeyDown;
@@ -2121,8 +2245,9 @@ namespace TikArena
             Txt.MaxTextures = cfg.MaxTextTextures;
             style = cfg.HudStyle;
             fontName = cfg.HudFont;
+            design = cfg.HudDesign;
+            designColor = cfg.HudDesignColor;
             vertical = string.Equals(cfg.LayoutMode, "Vertical", StringComparison.OrdinalIgnoreCase);
-            ApplyKit(ini);
             guideOrder.Clear();
             appliedWeather = null;
             tcApplied = false;
@@ -2255,8 +2380,8 @@ namespace TikArena
                 if (k == cfg.StartKey) { StartSession(); return; }
                 if (k == cfg.HudStyleKey) { style = Cycle(cfg.StyleCycle, style); Status("HUD: " + style); return; }
                 if (k == cfg.HudFontKey) { fontName = Cycle(cfg.FontCycle, fontName); Status("Font: " + fontName); return; }
-                if (KitActive && k == kitDesignKey) { kit.NextLayout(); return; }
-                if (KitActive && k == kitStyleKey) { kit.NextStyle(); return; }
+                if (k == cfg.DesignKey) { design = Cycle(DesignCycle, design); Status("Design: " + design); return; }
+                if (k == cfg.DesignColorKey) { designColor = Cycle(DesignColors, designColor); Status("Color: " + designColor); return; }
                 if (k == cfg.LayoutKey) { vertical = !vertical; Status(vertical ? "TikTok 9:16" : "16:9"); return; }
                 if (k == cfg.PauseKey)
                 {
@@ -2687,7 +2812,6 @@ namespace TikArena
                 s.LastGift = now;
                 s.ComebackSent = false;
                 LearnLog(e);
-                KitGift(s, e);
                 CheckNewKing();
             }
 
@@ -2763,7 +2887,6 @@ namespace TikArena
             j.Left = units;
             j.Coins = coins;
             if (IsSpawn(it.Action)) spawnQ.Add(j); else instantQ.Add(j);
-            if (KitActive && it.Index == kitSwapIndex) kit.SwapUsed();
 
             if (IsHelp(it.Action)) s.RoundHelpCoins += Math.Max(coins, 1);
             if (IsEnemyAction(it.Action)) { lastEnemySup = s; lastEnemyAt = U.Now; }
@@ -3953,7 +4076,6 @@ namespace TikArena
                 mvpReason = cfg.Tx("MvpLossReason", "");
                 Function.Call((Hash)0x67C540AA08E4A6F5UL, -1, "LOSER", "HUD_AWARDS", true);
             }
-            KitResult(win);
             if (cfg.ClearQueueOnRoundEnd) { spawnQ.Clear(); instantQ.Clear(); }
         }
 
@@ -4383,168 +4505,309 @@ namespace TikArena
             HandleEvent(e);
         }
 
-        // ================================================================ LiveHud designs (embedded kit, section [LiveHud])
-        //  arena broadcast podium cards esports minimal classic  x  GOLD NEON FIRE ICE CLASSIC
-        //  top supporters (coins) -> TOP board, queue -> NEXT board, round end -> result banner,
-        //  big gifts -> MEGA GIFT, one interaction -> "gift spot" bottom-left.
-        LiveHudKit.LiveHud kit;
-        bool kitOn, kitReplaceTop, kitReplaceEnd, kitShowResult, kitMega;
-        long kitMegaMin;
-        int kitSwapIndex;
-        string kitUnitIcon = "action", kitWinTitle = "", kitLossTitle = "";
-        Keys kitDesignKey = Keys.None, kitStyleKey = Keys.None;
-        long kitNextBoard;
-        static readonly string[] KitStyles = { "GOLD", "NEON", "FIRE", "ICE", "CLASSIC" };
+        // ================================================================ HUD designs over the ORIGINAL panels
+        //  [Hud] Design = None | Arena | Broadcast | Podium | Cards | Esports | Minimal | Classic
+        //  [Hud] DesignColor = GOLD | NEON | FIRE | ICE | CLASSIC  (medal colours)
+        //  Restyles the supporters panel (Top3) and the right lists (notifications / kill feed).
+        string design = "None", designColor = "GOLD";
+        static readonly List<string> DesignCycle = new List<string> { "None", "Arena", "Broadcast", "Podium", "Cards", "Esports", "Minimal", "Classic" };
+        static readonly List<string> DesignColors = new List<string> { "GOLD", "NEON", "FIRE", "ICE", "CLASSIC" };
 
-        void ApplyKit(Ini ini)
+        string Dz { get { return (design ?? "None").ToLowerInvariant(); } }
+        bool DesignOn { get { string d = Dz; return d.Length > 0 && d != "none"; } }
+
+        Color[] MedalsD
         {
-            const string S = "LiveHud";
-            kitOn = ini.B(S, "Enabled", true);
-            kitReplaceTop = ini.B(S, "ReplaceTop3", true);
-            kitReplaceEnd = ini.B(S, "ReplaceEndScreen", true);
-            kitShowResult = ini.B(S, "ShowResult", true);
-            kitMega = ini.B(S, "MegaEnabled", true);
-            kitMegaMin = Math.Max(1, ini.I(S, "MegaMinCoins", 1000));
-            kitUnitIcon = ini.S(S, "UnitIcon", "action");
-            kitWinTitle = ini.S(S, "WinTitle", "فوز!");
-            kitLossTitle = ini.S(S, "LossTitle", "خسارة!");
-            kitDesignKey = ini.K(S, "DesignKey", "F10");
-            kitStyleKey = ini.K(S, "StyleKey", "F5");
-            kitSwapIndex = ini.I(S, "GiftSpotInteraction", 1);
-            if (!kitOn) return;
-            try
+            get
             {
-                if (kit == null)
+                switch ((designColor ?? "GOLD").ToUpperInvariant())
                 {
-                    kit = new LiveHudKit.LiveHud(Path.Combine(U.DataDir, "livehud"));
-                    kit.OnLog = delegate(string t) { U.Log("LiveHud: " + t); };
+                    case "NEON": return new Color[] { Color.FromArgb(255, 215, 60, 255), Color.FromArgb(255, 0, 215, 255), Color.FromArgb(255, 40, 225, 120) };
+                    case "FIRE": return new Color[] { Color.FromArgb(255, 255, 140, 0), Color.FromArgb(255, 240, 95, 30), Color.FromArgb(255, 215, 40, 40) };
+                    case "ICE": return new Color[] { Color.FromArgb(255, 150, 215, 255), Color.FromArgb(255, 175, 228, 242), Color.FromArgb(255, 125, 165, 225) };
+                    default: return new Color[] { Color.FromArgb(255, 245, 190, 40), Color.FromArgb(255, 192, 198, 206), Color.FromArgb(255, 205, 127, 50) };
                 }
-                LiveHudKit.LiveHud.Config k = kit.cfg;
-                k.Design = ini.S(S, "Design", "arena").ToLowerInvariant();
-                int st = Array.IndexOf(KitStyles, ini.S(S, "Style", "GOLD").ToUpperInvariant());
-                k.HudStyle = st < 0 ? 0 : st;
-                k.HudFont = ini.S(S, "Font", "default").ToLowerInvariant();
-                k.HudFontCustom = ini.S(S, "FontCustom", "");
-                k.AvShape = ini.S(S, "AvatarShape", "auto").ToLowerInvariant();
-                k.PanelKind = ini.S(S, "Panel", "auto").ToLowerInvariant();
-                k.HudScale = U.Clamp(ini.F(S, "Scale", 1f), 0.3f, 3f);
-                k.TikTokScale = U.Clamp(ini.F(S, "TikTokScale", 0.9f), 0.3f, 3f);
-                k.PanelAlpha = U.Clamp(ini.I(S, "PanelAlpha", 190), 0, 255);
-                k.Accent = ini.C(S, "Accent", "#f5b301");
-                k.ShowTop = ini.B(S, "ShowTop", true);
-                k.PodiumPulse = ini.B(S, "PodiumPulse", true);
-                k.TopCount = U.Clamp(ini.I(S, "TopCount", 3), 1, 3);
-                k.TopY = ini.F(S, "TopY", 170f);
-                k.TopTitle = ini.S(S, "TopTitle", "أفضل الداعمين");
-                k.GoalsWord = ini.S(S, "CoinsWord", "كوينز");
-                k.GoalWord = ini.S(S, "CoinWord", "كوين");
-                k.ShowBoard = ini.B(S, "ShowBoard", true);
-                k.BoardSide = ini.S(S, "BoardSide", "right").ToLowerInvariant();
-                k.BoardTitle = ini.S(S, "BoardTitle", "الطابور");
-                k.EmptyText = ini.S(S, "EmptyText", "صيفط هدية باش تدخل!");
-                k.BoardRows = U.Clamp(ini.I(S, "BoardRows", 5), 1, 12);
-                k.ListY = ini.F(S, "ListY", 300f);
-                k.ListW = ini.F(S, "ListW", 420f);
-                k.ShowSwap = ini.B(S, "ShowGiftSpot", false);
-                k.SwapWord = ini.S(S, "GiftSpotWord", "GIFT");
-                k.SwapTextPos = "below";
-                k.ShowSwapName = true;
-                k.SwapX = ini.F(S, "GiftSpotX", 130f);
-                k.SwapBottom = ini.F(S, "GiftSpotBottom", 150f);
-                k.SwapSize = ini.F(S, "GiftSpotSize", 110f);
-                k.ShowResult = kitShowResult;
-                k.ResultStyle = ini.S(S, "ResultStyle", "design").ToLowerInvariant();
-                k.ResultY = ini.F(S, "ResultY", 360f);
-                k.BigTitle = ini.S(S, "MegaTitle", "MEGA GIFT!");
-                k.BigColor = ini.C(S, "MegaColor", "#ffd23c");
-                k.BigMs = U.Clamp(ini.I(S, "MegaMs", 6500), 1000, 30000);
-                k.HudMode = vertical ? "tiktok" : "wide";
-                kit.SwapIcon = null;
-                k.SwapGiftName = "";
-                foreach (Interaction it in cfg.Interactions)
-                    if (it.Index == kitSwapIndex) { kit.SwapIcon = ImgPath(it.GiftImage); k.SwapGiftName = it.Trigger.Equals("Gift", StringComparison.OrdinalIgnoreCase) ? it.GiftName : it.Title; }
-                kit.Apply();
             }
-            catch (Exception ex) { U.Error("LiveHud", ex); kitOn = false; }
         }
 
-        bool KitActive { get { return kitOn && kit != null; } }
-
-        LiveHudKit.LiveHud.AvatarInfo KitAvatar(Supporter s)
+        Color DAcc
         {
-            if (!KitActive || s == null) return null;
-            return kit.Avatar(s.Key, string.Join("\n", s.AvatarUrls.ToArray()));
-        }
-
-        string KitAlt(Supporter s) { return s.Sim || s.Key.StartsWith("test:") ? s.Nick : "@" + s.Key; }
-
-        void KitGift(Supporter s, LiveEvent e)
-        {
-            if (!KitActive || e.Coins <= 0) return;
-            try
+            get
             {
-                kit.AddGoal(s.Key, s.Nick, KitAlt(s), string.Join("\n", s.AvatarUrls.ToArray()), (int)Math.Min(e.Coins, 1000000));
-                if (kitMega && e.Coins >= kitMegaMin) kit.ShowMegaGift(s.Nick, KitAlt(s), KitAvatar(s), e.GiftName, e.Count, e.Coins);
-            }
-            catch (Exception ex) { U.Error("LiveHud", ex); }
-        }
-
-        void KitResult(bool win)
-        {
-            if (!KitActive || !kitShowResult) return;
-            try { kit.ShowResult(win ? "goal" : "miss", win ? kitWinTitle : kitLossTitle, mvp != null ? mvpReason : "", mvp != null ? mvp.Nick : "", KitAvatar(mvp)); }
-            catch (Exception ex) { U.Error("LiveHud", ex); }
-        }
-
-        string KitIcon(Interaction it)
-        {
-            if (it == null) return null;
-            string m = (kitUnitIcon ?? "action").ToLowerInvariant();
-            if (m == "ball") return null;
-            if (m == "gift") return ImgPath(it.GiftImage);
-            if (m == "action") return ImgPath(it.ActionImage);
-            return ImgPath(kitUnitIcon);
-        }
-
-        // queue -> "NEXT" board: one row per supporter (in order), one unit per ball
-        void KitBoard()
-        {
-            List<LiveHudKit.LiveHud.Supporter> list = new List<LiveHudKit.LiveHud.Supporter>();
-            LiveHudKit.LiveHud.Supporter cur = null;
-            Job first = null;
-            foreach (List<Job> q in new List<Job>[] { spawnQ, instantQ })
-            {
-                foreach (Job j in q)
+                switch ((designColor ?? "GOLD").ToUpperInvariant())
                 {
-                    if (list.Count >= 30) break;
-                    if (first == null) first = j;
-                    string key = j.Sup != null ? j.Sup.Key : "?";
-                    if (cur == null || cur.Key != key)
+                    case "NEON": return Color.FromArgb(255, 0, 229, 255);
+                    case "FIRE": return Color.FromArgb(255, 255, 106, 0);
+                    case "ICE": return Color.FromArgb(255, 127, 216, 255);
+                    case "CLASSIC": return cAcc;
+                    default: return Color.FromArgb(255, 245, 179, 1);
+                }
+            }
+        }
+
+        static readonly Color Dark = Color.FromArgb(225, 12, 14, 20);
+        static readonly Color Ink = Color.FromArgb(255, 28, 24, 18);
+
+        List<string> CoinParts(Supporter s) { return new List<string> { U.Coins(s.Coins), cfg.DesignCoinsWord }; }
+
+        void AvRing(Supporter s, float cx, float cy, float d, Color ring, bool glow, bool hex)
+        {
+            if (glow) Gfx.Shape("glow", cx - d * 0.95f, cy - d * 0.95f, d * 1.9f, d * 1.9f, U.WithAlpha(ring, 150));
+            if (hex)
+            {
+                Gfx.Shape("hex", cx - d * 0.66f, cy - d * 0.66f, d * 1.32f, d * 1.32f, ring);
+                Gfx.Shape("hex", cx - d * 0.57f, cy - d * 0.57f, d * 1.14f, d * 1.14f, Color.FromArgb(255, 20, 22, 30));
+                Gfx.Image(Avatar(s), cx - d * 0.45f, cy - d * 0.45f, d * 0.9f, d * 0.9f, 255);
+            }
+            else
+            {
+                Gfx.Shape("circle", cx - d * 0.57f, cy - d * 0.57f, d * 1.14f, d * 1.14f, ring);
+                Gfx.Image(Avatar(s), cx - d / 2, cy - d / 2, d, d, 255);
+            }
+        }
+
+        void NameTag(string name, float cx, float y, Color bg, Color fg, bool slanted)
+        {
+            float nw = Gfx.TextW(name, SMALL) + 14;
+            if (slanted)
+            {
+                Gfx.Rect(cx - nw / 2, y, nw, 16, bg);
+                Gfx.Shape("slant_l", cx - nw / 2 - 7, y, 7, 16, bg);
+                Gfx.Shape("slant_r", cx + nw / 2, y, 7, 16, bg);
+            }
+            else Gfx.RRect(cx - nw / 2, y, nw, 16, 8, bg);
+            Gfx.Text(name, cx, y + 1, SMALL, fg, Alignment.Center);
+        }
+
+        // ---------------------------------------------------------------- supporters panel
+        SizeF DesignTop(bool draw)
+        {
+            string dz = Dz;
+            List<string> rows = TopRows();
+            bool showTop = rows.Contains("top3");
+            List<Supporter> top = TopList(dz == "classic" ? cfg.TopCount : Math.Min(3, cfg.TopCount));
+            int n = Math.Max(1, top.Count);
+            float w, h;
+            switch (dz)
+            {
+                case "arena": w = 300; h = 120; break;
+                case "esports": w = 300; h = 140; break;
+                case "broadcast": w = Math.Max(1, Math.Min(3, n)) * 147; h = 58; break;
+                case "podium": w = 272; h = 152; break;
+                case "cards": w = 234; h = 116; break;
+                case "minimal": w = 36 + Math.Min(3, n) * 104; h = 40; break;
+                default: w = 240; h = 30 + n * 28 + 4; break;
+            }
+            if (!showTop) { w = 236; h = 0; }
+            float extra = (rows.Count - (showTop ? 1 : 0)) * 20;
+            float total = h + (extra > 0 ? extra + 4 : 0);
+            if (total <= 0) return SizeF.Empty;
+            if (!draw) return new SizeF(w, total);
+
+            Color acc = DAcc;
+            Color[] md = MedalsD;
+            int[] order = { 1, 0, 2 };
+            if (showTop)
+            {
+                if (top.Count == 0 && dz != "classic") Gfx.Text("—", w / 2, h / 2 - 8, TXT, TextCol(160), Alignment.Center);
+                switch (dz)
+                {
+                    case "arena":
+                    case "esports":
+                        {
+                            float oy = 0;
+                            bool es = dz == "esports";
+                            if (es)
+                            {
+                                Gfx.PartsCentered(new List<string> { "//", cfg.Top3Title, "//" }, w / 2, 0, TXT, acc);
+                                oy = 20;
+                            }
+                            for (int c = 0; c < 3; c++)
+                            {
+                                int ix = order[c];
+                                if (ix >= top.Count) continue;
+                                Supporter s = top[ix];
+                                bool big = ix == 0;
+                                float cx = 50 + c * 100, d = big ? 56 : 44, cy = oy + (big ? 50 : 56);
+                                if (big && !es) Gfx.Shape("crown", cx - 13, cy - d / 2 - 24, 26, 19, md[0]);
+                                AvRing(s, cx, cy, d, md[ix], big, es);
+                                if (!es)
+                                {
+                                    Gfx.Shape("circle", cx - 8, cy + d / 2 - 10, 16, 16, md[ix]);
+                                    Gfx.TextPic((ix + 1).ToString(U.IC), cx, cy + d / 2 - 10, SMALL * 0.85f, Ink, Alignment.Center);
+                                }
+                                float py = oy + 84;
+                                NameTag((es ? "#" + (ix + 1) + " " : "") + U.Trunc(s.Nick, 12), cx, py, es ? Color.FromArgb(235, 10, 12, 18) : Color.FromArgb(220, 8, 10, 14), Color.White, es);
+                                if (cfg.ShowCoins) Gfx.PartsCentered(CoinParts(s), cx, py + 18, SMALL, md[ix]);
+                            }
+                            break;
+                        }
+                    case "broadcast":
+                        {
+                            float tw = Gfx.TextW(cfg.Top3Title, SMALL) + 26;
+                            Gfx.Shape("slant_l", w / 2 - tw / 2 - 8, 0, 8, 17, acc);
+                            Gfx.Rect(w / 2 - tw / 2, 0, tw, 17, acc);
+                            Gfx.Shape("slant_r", w / 2 + tw / 2, 0, 8, 17, acc);
+                            Gfx.Text(cfg.Top3Title, w / 2, 0, SMALL, Ink, Alignment.Center);
+                            for (int i = 0; i < top.Count && i < 3; i++)
+                            {
+                                Supporter s = top[i];
+                                float x = i * 147, y = 21;
+                                Gfx.Rect(x, y, 138, 34, Dark);
+                                Gfx.Shape("slant_r", x + 138, y, 8, 34, Dark);
+                                Gfx.Rect(x, y + 34, 138, 2, md[i]);
+                                Gfx.Rect(x, y, 22, 34, md[i]);
+                                Gfx.Text((i + 1).ToString(U.IC), x + 11, y + 4, 0.5f, Ink, Alignment.Center);
+                                Gfx.Image(Avatar(s), x + 26, y + 4, 26, 26, 255);
+                                Gfx.Text(U.Trunc(s.Nick, 11), x + 56, y + 2, SMALL, Color.White, Alignment.Left);
+                                if (cfg.ShowCoins) Gfx.Parts(CoinParts(s), x + 56, y + 17, SMALL * 0.95f, md[i]);
+                            }
+                            break;
+                        }
+                    case "podium":
+                        {
+                            float[] ph = { 44, 32, 24 };
+                            const float colW = 86, baseY = 150;
+                            for (int c = 0; c < 3; c++)
+                            {
+                                int ix = order[c];
+                                if (ix >= top.Count) continue;
+                                Supporter s = top[ix];
+                                float x0 = 6 + c * (colW + 3), cx = x0 + colW / 2, hgt = ph[ix];
+                                Gfx.Rect(x0, baseY - hgt, colW, hgt, U.WithAlpha(md[ix], 235));
+                                Gfx.Rect(x0, baseY - hgt, colW, 3, Color.FromArgb(130, 255, 255, 255));
+                                Gfx.Text((ix + 1).ToString(U.IC), cx, baseY - hgt + 1, 0.5f, Ink, Alignment.Center);
+                                if (cfg.ShowCoins && hgt >= 30) Gfx.PartsCentered(CoinParts(s), cx, baseY - hgt + 20, SMALL * 0.8f, Ink);
+                                float d = ix == 0 ? 46 : 38, acy = baseY - hgt - 26 - d / 2;
+                                if (ix == 0) Gfx.Shape("crown", cx - 11, acy - d / 2 - 18, 22, 16, md[0]);
+                                AvRing(s, cx, acy, d, md[ix], ix == 0, false);
+                                NameTag(U.Trunc(s.Nick, 10), cx, baseY - hgt - 21, Color.FromArgb(110, 255, 255, 255), Color.White, false);
+                            }
+                            break;
+                        }
+                    case "cards":
+                        {
+                            float[] xs = { 0, 77, 166 };
+                            for (int c = 0; c < 3; c++)
+                            {
+                                int ix = order[c];
+                                if (ix >= top.Count) continue;
+                                Supporter s = top[ix];
+                                bool big = ix == 0;
+                                float cw = big ? 82 : 68, bh = big ? 100 : 86, x = xs[c], y = big ? 0 : 10;
+                                for (int k = 0; k < 6; k++)
+                                    Gfx.Rect(x, y + k * bh / 6, cw, bh / 6 + 0.6f, U.Mix(Color.White, md[ix], 0.3f + k * 0.13f));
+                                Gfx.Shape("tri_down", x, y + bh - 0.5f, cw, 14, md[ix]);
+                                Gfx.Text(U.Coins(s.Coins), x + 5, y + 2, big ? 0.5f : 0.44f, Ink, Alignment.Left);
+                                Gfx.Text("#" + (ix + 1), x + cw - 5, y + 4, SMALL, Ink, Alignment.Right);
+                                Gfx.Text(cfg.DesignCoinsWord, x + 6, y + (big ? 22 : 20), SMALL * 0.75f, Ink, Alignment.Left);
+                                AvRing(s, x + cw / 2, y + bh * 0.55f, big ? 32 : 26, Color.White, false, false);
+                                Gfx.Text(U.Trunc(s.Nick, 9), x + cw / 2, y + bh - 17, SMALL, Ink, Alignment.Center);
+                            }
+                            break;
+                        }
+                    case "minimal":
+                        {
+                            Gfx.RRect(0, 0, w, 38, 19, Color.FromArgb(75, 255, 255, 255));
+                            Gfx.Shape("crown", 10, 12, 18, 14, md[0]);
+                            for (int i = 0; i < top.Count && i < 3; i++)
+                            {
+                                Supporter s = top[i];
+                                float x = 36 + i * 104;
+                                AvRing(s, x + 13, 19, 24, md[i], false, false);
+                                Gfx.Text(U.Trunc(s.Nick, 10), x + 30, 4, SMALL * 0.95f, Color.White, Alignment.Left);
+                                if (cfg.ShowCoins) Gfx.Parts(CoinParts(s), x + 30, 19, SMALL * 0.85f, md[i]);
+                            }
+                            break;
+                        }
+                    default: // classic
+                        {
+                            Gfx.RRect(0, 0, w, h, 10, Color.FromArgb(Math.Max(170, cfg.Opacity), 14, 16, 24));
+                            Gfx.Shape("crown", 10, 7, 16, 12, acc);
+                            Gfx.Text(cfg.Top3Title, 32, 3, TXT, acc, Alignment.Left);
+                            if (top.Count == 0) Gfx.Text("—", w / 2, 32, TXT, TextCol(160), Alignment.Center);
+                            for (int i = 0; i < top.Count; i++)
+                            {
+                                Supporter s = top[i];
+                                float y = 28 + i * 28;
+                                Color mc = i < 3 ? md[i] : Color.FromArgb(255, 120, 126, 136);
+                                Gfx.Shape("circle", 10, y + 5, 16, 16, mc);
+                                Gfx.TextPic((i + 1).ToString(U.IC), 18, y + 5, SMALL * 0.85f, Ink, Alignment.Center);
+                                Gfx.Image(Avatar(s), 32, y + 2, 22, 22, 255);
+                                Gfx.Text(U.Trunc(s.Nick, 14), 60, y + 4, TXT, Color.White, Alignment.Left);
+                                if (cfg.ShowCoins)
+                                {
+                                    List<string> cp = CoinParts(s);
+                                    Gfx.Parts(cp, w - 10 - Gfx.PartsW(cp, SMALL), y + 6, SMALL, mc);
+                                }
+                            }
+                            break;
+                        }
+                }
+            }
+            float ry = h + (showTop ? 4 : 0);
+            foreach (string r in rows)
+            {
+                if (r == "top3") continue;
+                Gfx.RRect(w / 2 - 112, ry, 224, 18, 9, Color.FromArgb(160, 10, 12, 18));
+                if (r == "counters") CountersRow(w, ry - 2);
+                else StatusRow(w, ry - 2);
+                ry += 20;
+            }
+            return new SizeF(w, total);
+        }
+
+        // ---------------------------------------------------------------- right lists (notifications / kill feed) rows
+        float DesignRowPad(float rowH)
+        {
+            string dz = Dz;
+            return dz == "broadcast" || dz == "cards" || dz == "esports" ? rowH - 2 : 0;
+        }
+
+        // draws a row background in the current design, returns the left padding for the content
+        float DesignRowBg(float x, float y, float w, float h, float a, int index, bool newest)
+        {
+            Color acc = DAcc;
+            int A = (int)(255 * a);
+            switch (Dz)
+            {
+                case "arena":
+                    Gfx.RRect(x, y, w, h, 8, Color.FromArgb((int)(215 * a), 14, 16, 24));
+                    if (newest)
                     {
-                        cur = new LiveHudKit.LiveHud.Supporter();
-                        cur.Key = key;
-                        cur.DisplayName = j.Sup != null ? j.Sup.Nick : "?";
-                        cur.Alt = j.Sup != null ? KitAlt(j.Sup) : "";
-                        cur.PicUrl = j.Sup != null ? string.Join("\n", j.Sup.AvatarUrls.ToArray()) : "";
-                        cur.Avatar = KitAvatar(j.Sup);
-                        list.Add(cur);
+                        for (int k = 0; k < 8; k++) Gfx.Rect(x + 3 + k * w * 0.07f, y, w * 0.07f + 0.5f, h, U.WithAlpha(acc, (int)(90 * a * (1 - k / 8f))));
+                        Gfx.Rect(x, y + 3, 3, h - 6, U.WithAlpha(acc, A));
                     }
-                    for (int n = 0; n < j.Left && cur.Balls.Count < 40; n++) cur.Balls.Add(j.It.Action);
-                }
+                    return 0;
+                case "broadcast":
+                    Gfx.Rect(x, y, w, h, Color.FromArgb((int)(230 * a), 0, 0, 0));
+                    Gfx.Rect(x, y, h - 4, h, Color.FromArgb(A, 255, 255, 255));
+                    Gfx.Text(index.ToString(U.IC), x + (h - 4) / 2, y + (h - Gfx.LineH(TXT)) / 2, TXT, U.WithAlpha(Ink, A), Alignment.Center);
+                    if (newest) Gfx.Rect(x + h - 4, y + h - 2, w - h + 4, 2, U.WithAlpha(acc, A));
+                    return h - 2;
+                case "podium":
+                    Gfx.RRect(x, y, w, h, 10, Color.FromArgb((int)(80 * a), 255, 255, 255));
+                    if (newest) Gfx.Rect(x + 10, y + h - 2, w - 20, 2, U.WithAlpha(acc, A));
+                    return 0;
+                case "cards":
+                    Gfx.RRect(x, y, w, h, 6, Color.FromArgb((int)(215 * a), 14, 16, 24));
+                    Gfx.Rect(x + 4, y + 4, h - 8, h - 8, U.WithAlpha(newest ? acc : Color.FromArgb(255, 245, 190, 40), A));
+                    Gfx.Text(index.ToString(U.IC), x + h / 2, y + (h - Gfx.LineH(SMALL)) / 2, SMALL, U.WithAlpha(Ink, A), Alignment.Center);
+                    return h - 2;
+                case "esports":
+                    Gfx.Rect(x, y, w, h, Color.FromArgb((int)(225 * a), 10, 12, 20));
+                    Gfx.Shape("slant_r", x + w, y, 8, h, Color.FromArgb((int)(225 * a), 10, 12, 20));
+                    Gfx.Rect(x, y, 3, h, U.WithAlpha(acc, A));
+                    Gfx.Text("#" + index, x + 7, y + (h - Gfx.LineH(SMALL)) / 2, SMALL, U.WithAlpha(acc, A), Alignment.Left);
+                    return h - 2;
+                case "minimal":
+                    Gfx.RRect(x, y, w, h, h / 2, Color.FromArgb((int)(80 * a), 255, 255, 255));
+                    if (newest) Gfx.Rect(x + h / 2, y + h - 2, w - h, 2, U.WithAlpha(acc, A));
+                    return 4;
+                default:
+                    PanelBg(x, y, w, h, a);
+                    return 0;
             }
-            kit.Waiting = list;
-            kit.ShootingKey = list.Count > 0 ? list[0].Key : null;
-            kit.QueueOverride = QueueCount();
-            kit.BallIcon = first != null ? KitIcon(first.It) : null;
-        }
-
-        void DrawKit()
-        {
-            if (!KitActive) return;
-            string mode = vertical ? "tiktok" : "wide";
-            if (kit.cfg.HudMode != mode) { kit.cfg.HudMode = mode; kit.Apply(); }
-            if (U.Now >= kitNextBoard) { kitNextBoard = U.Now + 250; KitBoard(); }
-            kit.Draw();
         }
 
         // ================================================================ HUD
@@ -4795,14 +5058,13 @@ namespace TikArena
             PruneFeeds();
             Overheads();
             Place("Score", cfg.ScoreEnabled, fScore);
-            Place("Top3", cfg.Top3Enabled && !(KitActive && kitReplaceTop && kit.cfg.ShowTop), fTop);
+            Place("Top3", cfg.Top3Enabled, fTop);
             Place("Health", cfg.HealthEnabled, fHealth);
             Place("Guide", cfg.GuideEnabled, fGuide);
             Place("Notif", cfg.NotifEnabled && notifs.Count > 0, fNotif);
             Place("Feed", cfg.FeedEnabled && feed.Count > 0, fFeed);
             Place("Hype", cfg.HypeEnabled && hypes.Count > 0, fHype);
-            DrawKit();
-            if (!(KitActive && kitReplaceEnd && kitShowResult)) EndScreen();
+            EndScreen();
             LiveBadge();
             DrawToast(false);
             if (paused)
@@ -4997,6 +5259,7 @@ namespace TikArena
 
         SizeF TopPanel(bool draw)
         {
+            if (DesignOn) return DesignTop(draw);
             string v = cfg.Top3Variant ?? "List";
             List<Supporter> top = TopList(cfg.TopCount);
             List<string> rows = TopRows();
@@ -5296,10 +5559,12 @@ namespace TikArena
 
         SizeF FeedList(bool draw, List<FeedItem> items, string panel, float rowH, float img, float size, bool hype)
         {
-            string variant = hype ? "Card" : (cfg.NotifVariant ?? "Card");
+            bool des = !hype && DesignOn;
+            string variant = hype || des ? "Card" : (cfg.NotifVariant ?? "Card");
             bool banner = Is(variant, "Banner"), pill = Is(variant, "Pill");
+            float dpad = des ? DesignRowPad(rowH) + (Dz == "minimal" ? 8 : 0) : 0;
             float w = 0;
-            foreach (FeedItem f in items) w = Math.Max(w, RowWidth(f, img, size, hype) + (pill ? 10 : 0));
+            foreach (FeedItem f in items) w = Math.Max(w, RowWidth(f, img, size, hype) + (pill ? 10 : 0) + dpad);
             w = Math.Min(Math.Max(w, banner ? 260 : 150), 520);
             float gap = banner ? 3 : 4;
             float h = items.Count * (rowH + gap);
@@ -5307,10 +5572,12 @@ namespace TikArena
             string al = HAlign(panel);
             string anim = (cfg.FeedAnimation ?? "Slide").ToLowerInvariant();
             float y = 0;
+            int idx = 0;
             foreach (FeedItem f in items)
             {
+                idx++;
                 float a = FeedAlpha(f);
-                float rw = banner ? w : Math.Min(w, RowWidth(f, img, size, hype) + (pill ? 10 : 0));
+                float rw = banner ? w : Math.Min(w, RowWidth(f, img, size, hype) + (pill ? 10 : 0) + dpad);
                 string lv = hype && cfg.HypeShowLevel && f.Level > 0 ? "Lv " + f.Level : null;
                 float x = al == "right" ? w - rw : (al == "center" ? (w - rw) / 2 : 0);
                 float t = Math.Min(1f, (U.Now - f.Start) / 250f);
@@ -5319,7 +5586,9 @@ namespace TikArena
                 else if (anim == "pop") { float e = 1 - t; dy = e * 14 - (float)Math.Sin(t * Math.PI) * 3; }
                 float ry = y + dy;
                 Color tc = hype ? f.Col : cTxt;
-                if (banner)
+                float cpad = 0;
+                if (des) cpad = DesignRowBg(x, ry, rw, rowH, a, idx, idx == items.Count);
+                else if (banner)
                 {
                     PanelBg(x, ry, rw, rowH, a);
                     Gfx.Rect(x, ry, rw, 2, U.WithAlpha(cAcc, (int)(255 * a)));
@@ -5341,7 +5610,7 @@ namespace TikArena
                     Gfx.Border(x, ry, rw, rowH, 1, U.WithAlpha(cfg.HypeColor, (int)(220 * a)));
                     Gfx.Rect(x, ry, 3, rowH, U.WithAlpha(cfg.HypeColor, (int)(255 * a)));
                 }
-                float cx = x + 6;
+                float cx = x + 6 + cpad;
                 if (banner) cx = x + (rw - RowWidth(f, img, size, hype)) / 2 + 6;
                 if (f.Avatar != null) { Gfx.Image(f.Avatar, cx, ry + (rowH - img) / 2, img, img, (int)(255 * a)); cx += img + 6; }
                 if (lv != null)
@@ -5467,2109 +5736,4 @@ namespace TikArena
             }
         }
     }
-}
-
-// =====================================================================
-//  LiveHud kit (designs: arena broadcast podium cards esports minimal classic)
-//  embedded in TikArena. Changes vs the original kit:
-//    - avatar urls may be a list separated by '\n' (tried in order), Referer header,
-//      TikArena.Wic fallback decoder, letter avatars retried when a real url arrives
-//    - BallIcon: optional picture drawn instead of the soccer ball (queue units)
-// =====================================================================
-namespace LiveHudKit
-{
-using System.Drawing.Text;
-using System.Reflection;
-using System.Text.RegularExpressions;
-
-public class LiveHud
-{
-    // ------------------------------------------------------------------
-    //  Data types
-    // ------------------------------------------------------------------
-    /// <summary>A profile picture (downloaded + cut in circle / rounded / square / hex on a worker thread).</summary>
-    public class AvatarInfo
-    {
-        public volatile bool Ready;
-        public volatile string File;
-        public volatile string Base;       // Base + "_circle.png" / "_rounded.png" / "_square.png" / "_hex.png"
-        public volatile bool Letter;       // no picture yet (coloured letter)
-    }
-
-    /// <summary>A text rendered to PNG (Arabic names, titles...).</summary>
-    public class NameTag
-    {
-        public volatile bool Ready;
-        public volatile string File;
-        public float Aspect = 1f;
-    }
-
-    /// <summary>One line of the TOP SCORERS board.</summary>
-    public class Scorer
-    {
-        public string Key, Name, Alt, PicUrl;     // Key = unique id, Name = nickname (any language), Alt = "@username"
-        public AvatarInfo Avatar;
-        public int Goals, ReachedAt, FlashUntil;
-    }
-
-    /// <summary>One line of the WAITING LIST ("NEXT SHOTS"). Balls = one entry per ball (any text).</summary>
-    public class Supporter
-    {
-        public string Key, DisplayName, Alt, PicUrl;
-        public AvatarInfo Avatar;
-        public List<string> Balls = new List<string>();
-        public int Arrival;
-    }
-
-    // ------------------------------------------------------------------
-    //  Settings (change them any time, e.g. from your own .ini)
-    // ------------------------------------------------------------------
-    public class Config
-    {
-        public string Design = "arena";              // arena broadcast podium cards esports minimal classic
-        public int HudStyle = 0;                     // 0 GOLD 1 NEON 2 FIRE 3 ICE 4 CLASSIC
-        public string AvShape = "auto";              // auto circle rounded square hex
-        public string PanelKind = "auto";            // auto dark glass light
-        public float HudScale = 1f;
-        public int PanelAlpha = 190;
-        public Color Accent = Color.FromArgb(245, 179, 1);
-        public string HudMode = "wide";              // wide / tiktok
-        public bool Vertical = false;                // set by the mode
-        public float TikTokScale = 0.9f;
-        public bool TikTokGuide = false;             // white lines on the edges of the TikTok area
-        public string HudFont = "default";           // default sport gta modern elegant mono fun custom
-        public string HudFontCustom = "";            // Windows font names for "custom", e.g. "Montserrat Black"
-        // top scorers
-        public bool ShowTop = true, PodiumPulse = false;
-        public int TopCount = 3;
-        public float TopY = 30f;
-        public string TopTitle = "TOP SCORERS", GoalsWord = "GOALS", GoalWord = "GOAL";
-        // waiting list
-        public bool ShowBoard = true;
-        public string BoardSide = "right", BoardTitle = "NEXT SHOTS", EmptyText = "SEND A GIFT TO SHOOT!";
-        public int BoardRows = 6;
-        public float ListY = 230f, ListW = 420f;
-        // swap gift (bottom left)
-        public bool ShowSwap = true, ShowSwapName = true;
-        public float SwapX = 130f, SwapBottom = 150f, SwapSize = 110f, TargetSpeed = 2.2f;
-        public string SwapWord = "SWAP", SwapTextPos = "below", SwapGiftName = "";
-        // result banner
-        public bool ShowResult = true;
-        public string ResultStyle = "design";        // design / gta (GTA's big "wasted" style message)
-        public float ResultY = 360f;
-        public int RapidSummaryMs = 4000;            // how long a "series" banner stays
-        // mega gift
-        public int BigMs = 6500;
-        public string BigTitle = "MEGA GIFT!";
-        public Color BigColor = Color.FromArgb(255, 210, 60);
-        public float BigY = 470f;
-    }
-
-    public Config cfg = new Config();
-
-    // ------------------------------------------------------------------
-    //  Public data + API
-    // ------------------------------------------------------------------
-    /// <summary>Waiting list shown on the side board (first = shooting now). Set it when it changes.</summary>
-    public List<Supporter> Waiting = new List<Supporter>();
-    /// <summary>Key of the supporter shooting now (highlighted on the board). null = nobody.</summary>
-    public string ShootingKey;
-    /// <summary>Picture (png file path) of the SWAP gift drawn bottom-left. null = a blue circle.</summary>
-    public string SwapIcon;
-    /// <summary>Balls waiting in total (shown on the board header). Default = sum of Waiting balls.</summary>
-    public int QueueOverride = -1;
-    int QueueCount { get { if (QueueOverride >= 0) return QueueOverride; int n = 0; List<Supporter> w = Waiting; if (w != null) foreach (Supporter s in w) n += s.Balls.Count; return n; } }
-    /// <summary>Goals of the last "series" (colours the series banner: >0 gold, 0 red).</summary>
-    public int seriesLastGoals;
-    /// <summary>Optional: called when the player changes design/style/font/mode with your keys -> save it in your ini.</summary>
-    public Action<string, string, string> SaveSetting = delegate { };
-    /// <summary>Optional: errors (write them to your log file).</summary>
-    public Action<string> OnLog = delegate { };
-
-    readonly Random rng = new Random();
-    readonly string dataDir, cacheDir, tagDir, iconCacheDir;
-    string ballFile;
-    readonly Dictionary<string, CustomSprite> sprites = new Dictionary<string, CustomSprite>();
-    readonly ConcurrentDictionary<string, AvatarInfo> avatars = new ConcurrentDictionary<string, AvatarInfo>();
-    readonly ConcurrentDictionary<string, NameTag> tags = new ConcurrentDictionary<string, NameTag>();
-    readonly Dictionary<string, Scorer> scorers = new Dictionary<string, Scorer>();
-    List<Scorer> topList = new List<Scorer>();
-    volatile int hudStyle;
-    Scaleform bigMsg;
-    string bigTitle = "", bigSub = "";
-    bool bigPending;
-    int bigUntil;
-
-    /// <param name="folder">a folder for the cache (photos, rendered names, shapes), e.g. scripts\MyGame</param>
-    public LiveHud(string folder)
-    {
-        dataDir = folder;
-        cacheDir = Path.Combine(folder, "avatars");
-        tagDir = Path.Combine(folder, "names");
-        iconCacheDir = Path.Combine(folder, "cache");
-        foreach (string d in new[] { dataDir, cacheDir, tagDir, iconCacheDir }) { try { Directory.CreateDirectory(d); } catch { } }
-        try { foreach (string f in Directory.GetFiles(tagDir, "*.png")) File.Delete(f); } catch { }   // names are rendered again each session
-        try { MakeUiKit(); } catch (Exception ex) { Log(ex); }
-        try { ballFile = Path.Combine(iconCacheDir, "ball.png"); RenderBall(ballFile); } catch (Exception ex) { Log(ex); ballFile = null; }
-        Apply();
-    }
-
-    /// <summary>Call after you change cfg (design, style, mode, font...).</summary>
-    public void Apply()
-    {
-        hudStyle = Math.Max(0, Math.Min(StyleNames.Length - 1, cfg.HudStyle));
-        cfg.HudMode = (cfg.HudMode ?? "wide").ToLowerInvariant() == "tiktok" ? "tiktok" : "wide";
-        cfg.Vertical = cfg.HudMode == "tiktok";
-        ApplyHudMode();
-        ApplyHudFont();
-    }
-
-    /// <summary>Downloads + prepares a profile picture (TikTok webp/jpg/png). Safe to call from any thread.</summary>
-    public AvatarInfo Avatar(string userId, string pictureUrl) { return GetAvatar(userId, pictureUrl); }
-
-    /// <summary>Adds goals to a supporter and updates the TOP SCORERS board (call on the game thread).</summary>
-    public void AddGoal(string userId, string displayName, string username, string pictureUrl) { AddGoal(userId, displayName, username, pictureUrl, 1); }
-    public void AddGoal(string userId, string displayName, string username, string pictureUrl, int goals)
-    {
-        if (string.IsNullOrEmpty(userId)) return;
-        Scorer sc;
-        if (!scorers.TryGetValue(userId, out sc))
-        {
-            sc = new Scorer();
-            sc.Key = userId;
-            scorers[userId] = sc;
-        }
-        sc.Name = CleanName(displayName);
-        sc.Alt = CleanName(string.IsNullOrEmpty(username) ? displayName : username);
-        if (!string.IsNullOrEmpty(pictureUrl)) sc.PicUrl = pictureUrl;
-        sc.Avatar = GetAvatar(userId, sc.PicUrl ?? "");
-        if (!Renderable(sc.Name)) GetTag(sc.Name);
-        sc.Goals += goals;
-        sc.ReachedAt = Game.GameTime;
-        sc.FlashUntil = Game.GameTime + 1600;
-        RebuildTop();
-    }
-    /// <summary>The whole ranking at once (e.g. loaded from a file).</summary>
-    public void SetScorers(IEnumerable<Scorer> list)
-    {
-        scorers.Clear();
-        foreach (Scorer s in list) if (s != null && !string.IsNullOrEmpty(s.Key)) scorers[s.Key] = s;
-        RebuildTop();
-    }
-    public void ResetScores() { scorers.Clear(); RebuildTop(); }
-    /// <summary>Current top 5 (best first).</summary>
-    public List<Scorer> Top { get { return topList; } }
-
-    void RebuildTop()
-    {
-        List<Scorer> all = new List<Scorer>(scorers.Values);
-        all.Sort(delegate (Scorer a, Scorer b)
-        {
-            int c = b.Goals.CompareTo(a.Goals);
-            return c != 0 ? c : a.ReachedAt.CompareTo(b.ReachedAt);
-        });
-        if (all.Count > 5) all.RemoveRange(5, all.Count - 5);
-        topList = all;
-    }
-
-    /// <summary>Banner in the middle. kind = goal / save / miss / swap / series.</summary>
-    public void ShowResult(string kind, string title, string sub, string who, AvatarInfo avatar) { SetResult(kind, title, sub, who, avatar); }
-    /// <summary>The SWAP gift was used: it jumps.</summary>
-    public void SwapUsed() { swapFlash = Game.GameTime; }
-    /// <summary>Big gift celebration (queued, one after the other).</summary>
-    public void ShowMegaGift(string name, string username, AvatarInfo avatar, string giftName, int count, long coins)
-    {
-        BigGiftEv e = new BigGiftEv();
-        e.Name = CleanName(name); e.Alt = CleanName(username); e.Av = avatar; e.Gift = CleanName(giftName); e.Count = Math.Max(1, count); e.Coins = coins;
-        if (!Renderable(e.Name)) GetTag(e.Name);
-        e.Seed = (int)(DateTime.Now.Ticks & 0x7FFFFFFF);
-        if (bigIn.Count < 10) bigIn.Enqueue(e);
-    }
-    public void SetDesign(string name) { if (Array.IndexOf(DesignNames, (name ?? "").ToLowerInvariant()) >= 0) { cfg.Design = name.ToLowerInvariant(); SaveSetting("HUD", "Design", cfg.Design); } }
-    public void NextStyle() { SetHudStyle(hudStyle + 1); }
-    public void NextFont() { NextHudFont(); }
-    public void ToggleMode() { ToggleHudMode(); }
-    public void NextLayout() { NextDesign(); }
-
-    void Log(Exception ex) { try { OnLog(ex.ToString()); } catch { } }
-    string SwapLabel() { return cfg.SwapGiftName ?? ""; }
-
-    // ------------------------------------------------------------------
-    //  Colour styles
-    // ------------------------------------------------------------------
-    static readonly string[] StyleNames = { "GOLD", "NEON", "FIRE", "ICE", "CLASSIC" };
-    static Color C3(int r, int g, int b) { return Color.FromArgb(r, g, b); }
-    static readonly Color[][][] StyleMedals =
-    {
-        new[] { new[] { C3(255,244,170), C3(245,190,40), C3(140,95,0) },  new[] { C3(252,253,255), C3(192,198,206), C3(100,108,118) }, new[] { C3(255,205,160), C3(205,127,50), C3(105,55,18) } },
-        new[] { new[] { C3(255,170,255), C3(215,60,255), C3(80,0,140) },  new[] { C3(170,255,255), C3(0,215,255), C3(0,80,130) },     new[] { C3(180,255,200), C3(40,225,120), C3(0,100,50) } },
-        new[] { new[] { C3(255,245,150), C3(255,140,0), C3(150,20,0) },   new[] { C3(255,205,130), C3(240,95,30), C3(120,30,0) },     new[] { C3(255,160,140), C3(215,40,40), C3(90,0,0) } },
-        new[] { new[] { C3(255,255,255), C3(150,215,255), C3(40,110,190) }, new[] { C3(240,250,255), C3(175,228,242), C3(70,130,160) }, new[] { C3(225,238,255), C3(125,165,225), C3(40,70,130) } },
-        new[] { new[] { C3(255,244,170), C3(245,190,40), C3(140,95,0) },  new[] { C3(252,253,255), C3(192,198,206), C3(100,108,118) }, new[] { C3(255,205,160), C3(205,127,50), C3(105,55,18) } }
-    };
-    static readonly Color[][] StyleText =
-    {
-        new[] { C3(255,205,60), C3(215,220,228), C3(225,150,80) },
-        new[] { C3(240,120,255), C3(80,230,255), C3(90,240,150) },
-        new[] { C3(255,200,60), C3(255,140,60), C3(255,90,80) },
-        new[] { C3(210,240,255), C3(170,225,245), C3(140,180,235) },
-        new[] { C3(255,205,60), C3(215,220,228), C3(225,150,80) }
-    };
-    Color Accent
-    {
-        get
-        {
-            switch (hudStyle)
-            {
-                case 1: return C3(0, 229, 255);
-                case 2: return C3(255, 106, 0);
-                case 3: return C3(127, 216, 255);
-                default: return cfg.Accent;
-            }
-        }
-    }
-
-
-    // =====================================================================
-    //  HUD  -  drawn inside GTA, wide screen 1920 x 1080 (16:9)
-    //  7 designs, each with its own shapes and arrangement:
-    //    arena  broadcast  podium  cards  esports  minimal  classic
-    //  Sizes and positions below are 1920x1080 pixels (converted to GTA's 1280x720 HUD space).
-    //  Shapes come from a small kit of white pictures made once (corners, triangles, circle,
-    //  hexagon, shield, glow) tinted with the colours, so everything stays sharp and fixed.
-    // =====================================================================
-    const float U = 1280f / 1920f;
-    static readonly string[] DesignNames = { "arena", "broadcast", "podium", "cards", "esports", "minimal", "classic" };
-    static readonly string[] DesignShape = { "circle", "square", "rounded", "rounded", "hex", "circle", "circle" };
-    static readonly string[] DesignPanel = { "dark", "dark", "glass", "dark", "dark", "glass", "dark" };
-    static readonly Color KGoal = Color.FromArgb(39, 217, 107), KSave = Color.FromArgb(255, 179, 0), KMiss = Color.FromArgb(255, 59, 59), KSwap = Color.FromArgb(31, 143, 255);
-    static readonly Color Ink = Color.FromArgb(28, 22, 8);
-    const GTA.UI.Alignment AL = GTA.UI.Alignment.Left, AC = GTA.UI.Alignment.Center, AR = GTA.UI.Alignment.Right;
-    static GTA.UI.Font FL = GTA.UI.Font.ChaletLondon, FC = GTA.UI.Font.ChaletComprimeCologne, FP = GTA.UI.Font.Pricedown;
-
-    // ---- HUD FONTS ([HUD] Font, F12 in the game = next one) ----
-    // only the letters of the HUD change: GTA's own text + the text pictures (titles, names, numbers)
-    static readonly string[] FontNames = { "default", "sport", "gta", "modern", "elegant", "mono", "fun", "custom" };
-    static string[] FontTitleFams = { "Impact", "Arial Black", "Segoe UI Black", "Segoe UI" };
-    static string[] FontTextFams = { "Segoe UI Black", "Arial Black", "Segoe UI", "Tahoma", "Arial" };
-    static volatile int hudFont;
-    void ApplyHudFont()
-    {
-        int i = Array.IndexOf(FontNames, (cfg.HudFont ?? "default").Trim().ToLowerInvariant());
-        if (i < 0) i = 0;
-        GTA.UI.Font fc = GTA.UI.Font.ChaletComprimeCologne, fl = GTA.UI.Font.ChaletLondon, fp = GTA.UI.Font.Pricedown;
-        string[] tt, tx;
-        switch (i)
-        {
-            case 1: tt = new[] { "Bahnschrift", "Impact" }; tx = new[] { "Bahnschrift", "Segoe UI" }; fl = GTA.UI.Font.ChaletComprimeCologne; break;
-            case 2: tt = new[] { "Impact" }; tx = new[] { "Arial Black", "Impact" }; fc = GTA.UI.Font.Pricedown; break;
-            case 3: tt = new[] { "Segoe UI Black", "Segoe UI" }; tx = new[] { "Segoe UI Semibold", "Segoe UI" }; fc = GTA.UI.Font.ChaletLondon; break;
-            case 4: tt = new[] { "Georgia", "Times New Roman" }; tx = new[] { "Georgia", "Times New Roman" }; fc = GTA.UI.Font.HouseScript; fl = GTA.UI.Font.HouseScript; fp = GTA.UI.Font.HouseScript; break;
-            case 5: tt = new[] { "Consolas", "Courier New" }; tx = new[] { "Consolas", "Courier New" }; fc = GTA.UI.Font.Monospace; fl = GTA.UI.Font.Monospace; fp = GTA.UI.Font.Monospace; break;
-            case 6: tt = new[] { "Comic Sans MS", "Segoe Print" }; tx = new[] { "Comic Sans MS", "Segoe UI" }; fc = GTA.UI.Font.ChaletLondon; break;
-            case 7:
-            {
-                List<string> fams = SplitList(cfg.HudFontCustom);
-                fams.Add("Segoe UI");
-                tt = fams.ToArray(); tx = fams.ToArray();
-                break;
-            }
-            default: tt = new[] { "Impact", "Arial Black", "Segoe UI Black", "Segoe UI" }; tx = new[] { "Segoe UI Black", "Arial Black", "Segoe UI", "Tahoma", "Arial" }; break;
-        }
-        FC = fc; FL = fl; FP = fp;
-        FontTitleFams = tt; FontTextFams = tx;
-        hudFont = i;
-    }
-    void NextHudFont()
-    {
-        int i = (hudFont + 1) % FontNames.Length;
-        if (FontNames[i] == "custom" && string.IsNullOrEmpty(cfg.HudFontCustom)) i = 0;
-        cfg.HudFont = FontNames[i];
-        ApplyHudFont();
-        try { SaveSetting("HUD", "Font", cfg.HudFont); } catch (Exception ex) { Log(ex); }
-        Notification.Show("~b~HUD font~s~: " + cfg.HudFont.ToUpperInvariant());
-    }
-
-    string uiDir;
-    readonly Dictionary<string, string> gradImgs = new Dictionary<string, string>();
-    readonly Dictionary<string, float> textWidths = new Dictionary<string, float>();
-
-    int DesignIndex { get { int i = Array.IndexOf(DesignNames, (cfg.Design ?? "").ToLowerInvariant()); return i < 0 ? 0 : i; } }
-    string Design { get { return DesignNames[DesignIndex]; } }
-    string AvShape
-    {
-        get { string s = cfg.AvShape; return (s == "circle" || s == "rounded" || s == "square" || s == "hex") ? s : DesignShape[DesignIndex]; }
-    }
-    string PanelKind
-    {
-        get { string p = cfg.PanelKind; return (p == "dark" || p == "glass" || p == "light") ? p : DesignPanel[DesignIndex]; }
-    }
-    float Sc { get { return cfg.HudScale * (cfg.HudMode == "tiktok" ? cfg.TikTokScale : 1f); } }
-
-    // ---------- palette of the boxes (dark / glass / light) ----------
-    Color PBg, PRow, PText, PMuted;
-    bool PLight;
-    void UpdatePalette()
-    {
-        int a = cfg.PanelAlpha;
-        switch (PanelKind)
-        {
-            case "glass":
-                PBg = Color.FromArgb(Math.Max(40, Math.Min(140, a / 2 + 20)), 255, 255, 255); PRow = Color.FromArgb(60, 255, 255, 255);
-                PText = Color.White; PMuted = Color.FromArgb(235, 238, 244); PLight = false; break;
-            case "light":
-                PBg = Color.FromArgb(Math.Max(210, a), 248, 249, 252); PRow = Color.FromArgb(Math.Max(210, a), 232, 235, 242);
-                PText = Color.FromArgb(22, 24, 30); PMuted = Color.FromArgb(96, 102, 114); PLight = true; break;
-            default:
-                PBg = Color.FromArgb(a, 14, 16, 24); PRow = Color.FromArgb(Math.Min(255, a + 25), 32, 35, 45);
-                PText = Color.White; PMuted = Color.FromArgb(172, 178, 190); PLight = false; break;
-        }
-    }
-    static Color A(Color c, int alpha) { return Color.FromArgb(Math.Max(0, Math.Min(255, alpha)), c.R, c.G, c.B); }
-    static Color A(Color c, float mul) { return Color.FromArgb(Math.Max(0, Math.Min(255, (int)(c.A * mul))), c.R, c.G, c.B); }
-    Color[] Med(int rank) { return StyleMedals[Math.Max(0, Math.Min(StyleMedals.Length - 1, hudStyle))][Math.Max(0, Math.Min(2, rank - 1))]; }
-    Color TxtCol(int rank) { return StyleText[Math.Max(0, Math.Min(StyleText.Length - 1, hudStyle))][Math.Max(0, Math.Min(2, rank - 1))]; }
-
-    // ---------- drawing in 1920x1080 pixels ----------
-    static void R(float x, float y, float w, float h, Color c) { if (w > 0.2f && h > 0.2f && c.A > 0) Rect((VOX + x * VK) * U, (VOY + y * VK) * U, w * VK * U, h * VK * U, c); }
-    bool Im(string file, float cx, float cy, float w, float h, Color tint) { return tint.A > 0 && Img(file, (VOX + cx * VK) * U, (VOY + cy * VK) * U, w * VK * U, h * VK * U, tint); }
-
-    // ---- HUD MODE ----  wide: the HUD uses the whole 1920x1080 screen
-    //  tiktok: the HUD is laid out on a 1080x1920 (9:16) page drawn in the MIDDLE of the screen,
-    //  exactly the part TikTok LIVE Studio keeps in portrait -> everything stays visible on the phone
-    static float VK = 1f, VOX = 0f, VOY = 0f, VWv = 1920f, VHv = 1080f;
-    float VW { get { return VWv; } }
-    float VH { get { return VHv; } }
-    float VCX { get { return VWv / 2f; } }
-    float VY(float y) { return y * VHv / 1080f; }
-    bool TikTokMode { get { return cfg.HudMode == "tiktok"; } }
-    void ApplyHudMode()
-    {
-        if (cfg.HudMode == "tiktok") { VWv = 1080f; VHv = 1920f; VK = 1080f / 1920f; VOX = (1920f - 1080f * VK) / 2f; VOY = 0f; }
-        else { VWv = 1920f; VHv = 1080f; VK = 1f; VOX = 0f; VOY = 0f; }
-    }
-    void ToggleHudMode()
-    {
-        string m = TikTokMode ? "wide" : "tiktok";
-        cfg.HudMode = m;
-        cfg.Vertical = m == "tiktok";
-        ApplyHudMode();
-        try { SaveSetting("HUD", "Mode", m); } catch (Exception ex) { Log(ex); }
-        Notification.Show("~b~HUD~s~: " + (m == "tiktok" ? "TIKTOK LIVE (vertical, middle of the screen)" : "WIDE 16:9"));
-    }
-    void DrawTikTokGuide()
-    {
-        if (!TikTokMode || !cfg.TikTokGuide) return;
-        Color g = Color.FromArgb(160, 255, 255, 255);
-        R(-3f, 0f, 3f, VH, g);
-        R(VW, 0f, 3f, VH, g);
-    }
-    string Ui(string n) { return Path.Combine(uiDir, n + ".png"); }
-
-    // text centred on the line cy; px = size in 1080p pixels
-    static void T(string text, float x, float cy, float px, Color c, GTA.UI.Alignment al, GTA.UI.Font f, bool outline)
-    {
-        if (string.IsNullOrEmpty(text) || c.A == 0) return;
-        new TextElement(text, new PointF((VOX + x * VK) * U, (VOY + (cy - px * 0.6f) * VK) * U), px * VK / 75f, c, f, al, outline, outline).Draw();
-    }
-    // text on a box: no outline on light boxes
-    void TB(string text, float x, float cy, float px, Color c, GTA.UI.Alignment al, GTA.UI.Font f) { T(text, x, cy, px, c, al, f, !PLight); }
-
-    float TextW(string text, GTA.UI.Font f, float px)
-    {
-        if (string.IsNullOrEmpty(text)) return 0f;
-        string key = (int)f + "|" + px.ToString("0.0", CultureInfo.InvariantCulture) + "|" + text;
-        float w;
-        if (textWidths.TryGetValue(key, out w)) return w;
-        try
-        {
-            Function.Call((Hash)0x54CE8AC98E120CAB, "STRING");                        // BEGIN_TEXT_COMMAND_GET_SCREEN_WIDTH_OF_DISPLAY_TEXT
-            Function.Call((Hash)0x6C188BE134E074AAUL, text);
-            Function.Call((Hash)0x66E0276CC5F6B9DAUL, (int)f);
-            Function.Call((Hash)0x07C837F9A01C34C9UL, px / 75f, px / 75f);
-            w = Function.Call<float>((Hash)0x85F061DA64ED2F67, true) * 1920f;       // END_TEXT_COMMAND_GET_SCREEN_WIDTH_OF_DISPLAY_TEXT
-            if (w <= 0f || w > 5000f) w = text.Length * px * 0.5f;
-        }
-        catch { w = text.Length * px * 0.5f; }
-        if (textWidths.Count > 3000) textWidths.Clear();
-        textWidths[key] = w;
-        return w;
-    }
-    string Fit(string text, GTA.UI.Font f, float px, float maxW)
-    {
-        if (maxW <= 0f || TextW(text, f, px) <= maxW) return text;
-        string s = text;
-        for (int i = 0; i < 40 && s.Length > 2; i++)
-        {
-            s = s.Substring(0, s.Length - 1);
-            if (TextW(s + ".", f, px) <= maxW) return s + ".";
-        }
-        return s + ".";
-    }
-
-    // a supporter name in any language (Arabic etc. = picture). Returns the width it takes.
-    float NameW(string name, string alt, float px, float maxW)
-    {
-        if (string.IsNullOrEmpty(name)) name = alt ?? "";
-        if (Renderable(name)) return Math.Min(maxW, TextW(Fit(name, FL, px, maxW), FL, px));
-        NameTag t = GetTag(name);
-        if (t.Ready && t.File != null) return Math.Min(maxW, px * 1.05f * t.Aspect);
-        return Math.Min(maxW, TextW(alt ?? "...", FL, px));
-    }
-    float N(string name, string alt, float x, float cy, float px, Color c, GTA.UI.Alignment al, float maxW, bool outline)
-    {
-        if (string.IsNullOrEmpty(name)) name = alt ?? "";
-        if (Renderable(name))
-        {
-            string s = Fit(name, FL, px, maxW);
-            T(s, x, cy, px, c, al, FL, outline);
-            return Math.Min(maxW, TextW(s, FL, px));
-        }
-        NameTag t = GetTag(name);
-        if (t.Ready && t.File != null)
-        {
-            float h = px * 1.05f, w = h * t.Aspect;
-            if (maxW > 0f && w > maxW) { h *= maxW / w; w = maxW; }
-            float cx = al == AC ? x : (al == AR ? x - w / 2f : x + w / 2f);
-            if (Im(t.File, cx, cy, w, h, c)) return w;
-        }
-        string fb = Fit(string.IsNullOrEmpty(alt) ? "..." : alt, FL, px, maxW);
-        T(fb, x, cy, px, c, al, FL, outline);
-        return Math.Min(maxW, TextW(fb, FL, px));
-    }
-
-    // ---------- text as a picture ----------
-    // GTA draws script pictures on top of GTA's own text and boxes, so any text that sits
-    // ON a picture (a shield, a podium step, a medal badge) is drawn as a picture too.
-    readonly ConcurrentDictionary<string, NameTag> labels = new ConcurrentDictionary<string, NameTag>();
-    NameTag GetLabel(string text, Color title)
-    {
-        string key = "f" + hudFont + (title.A > 0 ? "T" + title.ToArgb() + "|" : "L|") + text;
-        NameTag t;
-        if (labels.TryGetValue(key, out t)) return t;
-        t = new NameTag();
-        if (!labels.TryAdd(key, t)) return labels[key];
-        NameTag tag = t;
-        string file = Path.Combine(tagDir, (title.A > 0 ? "t" : "l") + ((uint)key.GetHashCode()).ToString("x8") + "_" + labels.Count + ".png");
-        ThreadPool.QueueUserWorkItem(delegate
-        {
-            try
-            {
-                float aspect;
-                if (RenderLabel(text, file, title, out aspect)) { tag.Aspect = aspect; tag.File = file; tag.Ready = true; }
-            }
-            catch (Exception ex) { Log(ex); }
-        });
-        return t;
-    }
-    // text picture: px = text size in 1080p pixels
-    float TI(string text, float x, float cy, float px, Color c, GTA.UI.Alignment al) { return TI(text, x, cy, px, c, al, 0f); }
-    float TI(string text, float x, float cy, float px, Color c, GTA.UI.Alignment al, float maxW)
-    {
-        if (string.IsNullOrEmpty(text)) return 0f;
-        NameTag t = GetLabel(text, Color.Empty);
-        if (!t.Ready || t.File == null) return 0f;
-        float h = px * 1.34f, w = h * t.Aspect;
-        if (maxW > 0f && w > maxW) { h *= maxW / w; w = maxW; }
-        float cx = al == AC ? x : (al == AR ? x - w / 2f : x + w / 2f);
-        Im(t.File, cx, cy, w, h, c);
-        return w;
-    }
-    // a supporter name as a picture
-    float NI(string name, string alt, float x, float cy, float px, Color c, GTA.UI.Alignment al, float maxW)
-    {
-        return TI(string.IsNullOrEmpty(name) ? (alt ?? "") : name, x, cy, px, c, al, maxW);
-    }
-    // the big GOAL! / SAVED! title: heavy letters, colour gradient, dark outline
-    void Title(string text, float cx, float cy, float px, Color kind, float fade)
-    {
-        NameTag t = GetLabel(text, kind);
-        if (t.Ready && t.File != null)
-        {
-            float h = px * 1.3f, w = h * t.Aspect;
-            if (w > 1500f) { h *= 1500f / w; w = 1500f; }
-            Im(t.File, cx, cy, w, h, A(Color.White, fade));
-        }
-        else T(text, cx, cy, px, A(kind, fade), AC, FP, true);
-    }
-    static System.Drawing.Font HeavyFont(float px, bool title)
-    {
-        string[] fams = title ? FontTitleFams : FontTextFams;
-        foreach (string fam in fams)
-        {
-            try
-            {
-                FontStyle st = (fam.Contains("Black") || fam == "Impact" || fam.Contains("Semibold")) ? FontStyle.Regular : FontStyle.Bold;
-                System.Drawing.Font f = new System.Drawing.Font(fam, px, st, GraphicsUnit.Pixel);
-                if (f.Name == fam) return f;
-                f.Dispose();
-            }
-            catch { }
-        }
-        return MakeFont(px);
-    }
-    static bool RenderLabel(string text, string file, Color title, out float aspect)
-    {
-        aspect = 1f;
-        StringBuilder sb = new StringBuilder();
-        foreach (char ch in text)
-        {
-            if (char.IsSurrogate(ch) || ch == '\u200D' || ch == '\uFE0F' || (ch >= '\u2600' && ch <= '\u27BF')) continue;
-            sb.Append(ch);
-        }
-        string s = sb.ToString().Trim();
-        if (s.Length == 0) return false;
-        bool rtl = false;
-        foreach (char ch in s)
-        {
-            if ((ch >= '\u0590' && ch <= '\u08FF') || (ch >= '\uFB1D' && ch <= '\uFEFC')) { rtl = true; break; }
-            if (char.IsLetter(ch)) break;
-        }
-        bool big = title.A > 0;
-        float em = big ? 150f : 60f;
-        int H = big ? 200 : 80, pad = big ? 30 : 6;
-        bool nonLatin = false;
-        foreach (char ch in s) if (ch > 0x24F) { nonLatin = true; break; }
-        using (System.Drawing.Font font = nonLatin ? MakeFont(em) : HeavyFont(em, big))     // Arabic... -> a font that has the letters
-        using (StringFormat sf = new StringFormat(StringFormat.GenericTypographic))
-        {
-            sf.FormatFlags |= StringFormatFlags.NoWrap;
-            if (rtl) sf.FormatFlags |= StringFormatFlags.DirectionRightToLeft;
-            sf.LineAlignment = StringAlignment.Center;
-            int w;
-            using (Bitmap probe = new Bitmap(1, 1))
-            using (Graphics pg = Graphics.FromImage(probe))
-            {
-                pg.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-                w = (int)Math.Ceiling(pg.MeasureString(s, font, 6000, sf).Width) + pad * 2;
-            }
-            w = Math.Max(12, Math.Min(big ? 2400 : 1200, w));
-            using (Bitmap bmp = new Bitmap(w, H, PixelFormat.Format32bppArgb))
-            using (Graphics g = Graphics.FromImage(bmp))
-            {
-                g.Clear(Color.Transparent);
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-                RectangleF box = new RectangleF(pad, 0, w - pad * 2, H);
-                if (!big) g.DrawString(s, font, Brushes.White, box, sf);
-                else
-                {
-                    using (GraphicsPath gp = new GraphicsPath())
-                    {
-                        gp.AddString(s, font.FontFamily, (int)font.Style, em, box, sf);
-                        using (System.Drawing.Drawing2D.Matrix m = new System.Drawing.Drawing2D.Matrix()) { m.Translate(6f, 9f); gp.Transform(m); }
-                        using (SolidBrush sh = new SolidBrush(Color.FromArgb(150, 0, 0, 0))) g.FillPath(sh, gp);
-                        using (System.Drawing.Drawing2D.Matrix m = new System.Drawing.Drawing2D.Matrix()) { m.Translate(-6f, -9f); gp.Transform(m); }
-                        using (Pen pen = new Pen(Color.FromArgb(235, 12, 12, 16), 14f)) { pen.LineJoin = LineJoin.Round; g.DrawPath(pen, gp); }
-                        Color light = Color.FromArgb(255, Math.Min(255, title.R + 150), Math.Min(255, title.G + 150), Math.Min(255, title.B + 150));
-                        Color dark = Color.FromArgb(255, title.R * 55 / 100, title.G * 55 / 100, title.B * 55 / 100);
-                        using (LinearGradientBrush b = new LinearGradientBrush(new RectangleF(0, 0, w, H), Color.White, dark, 90f))
-                        {
-                            ColorBlend cb = new ColorBlend(4);
-                            cb.Colors = new[] { Color.White, light, title, dark };
-                            cb.Positions = new[] { 0f, 0.44f, 0.46f, 1f };
-                            b.InterpolationColors = cb;
-                            g.FillPath(b, gp);
-                        }
-                    }
-                }
-                bmp.Save(file, ImageFormat.Png);
-            }
-            aspect = w / (float)H;
-        }
-        return true;
-    }
-
-    // ---------- shapes ----------
-    void RR(float x, float y, float w, float h, float r, Color c)
-    {
-        r = Math.Min(r, Math.Min(w, h) / 2f);
-        if (r < 1f) { R(x, y, w, h, c); return; }
-        R(x + r, y, w - 2f * r, h, c);
-        R(x, y + r, r, h - 2f * r, c);
-        R(x + w - r, y + r, r, h - 2f * r, c);
-        Im(Ui("c_tl"), x + r / 2f, y + r / 2f, r, r, c);
-        Im(Ui("c_tr"), x + w - r / 2f, y + r / 2f, r, r, c);
-        Im(Ui("c_bl"), x + r / 2f, y + h - r / 2f, r, r, c);
-        Im(Ui("c_br"), x + w - r / 2f, y + h - r / 2f, r, r, c);
-    }
-    void Pill(float x, float y, float w, float h, Color c) { RR(x, y, w, h, h / 2f, c); }
-    // parallelogram leaning right  / /
-    void Para(float x, float y, float w, float h, float sk, Color c)
-    {
-        R(x + sk, y, w - 2f * sk, h, c);
-        Im(Ui("tri_l"), x + sk / 2f, y + h / 2f, sk, h, c);
-        Im(Ui("tri_r"), x + w - sk / 2f, y + h / 2f, sk, h, c);
-    }
-    // box with the bottom-right corner cut
-    void Cut(float x, float y, float w, float h, float cut, Color c)
-    {
-        R(x, y, w - cut, h, c);
-        R(x + w - cut, y, cut, h - cut, c);
-        Im(Ui("tri_r"), x + w - cut / 2f, y + h - cut / 2f, cut, cut, c);
-    }
-    void Circle(float cx, float cy, float d, Color c) { Im(Ui("circle"), cx, cy, d, d, c); }
-    void Glow(float cx, float cy, float d, Color c) { Im(Ui("glow"), cx, cy, d, d, c); }
-    void ShapeFill(string shape, float cx, float cy, float d, Color c)
-    {
-        switch (shape)
-        {
-            case "hex": Im(Ui("hex"), cx, cy, d, d, c); break;
-            case "rounded": RR(cx - d / 2f, cy - d / 2f, d, d, d * 0.26f, c); break;
-            case "square": RR(cx - d / 2f, cy - d / 2f, d, d, d * 0.09f, c); break;
-            default: Circle(cx, cy, d, c); break;
-        }
-    }
-    // a metal ring / frame in the medal colours of this place, in the photo shape
-    void Ring(string shape, int rank, float cx, float cy, float d)
-    {
-        string f = GradImg("ring_" + shape, rank);
-        if (f == null || !Im(f, cx, cy, d, d, Color.White)) ShapeFill(shape, cx, cy, d, Med(rank)[1]);
-    }
-    string AvatarFile(AvatarInfo a, string shape)
-    {
-        if (a == null || !a.Ready) return null;
-        if (a.Base != null) return a.Base + "_" + shape + ".png";
-        return shape == "circle" ? a.File : null;
-    }
-    void Av(AvatarInfo a, string who, float cx, float cy, float d, string shape)
-    {
-        string f = AvatarFile(a, shape);
-        if (f != null && Im(f, cx, cy, d, d, Color.White)) return;
-        ShapeFill(shape, cx, cy, d, Color.FromArgb(235, 70, 76, 90));
-        TI(InitialOf(who), cx, cy, d * 0.34f, Color.White, AC);
-    }
-    /// <summary>Optional png drawn instead of the soccer ball (e.g. the action picture of the queue).</summary>
-    public string BallIcon;
-    void Ball(float cx, float cy, float d, Color tint) { string f = !string.IsNullOrEmpty(BallIcon) && File.Exists(BallIcon) ? BallIcon : ballFile; if (f != null) Im(f, cx, cy, d, d, f == ballFile ? tint : Color.White); }
-
-    // ---------- the kit of white shapes (made once) ----------
-    void MakeUiKit()
-    {
-        uiDir = Path.Combine(dataDir, "ui16");
-        Directory.CreateDirectory(uiDir);
-        MakeShape("c_tl", 64, 64, delegate (Graphics g) { g.FillEllipse(Brushes.White, 0, 0, 128, 128); });
-        MakeShape("c_tr", 64, 64, delegate (Graphics g) { g.FillEllipse(Brushes.White, -64, 0, 128, 128); });
-        MakeShape("c_bl", 64, 64, delegate (Graphics g) { g.FillEllipse(Brushes.White, 0, -64, 128, 128); });
-        MakeShape("c_br", 64, 64, delegate (Graphics g) { g.FillEllipse(Brushes.White, -64, -64, 128, 128); });
-        MakeShape("tri_l", 128, 128, delegate (Graphics g) { g.FillPolygon(Brushes.White, new[] { new PointF(128, 0), new PointF(128, 128), new PointF(0, 128) }); });
-        MakeShape("tri_r", 128, 128, delegate (Graphics g) { g.FillPolygon(Brushes.White, new[] { new PointF(0, 0), new PointF(128, 0), new PointF(0, 128) }); });
-        MakeShape("circle", 128, 128, delegate (Graphics g) { g.FillEllipse(Brushes.White, 1, 1, 126, 126); });
-        MakeShape("dot", 32, 32, delegate (Graphics g) { g.FillEllipse(Brushes.White, 1, 1, 30, 30); });
-        MakeShape("px", 8, 8, delegate (Graphics g) { g.Clear(Color.White); });
-        MakeShape("ring", 128, 128, delegate (Graphics g) { using (Pen pen = new Pen(Color.White, 7f)) g.DrawEllipse(pen, 5, 5, 118, 118); });
-        MakeShape("hex", 128, 128, delegate (Graphics g) { g.FillPolygon(Brushes.White, HexPts(128)); });
-        MakeShape("glow", 128, 128, delegate (Graphics g)
-        {
-            using (GraphicsPath gp = new GraphicsPath())
-            {
-                gp.AddEllipse(0, 0, 128, 128);
-                using (PathGradientBrush pb = new PathGradientBrush(gp))
-                {
-                    pb.CenterColor = Color.FromArgb(255, 255, 255, 255);
-                    pb.SurroundColors = new[] { Color.FromArgb(0, 255, 255, 255) };
-                    g.FillEllipse(pb, 0, 0, 128, 128);
-                }
-            }
-        });
-        MakeShape("shield", 120, 170, delegate (Graphics g) { g.FillPolygon(Brushes.White, ShieldPts(120, 170)); });
-        MakeShape("shieldw", 240, 340, delegate (Graphics g)
-        {
-            PointF[] p = ShieldPts(240, 340);
-            using (LinearGradientBrush b = new LinearGradientBrush(new RectangleF(0, 0, 240, 340), Color.White, Color.FromArgb(150, 150, 150), 65f)) g.FillPolygon(b, p);
-            using (Pen pen = new Pen(Color.FromArgb(120, 255, 255, 255), 4f)) g.DrawPolygon(pen, ShieldPts(240, 340, 10f));
-        });
-    }
-    static PointF[] HexPts(float s)
-    {
-        float r = s / 2f - 1f, c = s / 2f;
-        PointF[] p = new PointF[6];
-        for (int i = 0; i < 6; i++) { double a = (-90 + 60 * i) * Math.PI / 180.0; p[i] = new PointF(c + (float)Math.Cos(a) * r, c + (float)Math.Sin(a) * r); }
-        return p;
-    }
-    static PointF[] ShieldPts(float w, float h) { return ShieldPts(w, h, 0f); }
-    static PointF[] ShieldPts(float w, float h, float inset)
-    {
-        float i = inset;
-        return new[]
-        {
-            new PointF(w * 0.12f + i, i), new PointF(w * 0.88f - i, i), new PointF(w - i, h * 0.07f + i), new PointF(w - i, h * 0.83f - i * 0.5f),
-            new PointF(w * 0.5f, h - i * 1.6f), new PointF(i, h * 0.83f - i * 0.5f), new PointF(i, h * 0.07f + i)
-        };
-    }
-    delegate void Painter(Graphics g);
-    void MakeShape(string name, int w, int h, Painter paint)
-    {
-        string f = Ui(name);
-        if (File.Exists(f)) return;
-        try
-        {
-            using (Bitmap bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb))
-            using (Graphics g = Graphics.FromImage(bmp))
-            {
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                g.Clear(Color.Transparent);
-                paint(g);
-                bmp.Save(f, ImageFormat.Png);
-            }
-        }
-        catch (Exception ex) { Log(ex); }
-    }
-
-    // metal pictures in the medal colours (gold / silver / bronze of the current colour style)
-    string GradImg(string kind, int rank)
-    {
-        int st = Math.Max(0, Math.Min(StyleMedals.Length - 1, hudStyle));
-        string key = kind + "_" + st + "_" + rank;
-        string f;
-        if (gradImgs.TryGetValue(key, out f)) return f;
-        f = Ui(key);
-        try { if (!File.Exists(f)) RenderGrad(kind, StyleMedals[st][Math.Max(0, Math.Min(2, rank - 1))], f); }
-        catch (Exception ex) { Log(ex); f = null; }
-        gradImgs[key] = f;
-        return f;
-    }
-    static void RenderGrad(string kind, Color[] mc, string file)
-    {
-        int w = 160, h = 160;
-        if (kind == "shield") { w = 240; h = 340; }
-        else if (kind == "step" || kind == "plate") { w = 128; h = 128; }
-        else if (kind == "crown") { w = 112; h = 68; }
-        using (Bitmap bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb))
-        using (Graphics g = Graphics.FromImage(bmp))
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            g.Clear(Color.Transparent);
-            RectangleF all = new RectangleF(0, 0, w, h);
-            if (kind == "crown") { DrawCrown(g, w / 2f, h - 5f, mc); bmp.Save(file, ImageFormat.Png); return; }
-            using (GraphicsPath gp = new GraphicsPath())
-            {
-                float angle = 60f;
-                switch (kind)
-                {
-                    case "shield": gp.AddPolygon(ShieldPts(w, h)); angle = 65f; break;
-                    case "ring_hex": gp.AddPolygon(HexPts(w)); break;
-                    case "ring_rounded": AddRound(gp, 1f, 1f, w - 2f, h - 2f, w * 0.26f); break;
-                    case "ring_square": AddRound(gp, 1f, 1f, w - 2f, h - 2f, w * 0.09f); break;
-                    case "step": case "plate": gp.AddRectangle(all); angle = 90f; break;
-                    default: gp.AddEllipse(1f, 1f, w - 2f, h - 2f); break;
-                }
-                using (LinearGradientBrush b = new LinearGradientBrush(all, mc[0], mc[2], angle))
-                {
-                    ColorBlend cb = new ColorBlend(3);
-                    cb.Colors = new[] { mc[0], mc[1], mc[2] };
-                    cb.Positions = new[] { 0f, kind == "step" || kind == "plate" ? 0.55f : 0.48f, 1f };
-                    b.InterpolationColors = cb;
-                    g.FillPath(b, gp);
-                }
-                g.SetClip(gp);
-                if (kind == "shield")
-                {
-                    using (Pen line = new Pen(Color.FromArgb(28, 255, 255, 255), 2f))
-                        for (int x = -h; x < w; x += 14) g.DrawLine(line, x, 0, x + h, h);
-                    using (Pen pen = new Pen(Color.FromArgb(120, 255, 255, 255), 4f)) g.DrawPolygon(pen, ShieldPts(w, h, 10f));
-                }
-                if (kind == "step")
-                {
-                    using (SolidBrush hl = new SolidBrush(Color.FromArgb(170, 255, 255, 255))) g.FillRectangle(hl, 0, 0, w, 7);
-                    using (LinearGradientBrush sh = new LinearGradientBrush(new RectangleF(0, h * 0.6f, w, h * 0.4f + 1), Color.FromArgb(0, 0, 0, 0), Color.FromArgb(60, 0, 0, 0), 90f))
-                        g.FillRectangle(sh, 0, h * 0.6f, w, h * 0.4f);
-                }
-                if (kind.StartsWith("ring"))
-                    using (Pen pen = new Pen(Color.FromArgb(200, mc[0]), 3f)) g.DrawPath(pen, gp);
-                g.ResetClip();
-            }
-            bmp.Save(file, ImageFormat.Png);
-        }
-    }
-    static void AddRound(GraphicsPath gp, float x, float y, float w, float h, float r)
-    {
-        float d = r * 2f;
-        gp.AddArc(x, y, d, d, 180, 90);
-        gp.AddArc(x + w - d, y, d, d, 270, 90);
-        gp.AddArc(x + w - d, y + h - d, d, d, 0, 90);
-        gp.AddArc(x, y + h - d, d, d, 90, 90);
-        gp.CloseFigure();
-    }
-
-    // =====================================================================
-    //  HUD main
-    // =====================================================================
-    /// <summary>Call EVERY FRAME (in your Tick) after your own drawing.</summary>
-    public void Draw()
-    {
-        int now = Game.GameTime;
-        UpdatePalette();
-        try { if (cfg.ShowTop) DrawTop(now); } catch (Exception ex) { Log(ex); }
-        try { if (cfg.ShowBoard) DrawList(now); } catch (Exception ex) { Log(ex); }
-        try { if (cfg.ShowSwap) DrawSwap(now); } catch (Exception ex) { Log(ex); }
-        try { DrawResult(now); } catch (Exception ex) { Log(ex); }
-        try { UpdateMegaGift(now); DrawMegaGift(now); } catch (Exception ex) { Log(ex); }
-        DrawTikTokGuide();
-    }
-
-    // ---------------- TOP SCORERS (top centre) ----------------
-    void DrawTop(int now)
-    {
-        List<Scorer> list = topList;
-        int n = Math.Max(1, Math.Min(3, cfg.TopCount));
-        switch (Design)
-        {
-            case "broadcast": TopBroadcast(list, n); break;
-            case "podium": TopPodium(list, n); break;
-            case "cards": TopCards(list, n); break;
-            case "esports": TopEsports(list, n); break;
-            case "minimal": TopMinimal(list, n); break;
-            case "classic": TopClassic(list, n); break;
-            default: TopArena(list, n, now); break;
-        }
-    }
-    static Scorer At(List<Scorer> l, int i) { return i < l.Count ? l[i] : null; }
-    string GoalsText(Scorer sc) { return sc == null ? "" : sc.Goals + " " + (sc.Goals == 1 ? cfg.GoalWord : cfg.GoalsWord); }
-    static int[] Order213(int n) { return n >= 3 ? new[] { 2, 1, 3 } : (n == 2 ? new[] { 2, 1 } : new[] { 1 }); }
-
-    // ARENA: metal rings, crown on the 1st, gold / silver / bronze
-    void TopArena(List<Scorer> list, int n, int now)
-    {
-        float s = Sc, oy = VY(cfg.TopY);
-        string sh = AvShape;
-        foreach (int r in Order213(n))
-        {
-            Scorer sc = At(list, r - 1);
-            float d = (r == 1 ? 168f : 136f) * s;
-            if (cfg.PodiumPulse && sc != null && now < sc.FlashUntil) d *= 1f + 0.06f * Math.Abs((float)Math.Sin(now / 90.0));
-            float cx = VCX + (r == 1 ? 0f : (r == 2 ? -225f : 225f)) * s;
-            float cy = oy + (60f + 84f) * s + (r == 1 ? 0f : 34f * s);
-            float fade = sc == null ? 0.45f : 1f;
-            Color[] mc = Med(r);
-            Glow(cx, cy, d * 1.45f, A(mc[1], (int)(150 * fade)));
-            if (r == 1) Im(GradImg("crown", 1), cx, cy - d / 2f - 20f * s, 96f * s, 55f * s, A(Color.White, fade));
-            Ring(sh, r, cx, cy, d);
-            Av(sc != null ? sc.Avatar : null, sc != null ? sc.Alt : "?", cx, cy, d * 0.86f, sh);
-            // place badge
-            float bd = 40f * s, by = cy + d / 2f - 4f * s;
-            Circle(cx, by, bd + 5f * s, A(Color.Black, 140));
-            Im(GradImg("ring_circle", r), cx, by, bd, bd, Color.White);
-            TI(r.ToString(), cx, by, 24f * s, Ink, AC);
-            // name pill + goals
-            float ny = by + 44f * s;
-            float nw = sc != null ? NameW(sc.Name, sc.Alt, 28f * s, 230f * s) : 20f * s;
-            Pill(cx - nw / 2f - 25f * s, ny - 21f * s, nw + 50f * s, 42f * s, A(PBg, fade));
-            if (sc != null) N(sc.Name, sc.Alt, cx, ny, 28f * s, PText, AC, 230f * s, !PLight);
-            else TB("-", cx, ny, 28f * s, PMuted, AC, FL);
-            if (sc != null) T(GoalsText(sc), cx, ny + 42f * s, 34f * s, TxtCol(r), AC, FC, true);
-        }
-    }
-
-    // BROADCAST: three slanted TV plates side by side, rank block in metal colour
-    void TopBroadcast(List<Scorer> list, int n)
-    {
-        float s = Sc, oy = VY(cfg.TopY), pw = 372f * s, ph = 92f * s, gap = 14f * s, sk = 22f * s;
-        float total = n * pw + (n - 1) * gap, x0 = VCX - total / 2f;
-        float tw = TextW(cfg.TopTitle, FC, 26f * s) + 60f * s;
-        Para(VCX - tw / 2f, oy, tw, 38f * s, 12f * s, Accent);
-        T(cfg.TopTitle, VCX, oy + 19f * s, 26f * s, Color.FromArgb(16, 16, 16), AC, FC, false);
-        float y = oy + 50f * s;
-        for (int r = 1; r <= n; r++)
-        {
-            Scorer sc = At(list, r - 1);
-            Color[] mc = Med(r);
-            float x = x0 + (r - 1) * (pw + gap);
-            float fade = sc == null ? 0.5f : 1f;
-            Para(x, y, pw, ph, sk, A(Color.FromArgb(Math.Max(200, (int)PBg.A), PLight ? 250 : 12, PLight ? 250 : 14, PLight ? 252 : 20), fade));
-            Para(x + sk * 0.2f, y + ph - 6f * s, pw - sk * 0.4f, 6f * s, sk * 0.07f, A(mc[1], fade));
-            Para(x, y, 78f * s, ph, sk, A(mc[1], fade));
-            R(x + sk, y, 78f * s - 2f * sk, 6f * s, A(mc[0], fade));
-            T(r.ToString(), x + 39f * s, y + ph / 2f, 58f * s, Color.FromArgb(18, 18, 18), AC, FC, false);
-            float ax = x + 78f * s + 12f * s + 34f * s;
-            Av(sc != null ? sc.Avatar : null, sc != null ? sc.Alt : "?", ax, y + ph / 2f, 66f * s, AvShape);
-            float tx = ax + 34f * s + 14f * s, maxW = x + pw - sk - tx - 8f * s;
-            if (sc != null)
-            {
-                N(sc.Name, sc.Alt, tx, y + 32f * s, 27f * s, PLight ? PText : Color.White, AL, maxW, !PLight);
-                T(GoalsText(sc), tx, y + 64f * s, 26f * s, TxtCol(r), AL, FC, !PLight);
-            }
-            else T("-", tx, y + ph / 2f, 28f * s, PMuted, AL, FL, !PLight);
-        }
-    }
-
-    // PODIUM: real podium steps 2 - 1 - 3 with the photos standing on them
-    void TopPodium(List<Scorer> list, int n)
-    {
-        float s = Sc, sw = 250f * s, bottom = VY(cfg.TopY) + 400f * s;
-        int[] order = Order213(n);
-        float x0 = VCX - order.Length * sw / 2f;
-        string sh = AvShape;
-        for (int i = 0; i < order.Length; i++)
-        {
-            int r = order[i];
-            Scorer sc = At(list, r - 1);
-            float h = (r == 1 ? 150f : (r == 2 ? 112f : 84f)) * s, cx = x0 + (i + 0.5f) * sw, top = bottom - h;
-            float fade = sc == null ? 0.5f : 1f;
-            if (!Im(GradImg("step", r), cx, bottom - h / 2f, sw, h, A(Color.White, fade))) R(cx - sw / 2f, top, sw, h, Med(r)[1]);
-            TI(r.ToString(), cx, top + 44f * s, (r == 3 ? 42f : 52f) * s, Ink, AC);
-            if (sc != null) TI(GoalsText(sc), cx, top + (r == 3 ? 72f : 88f) * s, 19f * s, Ink, AC, sw - 20f * s);
-            // name pill and photo above the step
-            float ny = top - 30f * s;
-            float nw = sc != null ? NameW(sc.Name, sc.Alt, 25f * s, 210f * s) : 20f * s;
-            Pill(cx - nw / 2f - 23f * s, ny - 19f * s, nw + 46f * s, 38f * s, A(PBg, fade));
-            if (sc != null) N(sc.Name, sc.Alt, cx, ny, 25f * s, PText, AC, 210f * s, !PLight);
-            float d = (r == 1 ? 124f : 100f) * s, ay = ny - 26f * s - d / 2f;
-            ShapeFill(sh, cx, ay, d + 12f * s, A(Color.White, fade));
-            Av(sc != null ? sc.Avatar : null, sc != null ? sc.Alt : "?", cx, ay, d, sh);
-            if (r == 1) Im(GradImg("crown", 1), cx, ay - d / 2f - 30f * s, 92f * s, 53f * s, A(Color.White, fade));
-        }
-    }
-
-    // CARDS: player cards in the shape of a shield, goals like a rating
-    void TopCards(List<Scorer> list, int n)
-    {
-        float s = Sc, oy = VY(cfg.TopY);
-        int[] order = Order213(n);
-        string sh = AvShape;
-        for (int i = 0; i < order.Length; i++)
-        {
-            int r = order[i];
-            Scorer sc = At(list, r - 1);
-            float w = (r == 1 ? 236f : 200f) * s, h = (r == 1 ? 334f : 284f) * s;
-            float cx = VCX + (r == 1 ? 0f : (r == 2 ? -1f : 1f) * (118f + 26f + 100f) * s);
-            if (n == 2 && r == 2) cx = VCX - (118f + 13f) * s;
-            float top = oy + (r == 1 ? 0f : 42f * s), cy = top + h / 2f;
-            float fade = sc == null ? 0.5f : 1f;
-            Im(Ui("shield"), cx + 6f * s, cy + 10f * s, w, h, A(Color.Black, (int)(90 * fade)));
-            if (!Im(GradImg("shield", r), cx, cy, w, h, A(Color.White, fade))) Im(Ui("shield"), cx, cy, w, h, Med(r)[1]);
-            float lx = cx - w / 2f + 36f * s;
-            TI(sc != null ? sc.Goals.ToString() : "0", lx, top + 56f * s, (r == 1 ? 50f : 42f) * s, A(Ink, fade), AC);
-            TI((sc != null && sc.Goals == 1 ? cfg.GoalWord : cfg.GoalsWord).ToUpperInvariant(), lx, top + (r == 1 ? 96f : 88f) * s, 12f * s, A(Ink, fade), AC);
-            TI("#" + r, cx + w / 2f - 30f * s, top + 52f * s, 24f * s, A(Ink, 0.7f * fade), AR);
-            float d = w * 0.5f, ay = top + h * 0.47f;
-            Av(sc != null ? sc.Avatar : null, sc != null ? sc.Alt : "?", cx, ay, d, sh);
-            if (sc != null) NI(sc.Name, sc.Alt, cx, top + h * 0.755f, 19f * s, Ink, AC, w * 0.76f);
-        }
-    }
-
-    // ESPORTS: hexagon frames, angled name plates, neon glow
-    void TopEsports(List<Scorer> list, int n)
-    {
-        float s = Sc, oy = VY(cfg.TopY);
-        T("//  " + cfg.TopTitle + "  //", VCX, oy + 16f * s, 30f * s, Accent, AC, FC, true);
-        string sh = AvShape;
-        foreach (int r in Order213(n))
-        {
-            Scorer sc = At(list, r - 1);
-            float d = (r == 1 ? 172f : 142f) * s;
-            float cx = VCX + (r == 1 ? 0f : (r == 2 ? -250f : 250f)) * s;
-            float cy = oy + 48f * s + d / 2f + (r == 1 ? 0f : 38f * s);
-            float fade = sc == null ? 0.45f : 1f;
-            Color[] mc = Med(r);
-            Glow(cx, cy, d * 1.3f, A(mc[1], (int)(170 * fade)));
-            Ring(sh, r, cx, cy, d);
-            Av(sc != null ? sc.Avatar : null, sc != null ? sc.Alt : "?", cx, cy, d * 0.84f, sh);
-            float py = cy + d / 2f + 12f * s, pw = 250f * s;
-            Para(cx - pw / 2f, py, pw, 40f * s, 12f * s, A(PBg.A < 200 && !PLight ? Color.FromArgb(215, 12, 14, 22) : PBg, fade));
-            R(cx - pw / 2f + 12f * s, py, 6f * s, 40f * s, A(mc[1], fade));
-            float tw = TextW("#" + r, FC, 26f * s);
-            T("#" + r, cx - pw / 2f + 26f * s, py + 20f * s, 26f * s, A(mc[1], fade), AL, FC, !PLight);
-            if (sc != null) N(sc.Name, sc.Alt, cx - pw / 2f + 34f * s + tw, py + 20f * s, 24f * s, PText, AL, pw - 60f * s - tw, !PLight);
-            if (sc != null) T(GoalsText(sc), cx, py + 64f * s, 30f * s, TxtCol(r), AC, FC, true);
-        }
-    }
-
-    // MINIMAL: one clean pill with the three
-    void TopMinimal(List<Scorer> list, int n)
-    {
-        float s = Sc, oy = VY(cfg.TopY), slot = 280f * s, h = 96f * s;
-        float total = n * slot + 84f * s, x0 = VCX - total / 2f;
-        Pill(x0, oy, total, h, PBg);
-        Im(GradImg("crown", 1), x0 + 46f * s, oy + h / 2f, 50f * s, 29f * s, Color.White);
-        string sh = AvShape;
-        for (int r = 1; r <= n; r++)
-        {
-            Scorer sc = At(list, r - 1);
-            float x = x0 + 80f * s + (r - 1) * slot, cy = oy + h / 2f;
-            if (r > 1) R(x - 12f * s, oy + 20f * s, 2f * s, h - 40f * s, A(PMuted, 90));
-            float fade = sc == null ? 0.45f : 1f;
-            ShapeFill(sh, x + 34f * s, cy, 70f * s, A(Med(r)[1], fade));
-            Av(sc != null ? sc.Avatar : null, sc != null ? sc.Alt : "?", x + 34f * s, cy, 62f * s, sh);
-            Circle(x + 60f * s, cy + 24f * s, 26f * s, A(Med(r)[1], fade));
-            TI(r.ToString(), x + 60f * s, cy + 24f * s, 13f * s, Ink, AC);
-            if (sc != null)
-            {
-                N(sc.Name, sc.Alt, x + 80f * s, cy - 13f * s, 24f * s, PText, AL, slot - 100f * s, !PLight);
-                T(GoalsText(sc), x + 80f * s, cy + 17f * s, 22f * s, PLight ? A(TxtCol(r), 255) : TxtCol(r), AL, FC, !PLight);
-            }
-            else TB("-", x + 80f * s, cy, 24f * s, PMuted, AL, FL);
-        }
-    }
-
-    // CLASSIC: a table of the top scorers
-    void TopClassic(List<Scorer> list, int n)
-    {
-        float s = Sc, w = 640f * s, x = VCX - w / 2f, y = VY(cfg.TopY), rowH = 76f * s, head = 62f * s;
-        RR(x, y, w, head + n * rowH + 10f * s, 24f * s, PBg);
-        Im(GradImg("crown", 1), x + 50f * s, y + head / 2f, 54f * s, 31f * s, Color.White);
-        T(cfg.TopTitle, x + 86f * s, y + head / 2f, 34f * s, Accent, AL, FC, !PLight);
-        R(x + 20f * s, y + head - 2f * s, w - 40f * s, 2f * s, A(PMuted, 70));
-        for (int r = 1; r <= n; r++)
-        {
-            Scorer sc = At(list, r - 1);
-            float cy = y + head + (r - 0.5f) * rowH;
-            Im(GradImg("ring_circle", r), x + 46f * s, cy, 44f * s, 44f * s, Color.White);
-            TI(r.ToString(), x + 46f * s, cy, 22f * s, Ink, AC);
-            ShapeFill(AvShape, x + 108f * s, cy, 64f * s, Med(r)[1]);
-            Av(sc != null ? sc.Avatar : null, sc != null ? sc.Alt : "?", x + 108f * s, cy, 58f * s, AvShape);
-            if (sc != null)
-            {
-                N(sc.Name, sc.Alt, x + 154f * s, cy, 30f * s, PText, AL, w - 330f * s, !PLight);
-                T(GoalsText(sc), x + w - 26f * s, cy, 36f * s, TxtCol(r), AR, FC, !PLight);
-            }
-            else TB("-", x + 154f * s, cy, 30f * s, PMuted, AL, FL);
-        }
-    }
-
-    // ---------------- WAITING LIST (side) ----------------
-    void DrawList(int now)
-    {
-        List<Supporter> list = Waiting ?? new List<Supporter>();
-        int rows = Math.Min(list.Count, cfg.BoardRows);
-        float s = Sc, w = cfg.ListW * s;
-        float x = cfg.BoardSide == "left" ? 30f : VW - 30f - w, y = VY(cfg.ListY);
-        switch (Design)
-        {
-            case "broadcast": ListBroadcast(list, rows, x, y, w, s); break;
-            case "podium": ListPodium(list, rows, x, y, w, s); break;
-            case "cards": ListCards(list, rows, x, y, w, s); break;
-            case "esports": ListEsports(list, rows, x, y, w, s); break;
-            case "minimal": ListMinimal(list, rows, x, y, w, s); break;
-            default: ListArena(list, rows, x, y, w, s); break;
-        }
-    }
-    bool Shooting(Supporter p) { return p != null && !string.IsNullOrEmpty(ShootingKey) && p.Key == ShootingKey; }
-    string More(List<Supporter> list, int rows) { return list.Count > rows ? "+" + (list.Count - rows) + " ..." : null; }
-
-    void ListArena(List<Supporter> list, int rows, float x, float y, float w, float s)
-    {
-        float head = 62f * s, rowH = 78f * s;
-        string more = More(list, rows);
-        float h = head + Math.Max(1, rows) * rowH + (more != null ? 34f * s : 0f) + 12f * s;
-        RR(x, y, w, h, 24f * s, PBg);
-        Ball(x + 34f * s, y + head / 2f, 30f * s, Color.White);
-        T(cfg.BoardTitle, x + 58f * s, y + head / 2f, 32f * s, Accent, AL, FC, !PLight);
-        string qc = QueueCount.ToString();
-        float cw = TextW(qc, FC, 28f * s) + 28f * s;
-        Pill(x + w - 18f * s - cw, y + head / 2f - 17f * s, cw, 34f * s, Accent);
-        T(qc, x + w - 18f * s - cw / 2f, y + head / 2f, 28f * s, Color.FromArgb(17, 17, 17), AC, FC, false);
-        R(x + 18f * s, y + head - 3f * s, w - 36f * s, 3f * s, Accent);
-        float ry = y + head + 4f * s;
-        if (rows == 0) TB(cfg.EmptyText, x + w / 2f, ry + rowH / 2f, 24f * s, PMuted, AC, FL);
-        for (int i = 0; i < rows; i++)
-        {
-            Supporter p = list[i];
-            float cy = ry + rowH / 2f;
-            if (Shooting(p)) { R(x, ry + 4f * s, w, rowH - 8f * s, A(Accent, 85)); R(x, ry + 10f * s, 6f * s, rowH - 20f * s, Accent); }
-            ShapeFill(AvShape, x + 50f * s, cy, 62f * s, Shooting(p) ? Accent : PRow);
-            Av(p.Avatar, p.Alt, x + 50f * s, cy, 56f * s, AvShape);
-            N(p.DisplayName, p.Alt, x + 94f * s, cy, 27f * s, PText, AL, w - 94f * s - 118f * s, !PLight);
-            Pill(x + w - 16f * s - 96f * s, cy - 18f * s, 96f * s, 36f * s, PRow);
-            Ball(x + w - 16f * s - 74f * s, cy, 26f * s, Color.White);
-            TB("x" + p.Balls.Count, x + w - 16f * s - 22f * s, cy, 28f * s, PText, AR, FC);
-            ry += rowH;
-        }
-        if (more != null) TB(more, x + 24f * s, ry + 14f * s, 24f * s, PMuted, AL, FL);
-    }
-
-    void ListBroadcast(List<Supporter> list, int rows, float x, float y, float w, float s)
-    {
-        float head = 50f * s, rowH = 60f * s, gap = 5f * s;
-        R(x, y, w, head, PLight ? Color.FromArgb(245, 255, 255, 255) : Color.FromArgb(235, 10, 10, 14));
-        R(x, y + head, w, 4f * s, Accent);
-        T(cfg.BoardTitle.ToUpperInvariant(), x + 18f * s, y + head / 2f, 28f * s, PLight ? PText : Color.White, AL, FC, !PLight);
-        string qc = QueueCount.ToString();
-        float cw = TextW(qc, FC, 26f * s) + 24f * s;
-        R(x + w - 12f * s - cw, y + 10f * s, cw, head - 20f * s, Accent);
-        T(qc, x + w - 12f * s - cw / 2f, y + head / 2f, 26f * s, Color.FromArgb(17, 17, 17), AC, FC, false);
-        float ry = y + head + 10f * s;
-        Color rowBg = PLight ? Color.FromArgb(235, 255, 255, 255) : Color.FromArgb(Math.Max(200, (int)PBg.A), 20, 22, 30);
-        if (rows == 0) { R(x, ry, w, rowH, rowBg); TB(cfg.EmptyText, x + w / 2f, ry + rowH / 2f, 22f * s, PMuted, AC, FL); }
-        for (int i = 0; i < rows; i++)
-        {
-            Supporter p = list[i];
-            bool now = Shooting(p);
-            float cy = ry + rowH / 2f;
-            R(x, ry, w, rowH, now ? A(Accent, 235) : rowBg);
-            R(x, ry, 52f * s, rowH, now ? Color.FromArgb(17, 17, 17) : Color.FromArgb(245, 245, 245));
-            T((i + 1).ToString(), x + 26f * s, cy, 30f * s, now ? Accent : Color.FromArgb(17, 17, 17), AC, FC, false);
-            R(x + 52f * s, ry, 6f * s, rowH, now ? Color.White : Accent);
-            Av(p.Avatar, p.Alt, x + 58f * s + 12f * s + 23f * s, cy, 46f * s, AvShape);
-            Color tc = now ? Color.FromArgb(17, 17, 17) : (PLight ? PText : Color.White);
-            N(p.DisplayName, p.Alt, x + 58f * s + 12f * s + 46f * s + 12f * s, cy, 25f * s, tc, AL, w - 250f * s, !now && !PLight);
-            Ball(x + w - 24f * s, cy, 24f * s, Color.White);
-            T(p.Balls.Count.ToString(), x + w - 42f * s, cy, 28f * s, tc, AR, FC, !now && !PLight);
-            ry += rowH + gap;
-        }
-        string more = More(list, rows);
-        if (more != null) T(more, x + 12f * s, ry + 12f * s, 22f * s, Color.White, AL, FL, true);
-    }
-
-    void ListPodium(List<Supporter> list, int rows, float x, float y, float w, float s)
-    {
-        T(cfg.BoardTitle, x + 8f * s, y + 20f * s, 34f * s, Color.White, AL, FC, true);
-        string qc = QueueCount.ToString();
-        float cw = TextW(qc, FC, 28f * s) + 30f * s;
-        Pill(x + w - cw, y + 3f * s, cw, 34f * s, Accent);
-        T(qc, x + w - cw / 2f, y + 20f * s, 28f * s, Color.FromArgb(17, 17, 17), AC, FC, false);
-        float ry = y + 50f * s, rowH = 86f * s;
-        if (rows == 0) { RR(x, ry, w, 64f * s, 22f * s, PBg); TB(cfg.EmptyText, x + w / 2f, ry + 32f * s, 22f * s, PMuted, AC, FL); }
-        for (int i = 0; i < rows; i++)
-        {
-            Supporter p = list[i];
-            float cy = ry + rowH / 2f;
-            if (Shooting(p)) RR(x - 4f * s, ry - 4f * s, w + 8f * s, rowH + 8f * s, 26f * s, Accent);
-            RR(x, ry, w, rowH, 22f * s, Shooting(p) ? Color.FromArgb(235, 20, 22, 30) : PBg);
-            Av(p.Avatar, p.Alt, x + 46f * s, cy, 60f * s, AvShape);
-            Color tc = Shooting(p) ? Color.White : PText;
-            N(p.DisplayName, p.Alt, x + 88f * s, cy - 14f * s, 25f * s, tc, AL, w - 170f * s, !PLight || Shooting(p));
-            int nb = Math.Min(6, p.Balls.Count);
-            for (int k = 0; k < nb; k++) Ball(x + 100f * s + k * 26f * s, cy + 18f * s, 22f * s, Color.White);
-            if (p.Balls.Count > 6) TB("+" + (p.Balls.Count - 6), x + 100f * s + 6 * 26f * s, cy + 18f * s, 20f * s, PMuted, AL, FL);
-            T(p.Balls.Count.ToString(), x + w - 34f * s, cy, 44f * s, Accent, AC, FC, true);
-            ry += rowH + 10f * s;
-        }
-        string more = More(list, rows);
-        if (more != null) T(more, x + 12f * s, ry + 8f * s, 24f * s, Color.White, AL, FL, true);
-    }
-
-    void ListCards(List<Supporter> list, int rows, float x, float y, float w, float s)
-    {
-        float head = 58f * s, rowH = 82f * s;
-        string more = More(list, rows);
-        float h = head + Math.Max(1, rows) * rowH + (more != null ? 34f * s : 0f) + 12f * s;
-        RR(x, y, w, h, 22f * s, PBg);
-        R(x + 12f * s, y + 8f * s, w - 24f * s, head - 16f * s, A(Accent, 60));
-        T(cfg.BoardTitle, x + 24f * s, y + head / 2f, 32f * s, Accent, AL, FC, !PLight);
-        TB(QueueCount.ToString(), x + w - 24f * s, y + head / 2f, 30f * s, PText, AR, FC);
-        float ry = y + head + 4f * s;
-        if (rows == 0) TB(cfg.EmptyText, x + w / 2f, ry + rowH / 2f, 23f * s, PMuted, AC, FL);
-        for (int i = 0; i < rows; i++)
-        {
-            Supporter p = list[i];
-            float cy = ry + rowH / 2f;
-            if (Shooting(p)) RR(x + 8f * s, ry + 4f * s, w - 16f * s, rowH - 8f * s, 14f * s, A(Accent, 80));
-            Im(Ui("shield"), x + 42f * s, cy, 50f * s, 62f * s, Accent);
-            TI(p.Balls.Count.ToString(), x + 42f * s, cy - 4f * s, 22f * s, Color.FromArgb(35, 24, 0), AC);
-            Av(p.Avatar, p.Alt, x + 104f * s, cy, 56f * s, AvShape);
-            N(p.DisplayName, p.Alt, x + 144f * s, cy, 26f * s, PText, AL, w - 220f * s, !PLight);
-            TB("#" + (i + 1), x + w - 22f * s, cy, 26f * s, PMuted, AR, FC);
-            if (i < rows - 1) R(x + 18f * s, ry + rowH - 1f * s, w - 36f * s, 1.5f * s, A(PMuted, 50));
-            ry += rowH;
-        }
-        if (more != null) TB(more, x + 24f * s, ry + 14f * s, 24f * s, PMuted, AL, FL);
-    }
-
-    void ListEsports(List<Supporter> list, int rows, float x, float y, float w, float s)
-    {
-        float head = 46f * s, rowH = 70f * s;
-        Color box = PLight ? Color.FromArgb(240, 250, 250, 252) : Color.FromArgb(Math.Max(205, (int)PBg.A), 12, 14, 22);
-        Cut(x, y, w, head, 14f * s, box);
-        R(x, y + head, w, 3f * s, Accent);
-        T(cfg.BoardTitle.ToUpperInvariant(), x + 18f * s, y + head / 2f, 28f * s, Accent, AL, FC, !PLight);
-        TB(QueueCount.ToString(), x + w - 30f * s, y + head / 2f, 28f * s, PText, AR, FC);
-        float ry = y + head + 10f * s;
-        if (rows == 0) { Cut(x, ry, w, rowH, 16f * s, box); TB(cfg.EmptyText, x + w / 2f, ry + rowH / 2f, 22f * s, PMuted, AC, FL); }
-        for (int i = 0; i < rows; i++)
-        {
-            Supporter p = list[i];
-            bool now = Shooting(p);
-            float cy = ry + rowH / 2f;
-            Cut(x, ry, w, rowH, 18f * s, now ? A(Accent, 150) : box);
-            R(x, ry, 5f * s, rowH, now ? Color.White : Accent);
-            T("#" + (i + 1), x + 18f * s, cy, 26f * s, now ? Color.White : Accent, AL, FC, !PLight);
-            Av(p.Avatar, p.Alt, x + 92f * s, cy, 50f * s, AvShape);
-            N(p.DisplayName, p.Alt, x + 128f * s, cy, 25f * s, now ? Color.White : PText, AL, w - 220f * s, !PLight || now);
-            T("x" + p.Balls.Count, x + w - 34f * s, cy, 28f * s, now ? Color.White : PText, AR, FC, !PLight || now);
-            ry += rowH + 6f * s;
-        }
-        string more = More(list, rows);
-        if (more != null) T(more, x + 12f * s, ry + 10f * s, 22f * s, Color.White, AL, FL, true);
-    }
-
-    void ListMinimal(List<Supporter> list, int rows, float x, float y, float w, float s)
-    {
-        bool right = cfg.BoardSide != "left";
-        float edge = right ? x + w : x;
-        string title = cfg.BoardTitle.ToUpperInvariant() + "  " + QueueCount;
-        T(title, edge, y + 14f * s, 24f * s, Color.White, right ? AR : AL, FC, true);
-        float ry = y + 34f * s, rowH = 62f * s;
-        if (rows == 0)
-        {
-            float ew = TextW(cfg.EmptyText, FL, 22f * s) + 44f * s;
-            Pill(right ? edge - ew : edge, ry, ew, rowH, PRow);
-            TB(cfg.EmptyText, (right ? edge - ew : edge) + ew / 2f, ry + rowH / 2f, 22f * s, PMuted, AC, FL);
-        }
-        for (int i = 0; i < rows; i++)
-        {
-            Supporter p = list[i];
-            int nb = Math.Min(5, p.Balls.Count);
-            string extra = p.Balls.Count > 5 ? "+" + (p.Balls.Count - 5) : "";
-            float nw = NameW(p.DisplayName, p.Alt, 24f * s, 230f * s);
-            float cw = nb * 24f * s + (extra.Length > 0 ? TextW(extra, FC, 22f * s) + 6f * s : 0f);
-            float pw = Math.Min(w, 8f * s + 50f * s + 12f * s + nw + 16f * s + cw + 34f * s);
-            float px = right ? edge - pw : edge, cy = ry + rowH / 2f;
-            if (Shooting(p)) Pill(px - 3f * s, ry - 3f * s, pw + 6f * s, rowH + 6f * s, Accent);
-            Pill(px, ry, pw, rowH, Shooting(p) ? Color.FromArgb(235, 20, 22, 30) : PRow);
-            Av(p.Avatar, p.Alt, px + 8f * s + 25f * s, cy, 50f * s, AvShape);
-            N(p.DisplayName, p.Alt, px + 70f * s, cy, 24f * s, Shooting(p) ? Color.White : PText, AL, 230f * s, !PLight || Shooting(p));
-            // the balls he still has: one ball picture per ball (5 max, then +N)
-            float bx = px + pw - 32f * s - cw + 11f * s;
-            for (int k = 0; k < nb; k++) Ball(bx + k * 24f * s, cy, 21f * s, Color.White);
-            if (extra.Length > 0) T(extra, px + pw - 32f * s, cy, 22f * s, Accent, AR, FC, true);
-            ry += rowH + 8f * s;
-        }
-        string more = More(list, rows);
-        if (more != null) T(more, edge, ry + 10f * s, 22f * s, Color.White, right ? AR : AL, FL, true);
-    }
-
-    // ---------------- SWAP gift (bottom left) : moves like the gifts in the goal ----------------
-    void DrawSwap(int now)
-    {
-        float s = Sc, t = now / 1000f, size = cfg.SwapSize * s;
-        float cx = cfg.SwapX, cy = VH - VY(cfg.SwapBottom) - size / 2f;
-        float bob = (float)Math.Sin(t * cfg.TargetSpeed) * 14f * s;
-        float pulse = 1f + (float)Math.Sin(t * cfg.TargetSpeed * 1.7f) * 0.07f;
-        // it was just used: jump
-        int since = now - swapFlash;
-        if (since >= 0 && since < 1100) { float u = since / 1100f; pulse *= 1f + 0.45f * (float)Math.Sin(u * Math.PI) * (1f - u); }
-        float icy = cy + bob;
-        Im(Ui("glow"), cx, icy, size * 1.6f, size * 1.15f, A(Accent, 140));
-        string icon = SwapIcon;
-        bool drew = icon != null && Im(icon, cx, icy, size * pulse, size * pulse, Color.FromArgb(245, 255, 255, 255));
-        if (!drew) { Circle(cx, icy, size * 0.9f * pulse, KSwap); TI("<>", cx, icy, size * 0.3f, Color.White, AC); }
-
-        string word = string.IsNullOrEmpty(cfg.SwapWord) ? "SWAP" : cfg.SwapWord.ToUpperInvariant();
-        bool above = cfg.SwapTextPos == "above";
-        float lh = 42f * s, lw = TextW(word, FC, 34f * s) + 40f * s;
-        float ly = above ? icy - size / 2f - 10f * s - lh : icy + size / 2f + 8f * s;
-        float lx = cx - lw / 2f, lc = ly + lh / 2f;
-        switch (Design)
-        {
-            case "broadcast": Para(lx - 8f * s, ly, lw + 16f * s, lh, 12f * s, Accent); T(word, cx, lc, 32f * s, Color.FromArgb(17, 17, 17), AC, FC, false); break;
-            case "podium": Pill(lx, ly, lw, lh, Color.FromArgb(90, 255, 255, 255)); T(word, cx, lc, 32f * s, Color.White, AC, FC, true); break;
-            case "cards": RR(lx, ly, lw, lh, 7f * s, Med(1)[1]); T(word, cx, lc, 32f * s, Ink, AC, FC, false); break;
-            case "esports":
-                Cut(lx, ly, lw, lh, 12f * s, Color.FromArgb(225, 12, 14, 22)); R(lx, ly, 5f * s, lh, Accent);
-                T(word, cx + 2f * s, lc, 32f * s, Accent, AC, FC, false); break;
-            case "minimal": T(word, cx, lc, 34f * s, Color.White, AC, FC, true); R(cx - lw / 2f + 10f * s, ly + lh - 2f * s, lw - 20f * s, 4f * s, Accent); break;
-            default: Pill(lx, ly, lw, lh, Accent); T(word, cx, lc, 34f * s, Color.FromArgb(17, 17, 17), AC, FC, false); break;
-        }
-        if (cfg.ShowSwapName)
-        {
-            string g = SwapLabel();
-            if (!string.IsNullOrEmpty(g)) T(g, cx, above ? icy + size / 2f + 20f * s : ly + lh + 18f * s, 22f * s, Color.White, AC, FL, true);
-        }
-    }
-    int swapFlash = -100000;
-
-    // ---------------- RESULT  GOAL! / SAVED! / MISSED! / ROLE SWAP! ----------------
-    string resKind = "", resTitle = "", resSub = "", resWho = "";
-    AvatarInfo resAv;
-    int resStart = -100000, resSeed;
-    const int ResMs = 3200;
-    int resMs = ResMs;
-
-    void SetResult(string kind, string title, string sub, string who, AvatarInfo av)
-    {
-        resKind = kind;
-        resTitle = Regex.Replace(title ?? "", "~[a-zA-Z]~", "").Trim();
-        resSub = sub ?? "";
-        resWho = who ?? "";
-        if (!string.IsNullOrEmpty(resSub) && resSub.TrimStart('@').Equals(resWho.TrimStart('@'), StringComparison.OrdinalIgnoreCase)) resSub = "";
-        resAv = av;
-        resMs = kind == "series" ? Math.Max(ResMs, cfg.RapidSummaryMs) : ResMs;
-        resStart = Game.GameTime;
-        resSeed = rng.Next();
-        if (kind == "swap") swapFlash = Game.GameTime;
-        int bigMs = kind == "series" ? Math.Max(1500, cfg.RapidSummaryMs - 300) : 2700;
-        if (cfg.ShowResult && cfg.ResultStyle == "gta") ShowBig(title, string.IsNullOrEmpty(sub) ? who : sub, bigMs);
-    }
-    Color KindColor { get { return resKind == "save" ? KSave : resKind == "miss" ? KMiss : resKind == "swap" ? KSwap : resKind == "series" ? (seriesLastGoals > 0 ? Accent : KMiss) : KGoal; } }
-
-    void DrawResult(int now)
-    {
-        if (!cfg.ShowResult) return;
-        if (cfg.ResultStyle == "gta") { DrawBig(); return; }
-        int el = now - resStart;
-        if (el < 0 || el > resMs || string.IsNullOrEmpty(resTitle)) return;
-        float t = el / (float)resMs;
-        float fade = t < 0.08f ? t / 0.08f : (t > 0.85f ? Math.Max(0f, (1f - t) / 0.15f) : 1f);
-        switch (Design)
-        {
-            case "broadcast": ResBroadcast(t, fade); break;
-            case "podium": ResPodium(t, fade); break;
-            case "cards": ResCards(t, fade); break;
-            case "esports": ResEsports(t, fade, el); break;
-            case "minimal": ResMinimal(t, fade); break;
-            default: ResArena(t, fade); break;
-        }
-        if (resKind == "goal" || resKind == "swap" || (resKind == "series" && seriesLastGoals > 0)) Confetti(el, fade);
-    }
-    static float PopScale(float t)
-    {
-        if (t < 0.1f) return 0.3f + 0.85f * (t / 0.1f);
-        if (t < 0.18f) return 1.15f - 0.15f * ((t - 0.1f) / 0.08f);
-        return 1f;
-    }
-    void WhoPill(float cy, float fade, float s, Color bg, Color fg)
-    {
-        if (string.IsNullOrEmpty(resWho)) return;
-        float nw = NameW(resWho, resWho, 32f * s, 600f * s), w = 64f * s + 16f * s + nw + 44f * s, x = VCX - w / 2f;
-        Pill(x, cy - 34f * s, w, 68f * s, A(bg, fade));
-        Av(resAv, resWho, x + 8f * s + 26f * s, cy, 52f * s, AvShape);
-        N(resWho, resWho, x + 76f * s, cy, 32f * s, A(fg, fade), AL, 600f * s, fg.R > 128);
-    }
-    void SubLine(float cy, float fade, float s)
-    {
-        if (!string.IsNullOrEmpty(resSub)) T(resSub, VCX, cy, 28f * s, A(Color.White, fade), AC, FL, true);
-    }
-
-    void ResArena(float t, float fade)
-    {
-        float s = Sc, cy = VY(cfg.ResultY) + 80f * s, p = PopScale(t);
-        Glow(VCX, cy, 760f * s * p, A(KindColor, (int)(110 * fade)));
-        Title(resTitle, VCX, cy, 150f * s * p, KindColor, fade);
-        WhoPill(cy + 118f * s, fade, s, PBg.A < 150 ? Color.FromArgb(220, 12, 14, 22) : PBg, PLight ? PText : Color.White);
-        SubLine(cy + 180f * s, fade, s);
-    }
-
-    void ResBroadcast(float t, float fade)
-    {
-        float s = Sc, h = 130f * s, y = VY(cfg.ResultY) + 20f * s;
-        float slide = t < 0.12f ? (1f - (float)Math.Pow(1f - t / 0.12f, 3)) - 1f : (t > 0.84f ? (t - 0.84f) / 0.16f : 0f);
-        float tw = TextW(resTitle.ToUpperInvariant(), FC, 104f * s) + 90f * s;
-        float nw = string.IsNullOrEmpty(resWho) ? 0f : NameW(resWho, resWho, 34f * s, 420f * s);
-        float bw = string.IsNullOrEmpty(resWho) ? 0f : 90f * s + 30f * s + Math.Max(nw, string.IsNullOrEmpty(resSub) ? 0f : TextW(resSub.ToUpperInvariant(), FC, 24f * s)) + 60f * s;
-        float x = VCX - (tw + bw) / 2f + slide * 1300f * s;
-        Para(x, y, tw, h, 30f * s, A(KindColor, fade));
-        R(x + 30f * s, y, tw - 60f * s, 10f * s, A(Color.White, (int)(70 * fade)));
-        T(resTitle.ToUpperInvariant(), x + tw / 2f, y + h / 2f, 104f * s, A(Color.White, fade), AC, FC, true);
-        if (bw > 0f)
-        {
-            float bx = x + tw - 12f * s;
-            Para(bx, y + 12f * s, bw, h - 24f * s, 26f * s, A(Color.FromArgb(235, 14, 16, 22), fade));
-            Av(resAv, resWho, bx + 40f * s + 45f * s, y + h / 2f, 86f * s, AvShape);
-            N(resWho, resWho, bx + 40f * s + 90f * s + 20f * s, y + h / 2f - (string.IsNullOrEmpty(resSub) ? 0f : 16f * s), 34f * s, A(Color.White, fade), AL, 420f * s, true);
-            if (!string.IsNullOrEmpty(resSub)) T(resSub.ToUpperInvariant(), bx + 40f * s + 90f * s + 20f * s, y + h / 2f + 24f * s, 24f * s, A(Color.FromArgb(190, 196, 206), fade), AL, FC, false);
-        }
-    }
-
-    void ResPodium(float t, float fade)
-    {
-        float s = Sc, rise = t < 0.14f ? (1f - t / 0.14f) : 0f;
-        float w = 660f * s, h = 290f * s, x = VCX - w / 2f, y = VY(cfg.ResultY) + 150f * s + rise * 120f * s;
-        RR(x, y, w, h, 40f * s, A(PBg.A < 120 ? Color.FromArgb(150, 255, 255, 255) : PBg, fade));
-        ShapeFill(AvShape, VCX, y, 150f * s, A(KindColor, fade));
-        Av(resAv, resWho, VCX, y, 134f * s, AvShape);
-        T(resTitle, VCX, y + 130f * s, 118f * s, A(KindColor, fade), AC, FC, true);
-        if (!string.IsNullOrEmpty(resWho)) N(resWho, resWho, VCX, y + 206f * s, 34f * s, A(PLight ? PText : Color.White, fade), AC, 600f * s, !PLight);
-        if (!string.IsNullOrEmpty(resSub)) T(resSub, VCX, y + 250f * s, 24f * s, A(PLight ? PMuted : Color.White, fade), AC, FL, !PLight);
-    }
-
-    void ResCards(float t, float fade)
-    {
-        float s = Sc, flip = t < 0.16f ? Math.Min(1.05f, t / 0.14f) : (t > 0.86f ? Math.Max(0f, (1f - t) / 0.14f) : 1f);
-        float w = 430f * s * flip, h = 500f * s, cy = VY(cfg.ResultY) + 280f * s;
-        Im(Ui("shield"), VCX + 10f * s, cy + 14f * s, w, h, A(Color.Black, (int)(100 * fade)));
-        Im(Ui("shieldw"), VCX, cy, w, h, A(KindColor, fade));
-        if (flip < 0.7f) return;
-        float top = cy - h / 2f;
-        Title(resTitle, VCX, top + 92f * s, 84f * s, KindColor, fade);
-        Circle(VCX, top + 236f * s, 150f * s, A(Color.White, (int)(210 * fade)));
-        Av(resAv, resWho, VCX, top + 236f * s, 136f * s, AvShape);
-        if (!string.IsNullOrEmpty(resWho)) NI(resWho, resWho, VCX, top + 342f * s, 26f * s, A(Color.White, fade), AC, 380f * s);
-        if (!string.IsNullOrEmpty(resSub)) TI(resSub, VCX, top + 386f * s, 15f * s, A(Color.White, fade), AC, 360f * s);
-    }
-
-    void ResEsports(float t, float fade, int el)
-    {
-        float s = Sc, cy = VY(cfg.ResultY) + 80f * s;
-        float jit = el < 420 ? (float)Math.Sin(el * 0.21) * 26f * s * (1f - el / 420f) : 0f;
-        string title = resTitle.ToUpperInvariant();
-        T(title, VCX - 7f * s + jit, cy, 150f * s, A(Color.FromArgb(0, 240, 255), (int)(170 * fade)), AC, FC, false);
-        T(title, VCX + 7f * s - jit, cy, 150f * s, A(Color.FromArgb(255, 0, 200), (int)(160 * fade)), AC, FC, false);
-        T(title, VCX + jit * 0.3f, cy, 150f * s, A(KindColor, fade), AC, FC, true);
-        if (string.IsNullOrEmpty(resWho)) return;
-        float nw = NameW(resWho, resWho, 32f * s, 520f * s), sw = string.IsNullOrEmpty(resSub) ? 0f : TextW(resSub.ToUpperInvariant(), FC, 22f * s) + 20f * s;
-        float w = 80f * s + nw + sw + 50f * s, x = VCX - w / 2f, y = cy + 90f * s;
-        Para(x, y, w, 68f * s, 16f * s, A(Color.FromArgb(230, 12, 14, 22), fade));
-        R(x + 16f * s, y, 6f * s, 68f * s, A(KindColor, fade));
-        Av(resAv, resWho, x + 58f * s, y + 34f * s, 54f * s, AvShape);
-        N(resWho, resWho, x + 96f * s, y + 34f * s, 32f * s, A(Color.White, fade), AL, 520f * s, true);
-        if (sw > 0f) T(resSub.ToUpperInvariant(), x + 96f * s + nw + 16f * s, y + 36f * s, 22f * s, A(Color.FromArgb(185, 190, 200), fade), AL, FC, false);
-    }
-
-    void ResMinimal(float t, float fade)
-    {
-        float s = Sc, cy = VY(cfg.ResultY) + 80f * s;
-        T(resTitle.ToUpperInvariant(), VCX, cy, 146f * s, A(Color.White, fade), AC, FC, true);
-        float grow = t < 0.18f ? t / 0.18f : (t > 0.84f ? Math.Max(0f, (1f - t) / 0.16f) : 1f);
-        float lw = 440f * s * grow;
-        RR(VCX - lw / 2f, cy + 70f * s, lw, 9f * s, 4f * s, A(KindColor, fade));
-        Im(Ui("glow"), VCX, cy + 74f * s, lw * 0.9f, 44f * s, A(KindColor, (int)(90 * fade)));
-        WhoPill(cy + 140f * s, fade, s, PRow.A < 120 ? Color.FromArgb(150, 255, 255, 255) : PRow, PLight ? PText : Color.White);
-        SubLine(cy + 200f * s, fade, s);
-    }
-
-    // small paper confetti for goals and swaps
-    void Confetti(int el, float fade)
-    {
-        if (el > 2600) return;
-        float s = Sc, t = el / 1000f, cy = VY(cfg.ResultY) + 80f * s;
-        Random r = new Random(resSeed);
-        Color[] cols = resKind == "swap" ? new[] { Color.FromArgb(143, 227, 255), KSwap, Color.White }
-                                         : new[] { Color.FromArgb(255, 216, 74), KGoal, Color.White, Color.FromArgb(255, 77, 109), Color.FromArgb(63, 169, 255) };
-        for (int i = 0; i < 60; i++)
-        {
-            double a = r.NextDouble() * Math.PI * 2, v = (260 + r.NextDouble() * 520) * s;
-            float delay = (float)r.NextDouble() * 0.2f, tt = Math.Max(0f, t - delay);
-            if (tt <= 0f) continue;
-            float x = VCX + (float)(Math.Cos(a) * v) * Math.Min(1f, tt * 1.6f);
-            float y = cy + (float)(Math.Sin(a) * v * 0.55) * Math.Min(1f, tt * 1.6f) - 120f * s * Math.Min(1f, tt * 2f) + 520f * s * tt * tt;
-            float sz = (10f + (float)r.NextDouble() * 8f) * s;
-            float wob = (float)Math.Abs(Math.Sin(tt * 9 + i));
-            R(x, y, sz * (0.35f + 0.65f * wob), sz * 1.5f, A(cols[i % cols.Length], (int)(255 * fade * Math.Max(0f, 1f - tt / 2.6f))));
-        }
-    }
-
-    void NextDesign()
-    {
-        cfg.Design = DesignNames[(DesignIndex + 1) % DesignNames.Length];
-        SaveSetting("HUD", "Design", cfg.Design);
-        Notification.Show("~b~HUD design~s~: " + cfg.Design.ToUpperInvariant());
-    }
-
-
-    // ------------------------------------------------------------------
-    //  Helpers: sprites, avatars, name pictures (Arabic...), shapes
-    // ------------------------------------------------------------------
-    // ------------------------------------------------------------------
-    //  Drawing helpers  (all coordinates in the 1280 x 720 HUD space)
-    // ------------------------------------------------------------------
-    static void Rect(float x, float y, float w, float h, Color c)
-    {
-        Function.Call((Hash)0x3A618A217E5154F0UL, (x + w / 2f) / 1280f, (y + h / 2f) / 720f, w / 1280f, h / 720f, (int)c.R, (int)c.G, (int)c.B, (int)c.A, false);
-    }
-
-    CustomSprite GetSprite(string file)
-    {
-        CustomSprite sp;
-        if (sprites.TryGetValue(file, out sp)) return sp;
-        try { sp = new CustomSprite(file, new SizeF(64f, 64f), PointF.Empty, Color.White, 0f, true); }
-        catch (Exception ex) { Log(ex); sp = null; }
-        sprites[file] = sp;
-        return sp;
-    }
-
-    // draw an image centred on (cx, cy)
-    bool Img(string file, float cx, float cy, float w, float h, Color tint)
-    {
-        if (string.IsNullOrEmpty(file)) return false;
-        CustomSprite sp = GetSprite(file);
-        if (sp == null) return false;
-        sp.Size = new SizeF(w, h);
-        sp.Position = new PointF(cx, cy);
-        sp.Color = tint;
-        sp.Draw();
-        return true;
-    }
-
-    // a small soccer ball image, drawn once
-    static void RenderBall(string file)
-    {
-        const int S = 64;
-        using (Bitmap bmp = new Bitmap(S, S, PixelFormat.Format32bppArgb))
-        using (Graphics g = Graphics.FromImage(bmp))
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.Clear(Color.Transparent);
-            RectangleF r = new RectangleF(3f, 3f, S - 6f, S - 6f);
-            float cx = S / 2f, cy = S / 2f;
-            using (GraphicsPath clip = new GraphicsPath())
-            {
-                clip.AddEllipse(r);
-                using (PathGradientBrush pb = new PathGradientBrush(clip))
-                {
-                    pb.CenterPoint = new PointF(S * 0.38f, S * 0.33f);
-                    pb.CenterColor = Color.White;
-                    pb.SurroundColors = new[] { Color.FromArgb(190, 196, 204) };
-                    g.FillEllipse(pb, r);
-                }
-                g.SetClip(clip);
-                using (Pen seam = new Pen(Color.FromArgb(70, 70, 75), 1.6f))
-                    for (int i = 0; i < 5; i++)
-                    {
-                        double a = (-90 + 72 * i) * Math.PI / 180.0;
-                        g.DrawLine(seam, cx + (float)Math.Cos(a) * 10f, cy + (float)Math.Sin(a) * 10f, cx + (float)Math.Cos(a) * 30f, cy + (float)Math.Sin(a) * 30f);
-                    }
-                Pentagon(g, cx, cy, 11f, -90f);
-                for (int i = 0; i < 5; i++)
-                {
-                    double a = (-90 + 72 * i + 36) * Math.PI / 180.0;
-                    Pentagon(g, cx + (float)Math.Cos(a) * 28f, cy + (float)Math.Sin(a) * 28f, 10f, -90f + 72 * i + 36 + 180);
-                }
-                g.ResetClip();
-            }
-            using (Pen o = new Pen(Color.FromArgb(40, 40, 45), 2f)) g.DrawEllipse(o, r);
-            bmp.Save(file, ImageFormat.Png);
-        }
-    }
-
-    static void Pentagon(Graphics g, float x, float y, float rad, float rotDeg)
-    {
-        PointF[] p = new PointF[5];
-        for (int i = 0; i < 5; i++)
-        {
-            double a = (rotDeg + 72 * i) * Math.PI / 180.0;
-            p[i] = new PointF(x + (float)Math.Cos(a) * rad, y + (float)Math.Sin(a) * rad);
-        }
-        using (SolidBrush b = new SolidBrush(Color.FromArgb(28, 28, 32))) g.FillPolygon(b, p);
-    }
-    static void Jewel(Graphics g, float x, float y, float r, Color c)
-    {
-        using (SolidBrush b = new SolidBrush(c)) g.FillEllipse(b, x - r, y - r, r * 2f, r * 2f);
-        using (SolidBrush hl = new SolidBrush(Color.FromArgb(210, 255, 255, 255))) g.FillEllipse(hl, x - r * 0.5f, y - r * 0.6f, r * 0.65f, r * 0.65f);
-        using (Pen p = new Pen(Color.FromArgb(210, 90, 60, 0), 1.5f)) g.DrawEllipse(p, x - r, y - r, r * 2f, r * 2f);
-    }
-
-    static void DrawCrown(Graphics g, float cx, float baseY, Color[] mc)
-    {
-        float w = 96f, h = 54f, x0 = cx - w / 2f, y0 = baseY - h;
-        PointF[] pts =
-        {
-            new PointF(x0, baseY), new PointF(x0 - 3f, y0 + 14f), new PointF(x0 + w * 0.28f, y0 + 30f),
-            new PointF(cx, y0), new PointF(x0 + w * 0.72f, y0 + 30f), new PointF(x0 + w + 3f, y0 + 14f),
-            new PointF(x0 + w, baseY)
-        };
-        RectangleF bounds = new RectangleF(x0 - 4f, y0, w + 8f, h);
-        using (LinearGradientBrush b = new LinearGradientBrush(bounds, mc[0], mc[2], 90f))
-        {
-            b.InterpolationColors = Blend3(mc);
-            g.FillPolygon(b, pts);
-        }
-        using (Pen p = new Pen(Color.FromArgb(230, 110, 70, 0), 2.5f))
-        {
-            p.LineJoin = LineJoin.Round;
-            g.DrawPolygon(p, pts);
-        }
-        RectangleF band = new RectangleF(x0, baseY - 13f, w, 13f);
-        using (LinearGradientBrush b2 = new LinearGradientBrush(band, mc[0], mc[2], 90f))
-        {
-            b2.InterpolationColors = Blend3(mc);
-            g.FillRectangle(b2, band);
-        }
-        using (Pen p = new Pen(Color.FromArgb(230, 110, 70, 0), 2f)) g.DrawRectangle(p, band.X, band.Y, band.Width, band.Height);
-        Jewel(g, x0 - 3f, y0 + 14f, 6f, Color.FromArgb(225, 40, 60));
-        Jewel(g, cx, y0, 7.5f, Color.FromArgb(40, 130, 235));
-        Jewel(g, x0 + w + 3f, y0 + 14f, 6f, Color.FromArgb(225, 40, 60));
-        Jewel(g, cx - 24f, baseY - 6.5f, 4f, Color.FromArgb(40, 190, 110));
-        Jewel(g, cx, baseY - 6.5f, 4.5f, Color.FromArgb(225, 40, 60));
-        Jewel(g, cx + 24f, baseY - 6.5f, 4f, Color.FromArgb(40, 190, 110));
-    }
-
-    static ColorBlend Blend3(Color[] c)
-    {
-        ColorBlend cb = new ColorBlend(3);
-        cb.Colors = new[] { c[0], c[1], c[2] };
-        cb.Positions = new[] { 0f, 0.5f, 1f };
-        return cb;
-    }
-
-    static List<string> SplitList(string s)
-    {
-        List<string> l = new List<string>();
-        foreach (string part in (s ?? "").Split(','))
-        {
-            string t = part.Trim();
-            if (t.Length > 0) l.Add(t);
-        }
-        return l;
-    }
-
-    // ------------------------------------------------------------------
-    //  Names in any language -> PNG (GTA fonts only have Latin letters)
-    // ------------------------------------------------------------------
-    NameTag GetTag(string text)
-    {
-        NameTag t;
-        if (tags.TryGetValue(text, out t)) return t;
-        t = new NameTag();
-        if (!tags.TryAdd(text, t)) return tags[text];
-        NameTag tag = t;
-        string file = Path.Combine(tagDir, "n" + ((uint)text.GetHashCode()).ToString("x8") + "_" + tags.Count + ".png");
-        ThreadPool.QueueUserWorkItem(delegate
-        {
-            try
-            {
-                float aspect;
-                if (RenderTag(text, file, out aspect)) { tag.Aspect = aspect; tag.File = file; tag.Ready = true; }
-            }
-            catch (Exception ex) { Log(ex); }
-        });
-        return t;
-    }
-
-    static bool RenderTag(string text, string file, out float aspect)
-    {
-        aspect = 1f;
-        // drop emoji / joiners that GDI+ would draw as boxes
-        StringBuilder sb = new StringBuilder();
-        foreach (char ch in text)
-        {
-            if (char.IsSurrogate(ch) || ch == '‍' || ch == '️' || (ch >= '☀' && ch <= '➿')) continue;
-            sb.Append(ch);
-        }
-        string s = sb.ToString().Trim();
-        if (s.Length == 0) return false;
-
-        bool rtl = false;
-        foreach (char ch in s)
-        {
-            if ((ch >= '֐' && ch <= 'ࣿ') || (ch >= 'יִ' && ch <= 'ﻼ')) { rtl = true; break; }
-            if (char.IsLetter(ch)) break;
-        }
-
-        const int H = 48;
-        using (System.Drawing.Font font = MakeFont(30f))
-        using (StringFormat sf = new StringFormat(StringFormat.GenericTypographic))
-        {
-            sf.FormatFlags |= StringFormatFlags.NoWrap;
-            if (rtl) sf.FormatFlags |= StringFormatFlags.DirectionRightToLeft;
-            int w;
-            using (Bitmap probe = new Bitmap(1, 1))
-            using (Graphics pg = Graphics.FromImage(probe))
-            {
-                pg.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-                w = (int)Math.Ceiling(pg.MeasureString(s, font, 4000, sf).Width) + 10;
-            }
-            w = Math.Max(10, Math.Min(900, w));
-            using (Bitmap bmp = new Bitmap(w, H, PixelFormat.Format32bppArgb))
-            using (Graphics g = Graphics.FromImage(bmp))
-            {
-                g.Clear(Color.Transparent);
-                g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-                RectangleF box = new RectangleF(3, 4, w - 6, H - 4);
-                using (SolidBrush sh = new SolidBrush(Color.FromArgb(200, 0, 0, 0)))
-                    g.DrawString(s, font, sh, new RectangleF(box.X + 2, box.Y + 2, box.Width, box.Height), sf);
-                g.DrawString(s, font, Brushes.White, box, sf);
-                bmp.Save(file, ImageFormat.Png);
-            }
-            aspect = w / (float)H;
-        }
-        return true;
-    }
-
-    // true when GTA's own font can draw the text (Latin letters only)
-    static bool Renderable(string s)
-    {
-        if (s == null) return true;
-        foreach (char ch in s) if (ch > 0x24F) return false;
-        return true;
-    }
-
-    static string CleanName(string s)
-    {
-        s = (s ?? "").Replace("~", "-").Replace("\r", " ").Replace("\n", " ").Trim();
-        if (s.Length > 24) s = s.Substring(0, 24);
-        return s;
-    }
-
-    static string InitialOf(string alt)
-    {
-        string a = (alt ?? "").TrimStart('@');
-        return a.Length > 0 ? a.Substring(0, 1).ToUpperInvariant() : "?";
-    }
-
-    static string Short(string s, int n) { return s.Length > n ? s.Substring(0, n - 1) + "." : s; }
-
-    static System.Drawing.Font MakeFont(float px)
-    {
-        foreach (string fam in new[] { "Segoe UI", "Tahoma", "Arial" })
-        {
-            try
-            {
-                System.Drawing.Font f = new System.Drawing.Font(fam, px, FontStyle.Bold, GraphicsUnit.Pixel);
-                if (f.Name == fam) return f;
-                f.Dispose();
-            }
-            catch { }
-        }
-        return new System.Drawing.Font(FontFamily.GenericSansSerif, px, FontStyle.Bold, GraphicsUnit.Pixel);
-    }
-
-    static Bitmap LoadBitmap(string file)
-    {
-        using (MemoryStream ms = new MemoryStream(File.ReadAllBytes(file)))
-        using (Image im = Image.FromStream(ms))
-            return new Bitmap(im);
-    }
-
-    // ------------------------------------------------------------------
-    //  Avatars (downloaded on a worker thread, cropped to a circle PNG)
-    // ------------------------------------------------------------------
-    AvatarInfo GetAvatar(string uid, string url)
-    {
-        if (string.IsNullOrEmpty(uid)) return null;
-        if (url == null) url = "";
-        AvatarInfo existing;
-        if (avatars.TryGetValue(uid, out existing))
-        {
-            if (!(existing.Letter && existing.Ready && url.Length > 0)) return existing;
-            AvatarInfo dropped;
-            avatars.TryRemove(uid, out dropped);   // a real picture arrived after a letter avatar
-        }
-
-        AvatarInfo a = new AvatarInfo();
-        if (!avatars.TryAdd(uid, a)) return avatars[uid];
-        string safe = Regex.Replace(uid, "[^A-Za-z0-9_.-]", "_");
-        string baseName = Path.Combine(cacheDir, safe);
-        string file = baseName + ".png";
-        ThreadPool.QueueUserWorkItem(delegate
-        {
-            try
-            {
-                if (url.Length > 0 && (!File.Exists(file) || !File.Exists(baseName + "_hex.png") || (DateTime.Now - File.GetLastWriteTime(file)).TotalDays > 3))
-                {
-                    using (Image img = DownloadImage(url))
-                    {
-                        if (img != null) { SaveCircle(img, file); SaveShapes(img, baseName); }
-                    }
-                }
-                if (File.Exists(file))
-                {
-                    if (!File.Exists(baseName + "_hex.png")) { using (Bitmap old = LoadBitmap(file)) SaveShapes(old, baseName); }
-                    a.Base = baseName; a.File = file; a.Ready = true; return;
-                }
-                // picture not available -> letter avatar (tried again next session)
-                string initBase = Path.Combine(cacheDir, "letter_" + safe);
-                RenderInitialAvatar(uid, initBase + ".png");
-                a.Base = initBase; a.File = initBase + ".png"; a.Letter = url.Length > 0 ? false : true; a.Ready = true;
-            }
-            catch (Exception ex) { Log(ex); }
-        });
-        return a;
-    }
-
-    static Image DownloadImage(string url)
-    {
-        List<string> urls = new List<string>();
-        foreach (string one in url.Split('\n'))
-        {
-            string u0 = one.Trim();
-            if (u0.Length == 0) continue;
-            urls.Add(u0);
-            if (u0.Contains(".webp"))               // unsigned CDN pictures (gifts) also exist as png / jpeg
-            {
-                urls.Add(u0.Replace(".webp", ".png"));
-                urls.Add(u0.Replace(".webp", ".jpeg"));
-            }
-        }
-        foreach (string u in urls)
-        {
-            byte[] data;
-            try
-            {
-                using (WebClient wc = new WebClient())
-                {
-                    wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36");
-                    wc.Headers.Add("Referer", "https://www.tiktok.com/");
-                    data = wc.DownloadData(u);
-                }
-            }
-            catch { continue; }
-            Image img = DecodeImage(data);
-            if (img != null) return img;
-        }
-        return null;
-    }
-
-    // PNG/JPG/GIF/BMP with GDI+; WebP (TikTok profile pictures) with the Windows image codecs (WIC)
-    static Image DecodeImage(byte[] data)
-    {
-        try
-        {
-            using (MemoryStream ms = new MemoryStream(data))
-            using (Image img = Image.FromStream(ms))
-                return new Bitmap(img);
-        }
-        catch { }
-        Image wic = DecodeWithWindowsCodecs(data);
-        if (wic != null) return wic;
-        return TikArena.Wic.Decode(data);
-    }
-
-    static Image DecodeWithWindowsCodecs(byte[] data)
-    {
-        Image result = null;
-        Thread t = new Thread(delegate ()
-        {
-            try
-            {
-                Assembly pc = Assembly.Load("PresentationCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35");
-                Type decT = pc.GetType("System.Windows.Media.Imaging.BitmapDecoder");
-                Type createOpt = pc.GetType("System.Windows.Media.Imaging.BitmapCreateOptions");
-                Type cacheOpt = pc.GetType("System.Windows.Media.Imaging.BitmapCacheOption");
-                MethodInfo create = decT.GetMethod("Create", new Type[] { typeof(Stream), createOpt, cacheOpt });
-                object dec = create.Invoke(null, new object[] { new MemoryStream(data), Enum.Parse(createOpt, "None"), Enum.Parse(cacheOpt, "OnLoad") });
-                System.Collections.IList frames = (System.Collections.IList)decT.GetProperty("Frames").GetValue(dec, null);
-                if (frames == null || frames.Count == 0) return;
-                Type encT = pc.GetType("System.Windows.Media.Imaging.PngBitmapEncoder");
-                object enc = Activator.CreateInstance(encT);
-                System.Collections.IList encFrames = (System.Collections.IList)encT.GetProperty("Frames").GetValue(enc, null);
-                encFrames.Add(frames[0]);
-                using (MemoryStream outMs = new MemoryStream())
-                {
-                    encT.GetMethod("Save", new Type[] { typeof(Stream) }).Invoke(enc, new object[] { outMs });
-                    outMs.Position = 0;
-                    using (Image im = Image.FromStream(outMs)) result = new Bitmap(im);
-                }
-            }
-            catch { result = null; }
-        });
-        t.SetApartmentState(ApartmentState.STA);
-        t.IsBackground = true;
-        t.Start();
-        t.Join(8000);
-        return result;
-    }
-
-    // no picture could be loaded -> a coloured circle with the first letter
-    static void RenderInitialAvatar(string name, string file)
-    {
-        string n = (name ?? "?").TrimStart('@').Trim();
-        string letter = n.Length > 0 ? n.Substring(0, 1).ToUpperInvariant() : "?";
-        int h = 0;
-        foreach (char ch in n) h = h * 31 + ch;
-        Color[] pal = { Color.FromArgb(233, 30, 99), Color.FromArgb(156, 39, 176), Color.FromArgb(63, 81, 181), Color.FromArgb(3, 169, 244),
-                        Color.FromArgb(0, 150, 136), Color.FromArgb(76, 175, 80), Color.FromArgb(255, 152, 0), Color.FromArgb(244, 67, 54) };
-        Color c = pal[(h & 0x7FFFFFFF) % pal.Length];
-        using (Bitmap bmp = new Bitmap(128, 128, PixelFormat.Format32bppArgb))
-        using (Graphics g = Graphics.FromImage(bmp))
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-            g.Clear(c);
-            using (System.Drawing.Font f = MakeFont(64f))
-            using (StringFormat sf = new StringFormat())
-            {
-                sf.Alignment = StringAlignment.Center;
-                sf.LineAlignment = StringAlignment.Center;
-                g.DrawString(letter, f, Brushes.White, new RectangleF(0, 4, 128, 128), sf);
-            }
-            using (Image copy = new Bitmap(bmp))
-            {
-                SaveCircle(copy, file);
-                SaveShapes(copy, file.EndsWith(".png") ? file.Substring(0, file.Length - 4) : file);
-            }
-        }
-    }
-
-    // the photo cut in every shape the HUD designs use (no border: the designs draw their own frames)
-    static void SaveShapes(Image src, string baseName)
-    {
-        string[] shapes = { "circle", "rounded", "square", "hex" };
-        foreach (string sh in shapes)
-        {
-            const int SZ = 128;
-            using (Bitmap bmp = new Bitmap(SZ, SZ, PixelFormat.Format32bppArgb))
-            using (Graphics g = Graphics.FromImage(bmp))
-            using (GraphicsPath gp = new GraphicsPath())
-            {
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                g.Clear(Color.Transparent);
-                switch (sh)
-                {
-                    case "hex": gp.AddPolygon(HexPts(SZ)); break;
-                    case "rounded": AddRound(gp, 1f, 1f, SZ - 2f, SZ - 2f, SZ * 0.26f); break;
-                    case "square": AddRound(gp, 1f, 1f, SZ - 2f, SZ - 2f, SZ * 0.09f); break;
-                    default: gp.AddEllipse(1, 1, SZ - 2, SZ - 2); break;
-                }
-                using (TextureBrush tb = new TextureBrush(src, WrapMode.Clamp))
-                {
-                    float k = Math.Max(SZ / (float)src.Width, SZ / (float)src.Height);
-                    tb.ScaleTransform(k, k);
-                    tb.TranslateTransform((SZ - src.Width * k) / 2f / k, (SZ - src.Height * k) / 2f / k, MatrixOrder.Prepend);
-                    g.FillPath(tb, gp);
-                }
-                bmp.Save(baseName + "_" + sh + ".png", ImageFormat.Png);
-            }
-        }
-    }
-
-    static void SaveSquare(Image src, string file, int size)
-    {
-        using (Bitmap bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb))
-        using (Graphics g = Graphics.FromImage(bmp))
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            g.Clear(Color.Transparent);
-            float k = Math.Min(size / (float)src.Width, size / (float)src.Height);
-            float w = src.Width * k, h = src.Height * k;
-            g.DrawImage(src, (size - w) / 2f, (size - h) / 2f, w, h);
-            bmp.Save(file, ImageFormat.Png);
-        }
-    }
-
-    static void SaveCircle(Image src, string file)
-    {
-        const int SZ = 128;
-        using (Bitmap bmp = new Bitmap(SZ, SZ, PixelFormat.Format32bppArgb))
-        using (Graphics g = Graphics.FromImage(bmp))
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            g.Clear(Color.Transparent);
-            using (GraphicsPath gp = new GraphicsPath())
-            {
-                gp.AddEllipse(4, 4, SZ - 8, SZ - 8);
-                g.SetClip(gp);
-                g.DrawImage(src, new Rectangle(4, 4, SZ - 8, SZ - 8));
-                g.ResetClip();
-            }
-            using (Pen pen = new Pen(Color.White, 5f)) g.DrawEllipse(pen, 4, 4, SZ - 8, SZ - 8);
-            bmp.Save(file, ImageFormat.Png);
-        }
-    }
-
-    void ShowBig(string title, string sub, int ms)
-    {
-        if (bigMsg == null) bigMsg = new Scaleform("MP_BIG_MESSAGE_FREEMODE");
-        bigTitle = title;
-        bigSub = sub ?? "";
-        bigPending = true;
-        bigUntil = Game.GameTime + ms;
-    }
-
-    void DrawBig()
-    {
-        if (bigMsg == null || Game.GameTime > bigUntil || !bigMsg.IsLoaded) return;
-        if (bigPending)
-        {
-            bigMsg.CallFunction("SHOW_SHARD_WASTED_MP_MESSAGE", bigTitle, bigSub);
-            bigPending = false;
-        }
-        bigMsg.Render2D();
-    }
-
-
-
-    void SetHudStyle(int st)
-    {
-        hudStyle = ((st % StyleNames.Length) + StyleNames.Length) % StyleNames.Length;
-        cfg.HudStyle = hudStyle;
-        SaveSetting("HUD", "Style", hudStyle.ToString());
-        Notification.Show("~b~HUD style~s~: " + StyleNames[hudStyle]);
-    }
-
-    // ------------------------------------------------------------------
-    //  MEGA GIFT (big gift celebration)
-    // ------------------------------------------------------------------
-    class BigGiftEv { public string Name, Alt, Gift; public AvatarInfo Av; public int Count; public long Coins; public int Seed; }
-    readonly ConcurrentQueue<BigGiftEv> bigIn = new ConcurrentQueue<BigGiftEv>();
-    BigGiftEv bigCur;
-    int bigStart;
-    /// <summary>Called when a mega gift starts on screen (play your sound / fireworks here).</summary>
-    public Action<string> OnMegaGiftStart = delegate { };
-
-    void UpdateMegaGift(int now)
-    {
-        if (bigCur != null && now - bigStart > cfg.BigMs) bigCur = null;
-        if (bigCur == null)
-        {
-            BigGiftEv e;
-            if (!bigIn.TryDequeue(out e)) return;
-            bigCur = e; bigStart = now;
-            try { OnMegaGiftStart(e.Alt); } catch { }
-        }
-    }
-
-    void DrawMegaGift(int now)
-    {
-        BigGiftEv e = bigCur;
-        if (e == null) return;
-        int el = now - bigStart;
-        float T = Math.Max(1f, cfg.BigMs), t = el / T;
-        if (t > 1f) return;
-        float fade = t < 0.06f ? t / 0.06f : (t > 0.86f ? Math.Max(0f, (1f - t) / 0.14f) : 1f);
-        float s = Sc, cx = VCX, cy = VY(cfg.BigY), sec = el / 1000f;
-        Color col = cfg.BigColor;
-        float pop = el < 350 ? 0.4f + 0.75f * (el / 350f) : (el < 520 ? 1.15f - 0.15f * ((el - 350) / 170f) : 1f);
-        float D = 300f * s * pop;
-
-        // light behind + rotating rays of glow
-        Glow(cx, cy, (820f + 60f * (float)Math.Sin(sec * 3f)) * s, A(col, (int)(150 * fade)));
-        Glow(cx, cy, 420f * s, A(Color.White, (int)(90 * fade)));
-
-        // ripples: rings of light that go out from the photo like water
-        for (int k = 0; k < 5; k++)
-        {
-            float ph = (sec * 0.8f + k / 5f) % 1f;
-            float d = D * (1.05f + ph * 2.3f);
-            Im(Ui("ring"), cx, cy, d, d, A(k % 2 == 0 ? col : Color.White, (int)((1f - ph) * 210 * fade)));
-        }
-
-        // the photo ripples (jelly wave) and floats
-        float wave = (float)Math.Sin(sec * 11f), wave2 = (float)Math.Sin(sec * 7f + 1.3f);
-        float w = D * (1f + 0.07f * wave), h = D * (1f - 0.07f * wave);
-        float py = cy + 10f * s * wave2;
-        ShapeFill("circle", cx, py, Math.Max(w, h) * 1.12f, A(col, (int)(255 * fade)));
-        ShapeFill("circle", cx, py, Math.Max(w, h) * 1.045f, A(Color.FromArgb(20, 20, 26), (int)(255 * fade)));
-        string f = AvatarFile(e.Av, "circle");
-        if (f == null || !Im(f, cx, py, w, h, A(Color.White, (int)(255 * fade))))
-        {
-            ShapeFill("circle", cx, py, w, A(Color.FromArgb(70, 76, 90), (int)(255 * fade)));
-            TI(InitialOf(e.Alt), cx, py, w * 0.34f, A(Color.White, (int)(255 * fade)), AC);
-        }
-
-        // sparkles turning around the photo
-        for (int k = 0; k < 14; k++)
-        {
-            double a = sec * (k % 2 == 0 ? 1.3 : -0.9) + k * Math.PI * 2 / 14;
-            float rr = D * (0.72f + 0.08f * (float)Math.Sin(sec * 4 + k));
-            float sz = (10f + 8f * (float)Math.Abs(Math.Sin(sec * 6 + k))) * s;
-            Glow(cx + (float)Math.Cos(a) * rr, py + (float)Math.Sin(a) * rr, sz * 3f, A(k % 3 == 0 ? Color.White : col, (int)(230 * fade)));
-        }
-
-        // falling gold confetti (pictures, so they are above everything)
-        Random r = new Random(e.Seed);
-        for (int i = 0; i < 56; i++)
-        {
-            float x = (float)r.NextDouble() * VW, spd = (200f + (float)r.NextDouble() * 260f) * s, delay = (float)r.NextDouble() * 1.2f;
-            float tt = sec - delay;
-            if (tt <= 0f) continue;
-            float y = -40f + tt * spd;
-            if (y > 1120f) continue;
-            float sz = (8f + (float)r.NextDouble() * 10f) * s * (0.4f + 0.6f * (float)Math.Abs(Math.Sin(tt * 7 + i)));
-            Color cc = i % 4 == 0 ? Color.White : (i % 4 == 1 ? col : (i % 4 == 2 ? Color.FromArgb(255, 77, 109) : Color.FromArgb(63, 169, 255)));
-            Im(Ui("dot"), x + 30f * (float)Math.Sin(tt * 2 + i), y, sz, sz * 1.4f, A(cc, (int)(235 * fade)));
-        }
-
-        // texts (pictures)
-        Title(cfg.BigTitle, cx, cy - D * 0.5f - 95f * s, 110f * s * pop, col, fade);
-        float nw = 560f * s;
-        {
-            // name box made of pictures (so it stays above the light)
-            float bh = 70f * s, by = py + h * 0.5f + 26f * s + bh / 2f;
-            Color bc = A(Color.FromArgb(225, 12, 14, 22), fade);
-            Im(Ui("px"), cx, by, nw - bh, bh, bc);
-            ShapeFill("circle", cx - nw / 2f + bh / 2f, by, bh, bc);
-            ShapeFill("circle", cx + nw / 2f - bh / 2f, by, bh, bc);
-        }
-        NI(e.Name, e.Alt, cx, py + h * 0.5f + 61f * s, 36f * s, A(Color.White, fade), AC, nw - 40f * s);
-        string line = e.Gift + "  x" + e.Count + (e.Coins > 0 ? "   -   " + e.Coins + " COINS" : "");
-        TI(line, cx, py + h * 0.5f + 128f * s, 30f * s, A(col, fade), AC);
-    }
-}
 }
