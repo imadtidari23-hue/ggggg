@@ -2035,7 +2035,7 @@ namespace TikArena
 
         public static string Pick(string file, float w, float h)
         {
-            if (!Enabled || w <= 0 || h <= 0) return file;
+            if (!Enabled || w <= 0 || h <= 0 || file.IndexOf("cache" + Path.DirectorySeparatorChar + "text", StringComparison.OrdinalIgnoreCase) >= 0) return file;
             Size s;
             if (!sizes.TryGetValue(file, out s))
             {
@@ -2264,6 +2264,10 @@ namespace TikArena
             return ok;
         }
 
+        // most different pictures registered with ScriptHookV (it never frees them; too many = game crash)
+        public static int MaxFiles = 400;
+        static int pictures;
+
         public static void ImageAbs(string file, float x, float y, float w, float h, int alpha)
         {
             ImageAbsTint(file, x, y, w, h, Color.FromArgb(U.Clamp(alpha, 0, 255), 255, 255, 255));
@@ -2272,7 +2276,17 @@ namespace TikArena
         public static void ImageAbsTint(string file, float x, float y, float w, float h, Color tint)
         {
             if (!FileOk(file) || tint.A <= 0) return;
-            file = Mip.Pick(file, w, h);
+            // pictures (not text): smaller copy only while there is room in the texture budget
+            bool text = file.IndexOf("cache" + Path.DirectorySeparatorChar + "text", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (!text)
+            {
+                if (pictures < MaxFiles * 6 / 10) file = Mip.Pick(file, w, h);
+                if (!pool.ContainsKey(file))
+                {
+                    if (pictures >= MaxFiles) return;
+                    pictures++;
+                }
+            }
             List<CustomSprite> list;
             if (!pool.TryGetValue(file, out list)) { list = new List<CustomSprite>(); pool[file] = list; }
             int n;
@@ -2614,7 +2628,7 @@ namespace TikArena
             if (first)
             {
                 first = false;
-                try { ClearBlips(true); } catch (Exception ex) { U.Error("Blips", ex); }
+                orphanSweepAt = U.Now + 4000;   // leftovers of an earlier run: removed once the game has settled
                 if (cfg.ShowLoadMessage)
                 {
                     toastParts = new List<string> { "TikArena" };
@@ -2624,6 +2638,7 @@ namespace TikArena
                 }
             }
             FileWatch();
+            if (orphanSweepAt > 0 && U.Now >= orphanSweepAt) { orphanSweepAt = 0; try { ClearBlips(true); } catch (Exception ex) { U.Error("Blips", ex); } }
             try { if (!started || !cfg.HudEnabled) DrawToast(true); } catch (Exception ex) { U.Error("Toast", ex); }
             if (!powered) return;
 
@@ -3775,6 +3790,8 @@ namespace TikArena
 
         // removes every blip of the script; orphans = also the marked ones left by an earlier run
         // (script reloaded / crashed) with their characters and vehicles
+        long orphanSweepAt;
+
         void ClearBlips(bool orphans)
         {
             foreach (Blip b in blips) { try { if (b.Exists()) b.Delete(); } catch { } }
@@ -3793,9 +3810,11 @@ namespace TikArena
                         if (en == null || !en.Exists() || (pl.Exists() && en.Handle == pl.Handle)) continue;
                         if (en is Ped && !IsTracked((Ped)en))
                         {
+                            // the character first, then his (now empty) vehicle
                             Ped p = (Ped)en;
-                            if (p.IsInVehicle()) SafeDeleteVehicle(p.CurrentVehicle);
+                            Vehicle v = p.IsInVehicle() ? p.CurrentVehicle : null;
                             p.Delete();
+                            if (v != null && v.Exists()) SafeDeleteVehicle(v);
                         }
                         else if (en is Vehicle) SafeDeleteVehicle((Vehicle)en);
                     }
